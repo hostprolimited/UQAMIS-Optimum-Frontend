@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useRole } from '@/contexts/RoleContext';
 import { useToast } from '@/hooks/use-toast';
 
-// Mock reports data
+// Mock reports data - different for each role
 const mockReports = [
   {
     id: '1',
@@ -93,6 +93,94 @@ const mockReports = [
   }
 ];
 
+// Mock facility reports for school admin
+const mockFacilityReports = [
+  {
+    id: '1',
+    facilityName: 'Classroom Block A',
+    type: 'Classrooms',
+    condition: 'Good',
+    lastInspection: '2024-01-15',
+    score: 87,
+    unitsTotal: 12,
+    unitsGood: 10,
+    unitsFair: 2,
+    unitsPoor: 0,
+    recommendations: 'Replace whiteboards in 2 classrooms',
+    status: 'Active'
+  },
+  {
+    id: '2',
+    facilityName: 'Science Laboratory',
+    type: 'Laboratory',
+    condition: 'Fair',
+    lastInspection: '2024-01-12',
+    score: 75,
+    unitsTotal: 2,
+    unitsGood: 1,
+    unitsFair: 1,
+    unitsPoor: 0,
+    recommendations: 'Update lab equipment, improve ventilation',
+    status: 'Needs Attention'
+  },
+  {
+    id: '3',
+    facilityName: 'ICT Center',
+    type: 'ICT',
+    condition: 'Good',
+    lastInspection: '2024-01-20',
+    score: 82,
+    unitsTotal: 1,
+    unitsGood: 1,
+    unitsFair: 0,
+    unitsPoor: 0,
+    recommendations: 'Add more power outlets, update software',
+    status: 'Active'
+  },
+  {
+    id: '4',
+    facilityName: 'School Compound',
+    type: 'Outdoor',
+    condition: 'Excellent',
+    lastInspection: '2024-01-10',
+    score: 92,
+    unitsTotal: 1,
+    unitsGood: 1,
+    unitsFair: 0,
+    unitsPoor: 0,
+    recommendations: 'Maintain current standards',
+    status: 'Active'
+  },
+  {
+    id: '5',
+    facilityName: 'Library',
+    type: 'Academic',
+    condition: 'Good',
+    lastInspection: '2024-01-08',
+    score: 85,
+    unitsTotal: 1,
+    unitsGood: 1,
+    unitsFair: 0,
+    unitsPoor: 0,
+    recommendations: 'Add more reading materials, improve lighting',
+    status: 'Active'
+  },
+  {
+    id: '6',
+    facilityName: 'Sports Facilities',
+    type: 'Recreation',
+    condition: 'Fair',
+    lastInspection: '2024-01-05',
+    score: 70,
+    unitsTotal: 3,
+    unitsGood: 1,
+    unitsFair: 2,
+    unitsPoor: 0,
+    recommendations: 'Repair basketball court, maintain football field',
+    status: 'Needs Attention'
+  }
+];
+
 const Reports = () => {
   const { toast } = useToast();
   const { currentUser } = useRole();
@@ -103,30 +191,34 @@ const Reports = () => {
   const [filterState, setFilterState] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
 
-  const filteredReports = mockReports.filter(report => {
-    const matchesSearch = report.schoolName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         report.county.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         report.location.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesType = filterType === 'all' || report.type === filterType;
-    const matchesSubCounty = filterSubCounty === 'all' || report.subCounty === filterSubCounty;
-    const matchesLocation = filterLocation === 'all' || report.location === filterLocation;
-    const matchesState = filterState === 'all' || report.state === filterState;
-    const matchesStatus = filterStatus === 'all' || report.status === filterStatus;
-    
-    // Role-based filtering
-    if (currentUser.role === 'county_admin') {
-      return matchesSearch && matchesType && matchesSubCounty && matchesLocation && 
-             matchesState && matchesStatus && report.county === currentUser.county;
-    }
-    if (currentUser.role === 'school_admin') {
-      return matchesSearch && matchesType && matchesSubCounty && matchesLocation && 
-             matchesState && matchesStatus && report.schoolName === currentUser.school;
-    }
-    
-    return matchesSearch && matchesType && matchesSubCounty && matchesLocation && 
-           matchesState && matchesStatus;
-  });
+  const filteredReports = currentUser.role === 'school_admin' 
+    ? mockFacilityReports.filter(report => {
+        const matchesSearch = report.facilityName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                             report.type.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesType = filterType === 'all' || report.type === filterType;
+        const matchesStatus = filterStatus === 'all' || report.status === filterStatus;
+        return matchesSearch && matchesType && matchesStatus;
+      })
+    : mockReports.filter(report => {
+        const matchesSearch = report.schoolName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                             report.county.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                             report.location.toLowerCase().includes(searchTerm.toLowerCase());
+        
+        const matchesType = filterType === 'all' || report.type === filterType;
+        const matchesSubCounty = filterSubCounty === 'all' || report.subCounty === filterSubCounty;
+        const matchesLocation = filterLocation === 'all' || report.location === filterLocation;
+        const matchesState = filterState === 'all' || report.state === filterState;
+        const matchesStatus = filterStatus === 'all' || report.status === filterStatus;
+        
+        // Role-based filtering
+        if (currentUser.role === 'county_admin') {
+          return matchesSearch && matchesType && matchesSubCounty && matchesLocation && 
+                 matchesState && matchesStatus && report.county === currentUser.county;
+        }
+        
+        return matchesSearch && matchesType && matchesSubCounty && matchesLocation && 
+               matchesState && matchesStatus;
+      });
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -415,7 +507,10 @@ const Reports = () => {
                 <p className="text-sm text-muted-foreground">Average Score</p>
                 <p className="text-2xl font-bold text-foreground">
                   {filteredReports.length > 0 
-                    ? Math.round(filteredReports.reduce((sum, r) => sum + r.overallScore, 0) / filteredReports.length)
+                    ? Math.round(filteredReports.reduce((sum, r) => 
+                        sum + (currentUser.role === 'school_admin' 
+                          ? (r as any).score 
+                          : (r as any).overallScore), 0) / filteredReports.length)
                     : 0
                   }
                 </p>
@@ -429,9 +524,14 @@ const Reports = () => {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Approved Schools</p>
+                <p className="text-sm text-muted-foreground">
+                  {currentUser.role === 'school_admin' ? 'Good Condition' : 'Approved Schools'}
+                </p>
                 <p className="text-2xl font-bold text-success">
-                  {filteredReports.filter(r => r.status === 'Approved').length}
+                  {currentUser.role === 'school_admin' 
+                    ? filteredReports.filter((r: any) => r.condition === 'Good' || r.condition === 'Excellent').length
+                    : filteredReports.filter((r: any) => r.status === 'Approved').length
+                  }
                 </p>
               </div>
               <div className="w-8 h-8 bg-success rounded-full flex items-center justify-center">

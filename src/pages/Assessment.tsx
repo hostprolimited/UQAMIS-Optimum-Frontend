@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Search, Filter, Plus, FileText, Star, Clock, CheckCircle } from 'lucide-react';
+import { Search, Filter, Plus, FileText, Star, Clock, CheckCircle, Building2, FlaskConical, Monitor, TreePine, BookOpen, Users, Check, X, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -14,25 +14,59 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useRole } from '@/contexts/RoleContext';
 
-// Mock schools data
-const mockSchools = [
-  { id: '1', name: 'Green Valley Primary School', county: 'Nairobi', subCounty: 'Westlands', status: 'pending', lastAssessment: '2024-01-15', score: 87 },
-  { id: '2', name: 'St. Mary Secondary School', county: 'Nairobi', subCounty: 'Dagoretti North', status: 'completed', lastAssessment: '2024-01-20', score: 92 },
-  { id: '3', name: 'Hillside Academy', county: 'Nairobi', subCounty: 'Langata', status: 'in-progress', lastAssessment: '2024-01-10', score: 78 },
-  { id: '4', name: 'Riverside Primary', county: 'Mombasa', subCounty: 'Nyali', status: 'needs-review', lastAssessment: '2024-01-05', score: 65 },
+// Mock facilities data for school admin
+const mockFacilities = [
+  { id: '1', name: 'Classrooms', icon: Building2, description: 'Classroom infrastructure and condition', assessments: 3, lastAssessment: '2024-01-15', avgScore: 87 },
+  { id: '2', name: 'Laboratory', icon: FlaskConical, description: 'Science lab equipment and safety', assessments: 1, lastAssessment: '2024-01-10', avgScore: 75 },
+  { id: '3', name: 'ICT Center', icon: Monitor, description: 'Computer lab and digital resources', assessments: 2, lastAssessment: '2024-01-20', avgScore: 82 },
+  { id: '4', name: 'Compound', icon: TreePine, description: 'School grounds and outdoor facilities', assessments: 1, lastAssessment: '2024-01-05', avgScore: 90 },
+  { id: '5', name: 'Library', icon: BookOpen, description: 'Library resources and study areas', assessments: 2, lastAssessment: '2024-01-12', avgScore: 85 },
+  { id: '6', name: 'Sports Facilities', icon: Users, description: 'Playgrounds and sports equipment', assessments: 1, lastAssessment: '2024-01-08', avgScore: 78 },
 ];
 
-// Assessment form schema
-const assessmentSchema = z.object({
-  schoolId: z.string().min(1, 'Please select a school'),
-  category: z.string().min(1, 'Please select a category'),
-  criteria: z.string().min(1, 'Please select criteria'),
+// Mock school assessments for county review
+const mockSchoolAssessments = [
+  { 
+    id: '1', 
+    schoolName: 'Green Valley Primary School', 
+    submittedBy: 'John Doe', 
+    submittedDate: '2024-01-15',
+    status: 'pending',
+    overallScore: 87,
+    facilities: [
+      { name: 'Classrooms', score: 90, comments: 'Good condition, adequate lighting', recommendations: 'Add more whiteboards' },
+      { name: 'Laboratory', score: 75, comments: 'Equipment needs maintenance', recommendations: 'Replace old microscopes' },
+      { name: 'ICT Center', score: 82, comments: 'Modern computers, good internet', recommendations: 'Add more power outlets' }
+    ]
+  },
+  { 
+    id: '2', 
+    schoolName: 'St. Mary Secondary School', 
+    submittedBy: 'Mary Smith', 
+    submittedDate: '2024-01-20',
+    status: 'approved',
+    overallScore: 92,
+    facilities: [
+      { name: 'Classrooms', score: 95, comments: 'Excellent condition', recommendations: 'Maintain current standards' },
+      { name: 'Library', score: 88, comments: 'Well stocked with books', recommendations: 'Add digital resources' }
+    ]
+  }
+];
+
+// Assessment form schema for facility assessment
+const facilityAssessmentSchema = z.object({
+  facilityId: z.string().min(1, 'Please select a facility'),
+  numberOfUnits: z.number().min(1, 'Please specify number of units'),
+  averageCapacity: z.number().min(1, 'Please specify average capacity'),
+  condition: z.enum(['excellent', 'good', 'fair', 'poor'], {
+    required_error: 'Please select condition',
+  }),
   score: z.number().min(0).max(100, 'Score must be between 0 and 100'),
   comments: z.string().min(10, 'Please provide detailed comments (minimum 10 characters)'),
   recommendations: z.string().min(10, 'Please provide recommendations (minimum 10 characters)'),
 });
 
-type AssessmentFormData = z.infer<typeof assessmentSchema>;
+type FacilityAssessmentFormData = z.infer<typeof facilityAssessmentSchema>;
 
 const assessmentCategories = {
   'Infrastructure': [
@@ -74,47 +108,50 @@ const Assessment = () => {
   const { currentUser } = useRole();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
-  const [selectedSchool, setSelectedSchool] = useState<typeof mockSchools[0] | null>(null);
+  const [selectedFacility, setSelectedFacility] = useState<typeof mockFacilities[0] | null>(null);
+  const [selectedAssessment, setSelectedAssessment] = useState<typeof mockSchoolAssessments[0] | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
 
-  const form = useForm<AssessmentFormData>({
-    resolver: zodResolver(assessmentSchema),
+  const facilityForm = useForm<FacilityAssessmentFormData>({
+    resolver: zodResolver(facilityAssessmentSchema),
     defaultValues: {
-      schoolId: '',
-      category: '',
-      criteria: '',
+      facilityId: '',
+      numberOfUnits: 0,
+      averageCapacity: 0,
+      condition: 'good',
       score: 0,
       comments: '',
       recommendations: '',
     },
   });
 
-  const filteredSchools = mockSchools.filter(school => {
-    const matchesSearch = school.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         school.county.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesFilter = filterStatus === 'all' || school.status === filterStatus;
-    
-    // Role-based filtering
-    if (currentUser.role === 'county_admin') {
-      return matchesSearch && matchesFilter && school.county === currentUser.county;
-    }
+  // Filter data based on user role
+  const getFilteredData = () => {
     if (currentUser.role === 'school_admin') {
-      return matchesSearch && matchesFilter && school.name === currentUser.school;
+      return mockFacilities.filter(facility => 
+        facility.name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    } else if (currentUser.role === 'county_admin') {
+      return mockSchoolAssessments.filter(assessment => {
+        const matchesSearch = assessment.schoolName.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesFilter = filterStatus === 'all' || assessment.status === filterStatus;
+        return matchesSearch && matchesFilter;
+      });
     }
-    
-    return matchesSearch && matchesFilter;
-  });
+    return [];
+  };
+
+  const filteredData = getFilteredData();
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'completed':
-        return <Badge className="bg-success text-success-foreground">Completed</Badge>;
-      case 'in-progress':
-        return <Badge className="bg-info text-info-foreground">In Progress</Badge>;
+      case 'approved':
+        return <Badge className="bg-success text-success-foreground">Approved</Badge>;
       case 'pending':
-        return <Badge className="bg-warning text-warning-foreground">Pending</Badge>;
-      case 'needs-review':
-        return <Badge className="bg-destructive text-destructive-foreground">Needs Review</Badge>;
+        return <Badge className="bg-warning text-warning-foreground">Pending Review</Badge>;
+      case 'rejected':
+        return <Badge className="bg-destructive text-destructive-foreground">Needs Revision</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -127,27 +164,155 @@ const Assessment = () => {
     return 'text-destructive';
   };
 
-  const handleAssessmentSubmit = async (data: AssessmentFormData) => {
-    console.log('Assessment Data:', data);
+  const handleFacilityAssessmentSubmit = async (data: FacilityAssessmentFormData) => {
+    console.log('Facility Assessment Data:', data);
     
     toast({
       title: "Assessment Submitted Successfully!",
-      description: `Assessment for ${selectedSchool?.name} has been recorded.`,
+      description: `Assessment for ${selectedFacility?.name} has been recorded.`,
     });
     
-    form.reset();
+    facilityForm.reset();
     setIsModalOpen(false);
-    setSelectedSchool(null);
+    setSelectedFacility(null);
   };
 
-  const openAssessmentModal = (school: typeof mockSchools[0]) => {
-    setSelectedSchool(school);
-    form.setValue('schoolId', school.id);
+  const handleAssessmentReview = async (action: 'approve' | 'reject', comments?: string) => {
+    console.log('Assessment Review:', { action, assessmentId: selectedAssessment?.id, comments });
+    
+    toast({
+      title: action === 'approve' ? "Assessment Approved!" : "Assessment Sent Back for Review",
+      description: `${selectedAssessment?.schoolName} assessment has been ${action}d.`,
+    });
+    
+    setIsReviewModalOpen(false);
+    setSelectedAssessment(null);
+  };
+
+  const openFacilityAssessmentModal = (facility: typeof mockFacilities[0]) => {
+    setSelectedFacility(facility);
+    facilityForm.setValue('facilityId', facility.id);
     setIsModalOpen(true);
   };
 
-  const selectedCategory = form.watch('category');
-  const criteriaOptions = selectedCategory ? assessmentCategories[selectedCategory as keyof typeof assessmentCategories] || [] : [];
+  const openReviewModal = (assessment: typeof mockSchoolAssessments[0]) => {
+    setSelectedAssessment(assessment);
+    setIsReviewModalOpen(true);
+  };
+
+  const selectedCategory = facilityForm.watch('condition');
+
+  // Render different views based on user role
+  const renderSchoolAdminView = () => (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {(filteredData as typeof mockFacilities).map((facility) => (
+        <Card key={facility.id} className="hover:shadow-lg transition-shadow">
+          <CardHeader className="pb-3">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center space-x-3">
+                <facility.icon className="h-8 w-8 text-primary" />
+                <div>
+                  <CardTitle className="text-lg">{facility.name}</CardTitle>
+                  <CardDescription className="mt-1">
+                    {facility.description}
+                  </CardDescription>
+                </div>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <FileText className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">Assessments:</span>
+              </div>
+              <span className="text-sm font-semibold">{facility.assessments}</span>
+            </div>
+            
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Star className="h-4 w-4 text-warning" />
+                <span className="text-sm text-muted-foreground">Avg Score:</span>
+              </div>
+              <span className={`text-sm font-semibold ${getScoreColor(facility.avgScore)}`}>
+                {facility.avgScore}/100
+              </span>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Clock className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">
+                Last: {new Date(facility.lastAssessment).toLocaleDateString()}
+              </span>
+            </div>
+
+            <Button
+              onClick={() => openFacilityAssessmentModal(facility)}
+              className="w-full bg-primary hover:bg-primary-hover text-primary-foreground"
+              size="sm"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              New Assessment
+            </Button>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+
+  const renderCountyAdminView = () => (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {(filteredData as typeof mockSchoolAssessments).map((assessment) => (
+        <Card key={assessment.id} className="hover:shadow-lg transition-shadow">
+          <CardHeader className="pb-3">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <CardTitle className="text-lg leading-tight">{assessment.schoolName}</CardTitle>
+                <CardDescription className="mt-1">
+                  Submitted by: {assessment.submittedBy}
+                </CardDescription>
+              </div>
+              {getStatusBadge(assessment.status)}
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Star className="h-4 w-4 text-warning" />
+                <span className="text-sm text-muted-foreground">Overall Score:</span>
+              </div>
+              <span className={`text-sm font-semibold ${getScoreColor(assessment.overallScore)}`}>
+                {assessment.overallScore}/100
+              </span>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Clock className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">
+                Submitted: {new Date(assessment.submittedDate).toLocaleDateString()}
+              </span>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <FileText className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">
+                {assessment.facilities.length} facilities assessed
+              </span>
+            </div>
+
+            <Button
+              onClick={() => openReviewModal(assessment)}
+              className="w-full bg-primary hover:bg-primary-hover text-primary-foreground"
+              size="sm"
+            >
+              <Eye className="h-4 w-4 mr-2" />
+              Review Assessment
+            </Button>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
 
   return (
     <div className="space-y-6">
@@ -155,11 +320,14 @@ const Assessment = () => {
         <div>
           <h1 className="text-2xl font-bold text-foreground">Quality Assessment</h1>
           <p className="text-muted-foreground">
-            Conduct and manage quality assessments for educational institutions
+            {currentUser.role === 'school_admin' 
+              ? 'Conduct facility assessments for your school'
+              : 'Review and approve school assessments'
+            }
           </p>
         </div>
         <Badge variant="outline" className="text-sm">
-          {filteredSchools.length} school{filteredSchools.length !== 1 ? 's' : ''} available
+          {filteredData.length} {currentUser.role === 'school_admin' ? 'facilities' : 'assessments'} available
         </Badge>
       </div>
 
@@ -170,166 +338,126 @@ const Assessment = () => {
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search schools by name or county..."
+                placeholder={currentUser.role === 'school_admin' 
+                  ? "Search facilities..." 
+                  : "Search school assessments..."
+                }
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
               />
             </div>
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-full md:w-48">
-                <Filter className="mr-2 h-4 w-4" />
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="in-progress">In Progress</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="needs-review">Needs Review</SelectItem>
-              </SelectContent>
-            </Select>
+            {currentUser.role === 'county_admin' && (
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger className="w-full md:w-48">
+                  <Filter className="mr-2 h-4 w-4" />
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="approved">Approved</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="rejected">Needs Revision</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
           </div>
         </CardContent>
       </Card>
 
-      {/* Schools Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredSchools.map((school) => (
-          <Card key={school.id} className="hover:shadow-lg transition-shadow">
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <CardTitle className="text-lg leading-tight">{school.name}</CardTitle>
-                  <CardDescription className="mt-1">
-                    {school.subCounty}, {school.county}
-                  </CardDescription>
-                </div>
-                {getStatusBadge(school.status)}
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <Star className="h-4 w-4 text-warning" />
-                  <span className="text-sm text-muted-foreground">Latest Score:</span>
-                </div>
-                <span className={`text-sm font-semibold ${getScoreColor(school.score)}`}>
-                  {school.score}/100
-                </span>
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <Clock className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">
-                  Last Assessment: {new Date(school.lastAssessment).toLocaleDateString()}
-                </span>
-              </div>
+      {/* Render based on user role */}
+      {currentUser.role === 'school_admin' && renderSchoolAdminView()}
+      {currentUser.role === 'county_admin' && renderCountyAdminView()}
 
-              <div className="flex gap-2 pt-2">
-                <Button
-                  onClick={() => openAssessmentModal(school)}
-                  className="flex-1 bg-primary hover:bg-primary-hover text-primary-foreground"
-                  size="sm"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  New Assessment
-                </Button>
-                
-                {currentUser.role === 'county_admin' && (
-                  <Button variant="outline" size="sm">
-                    <FileText className="h-4 w-4 mr-2" />
-                    Review
-                  </Button>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {filteredSchools.length === 0 && (
+      {filteredData.length === 0 && (
         <Card>
           <CardContent className="text-center py-12">
             <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-foreground mb-2">No Schools Found</h3>
+            <h3 className="text-lg font-semibold text-foreground mb-2">
+              No {currentUser.role === 'school_admin' ? 'Facilities' : 'Assessments'} Found
+            </h3>
             <p className="text-muted-foreground">
-              No schools match your current search criteria. Try adjusting your filters.
+              No {currentUser.role === 'school_admin' ? 'facilities' : 'assessments'} match your current search criteria.
             </p>
           </CardContent>
         </Card>
       )}
 
-      {/* Assessment Modal */}
+      {/* Facility Assessment Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center space-x-2">
               <CheckCircle className="h-5 w-5 text-primary" />
-              <span>New Quality Assessment</span>
+              <span>New Facility Assessment</span>
             </DialogTitle>
             <DialogDescription>
-              {selectedSchool && `Create a new assessment for ${selectedSchool.name}`}
+              {selectedFacility && `Create a new assessment for ${selectedFacility.name}`}
             </DialogDescription>
           </DialogHeader>
 
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleAssessmentSubmit)} className="space-y-4">
-              {/* Category Selection */}
+          <Form {...facilityForm}>
+            <form onSubmit={facilityForm.handleSubmit(handleFacilityAssessmentSubmit)} className="space-y-4">
+              {/* Number of Units */}
               <FormField
-                control={form.control}
-                name="category"
+                control={facilityForm.control}
+                name="numberOfUnits"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Assessment Category</FormLabel>
-                    <Select 
-                      onValueChange={(value) => {
-                        field.onChange(value);
-                        form.setValue('criteria', ''); // Reset criteria when category changes
-                      }} 
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select assessment category" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {Object.keys(assessmentCategories).map((category) => (
-                          <SelectItem key={category} value={category}>
-                            {category}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormLabel>Number of Units</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min="1"
+                        placeholder="e.g., Number of classrooms, labs, etc."
+                        {...field}
+                        onChange={(e) => field.onChange(Number(e.target.value))}
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
-              {/* Criteria Selection */}
+              {/* Average Capacity */}
               <FormField
-                control={form.control}
-                name="criteria"
+                control={facilityForm.control}
+                name="averageCapacity"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Assessment Criteria</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
-                      defaultValue={field.value}
-                      disabled={!selectedCategory}
-                    >
+                    <FormLabel>Average Capacity</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min="1"
+                        placeholder="e.g., Average students per classroom"
+                        {...field}
+                        onChange={(e) => field.onChange(Number(e.target.value))}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Condition */}
+              <FormField
+                control={facilityForm.control}
+                name="condition"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Overall Condition</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select specific criteria" />
+                          <SelectValue placeholder="Select condition" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {criteriaOptions.map((criteria) => (
-                          <SelectItem key={criteria} value={criteria}>
-                            {criteria}
-                          </SelectItem>
-                        ))}
+                        <SelectItem value="excellent">Excellent</SelectItem>
+                        <SelectItem value="good">Good</SelectItem>
+                        <SelectItem value="fair">Fair</SelectItem>
+                        <SelectItem value="poor">Poor</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -339,7 +467,7 @@ const Assessment = () => {
 
               {/* Score Input */}
               <FormField
-                control={form.control}
+                control={facilityForm.control}
                 name="score"
                 render={({ field }) => (
                   <FormItem>
@@ -361,7 +489,7 @@ const Assessment = () => {
 
               {/* Comments */}
               <FormField
-                control={form.control}
+                control={facilityForm.control}
                 name="comments"
                 render={({ field }) => (
                   <FormItem>
@@ -380,7 +508,7 @@ const Assessment = () => {
 
               {/* Recommendations */}
               <FormField
-                control={form.control}
+                control={facilityForm.control}
                 name="recommendations"
                 render={({ field }) => (
                   <FormItem>
@@ -415,6 +543,97 @@ const Assessment = () => {
               </div>
             </form>
           </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Assessment Review Modal */}
+      <Dialog open={isReviewModalOpen} onOpenChange={setIsReviewModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <Eye className="h-5 w-5 text-primary" />
+              <span>Review Assessment</span>
+            </DialogTitle>
+            <DialogDescription>
+              {selectedAssessment && `Assessment for ${selectedAssessment.schoolName}`}
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedAssessment && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">School Name</p>
+                  <p className="font-semibold">{selectedAssessment.schoolName}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Submitted By</p>
+                  <p className="font-semibold">{selectedAssessment.submittedBy}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Submission Date</p>
+                  <p className="font-semibold">{new Date(selectedAssessment.submittedDate).toLocaleDateString()}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Overall Score</p>
+                  <p className={`font-semibold text-lg ${getScoreColor(selectedAssessment.overallScore)}`}>
+                    {selectedAssessment.overallScore}/100
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Facility Assessments</h3>
+                {selectedAssessment.facilities.map((facility, index) => (
+                  <Card key={index}>
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-base">{facility.name}</CardTitle>
+                        <span className={`font-semibold ${getScoreColor(facility.score)}`}>
+                          {facility.score}/100
+                        </span>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Comments:</p>
+                        <p className="text-sm">{facility.comments}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Recommendations:</p>
+                        <p className="text-sm">{facility.recommendations}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              <div className="flex gap-2 pt-4 border-t">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsReviewModalOpen(false)}
+                  className="flex-1"
+                >
+                  Close
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => handleAssessmentReview('reject')}
+                  className="flex-1"
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  Send Back for Review
+                </Button>
+                <Button
+                  onClick={() => handleAssessmentReview('approve')}
+                  className="flex-1 bg-success hover:bg-success/90 text-success-foreground"
+                >
+                  <Check className="h-4 w-4 mr-2" />
+                  Approve Assessment
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
