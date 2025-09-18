@@ -5,12 +5,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { RoleProvider } from "@/contexts/RoleContext";
 import { AppLayout } from "@/components/layout/AppLayout";
-import Overview from "./pages/Overview";
-import Onboard from "./pages/Onboard";
-import Assessment from "./pages/Assessment";
-import Reports from "./pages/Reports";
-import Users from "./pages/Users";
-import RolesPermissions from "./pages/RolesPermissions";
+import Overview from "./pages/dashboard/components/OverviewPage";
+import Onboard from "./pages/onboarding/components/OnboardPage";
+import Assessment from "./pages/assements/components/AssessmentPage";
+import Reports from "./pages/dashboard/components/ReportsPage";
+import Users from "./pages/settings/components/UsersPage";
+import RolesPermissions from "./pages/settings/components/RolesPermissionsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
