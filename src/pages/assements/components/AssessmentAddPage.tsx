@@ -309,7 +309,7 @@ const AssessmentAddPage: React.FC = () => {
               <CardContent className="pt-0">
                 <Button 
                   onClick={() => openAssessmentModal(facility)}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                  className="w-full bg-[#010162] hover:bg-[#010162]/90 text-white"
                   variant="default"
                 >
                   <Plus className="mr-2 h-4 w-4" />
@@ -427,7 +427,7 @@ const AssessmentAddPage: React.FC = () => {
                   </Button>
                   <Button
                     type="submit"
-                    className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
+                    className="flex-1 bg-[#F89B0C] hover:bg-[#F89B0C]/90 text-primary-foreground"
                   >
                     Submit Assessment
                   </Button>

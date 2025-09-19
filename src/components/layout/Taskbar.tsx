@@ -51,7 +51,7 @@ export function Taskbar() {
   };
   
   return (
-    <div className="fixed top-0 left-0 right-0 h-14 bg-red-600 text-white shadow-md z-50 px-4">
+    <div className="fixed top-0 left-0 right-0 h-14 bg-[#FF0000] text-white shadow-md z-50 px-4">
       <div className="flex items-center justify-between h-full w-full">
         {/* Left side - Logo or title */}
         <div className="flex items-center">

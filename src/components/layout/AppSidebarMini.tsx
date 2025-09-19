@@ -73,7 +73,7 @@ export const DrawerHeader = styled('div')(({ theme }) => ({
 }));
 
 // Primary blue color for sidebar
-const primaryBlue = '#02025cff';
+const primaryBlue = '#010162';
 
 // Styled component for the drawer
 const Drawer = styled(MuiDrawer, { shouldForwardProp: (prop) => prop !== 'open' })(
@@ -172,7 +172,7 @@ const LucideIconWrapper = ({ icon: Icon, ...props }: { icon: LucideIcon }) => {
       height: '32px',
       boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)'
     }}>
-      <Icon color="#02025c" size={18} strokeWidth={2} {...props} />
+      <Icon color="#010162 " size={18} strokeWidth={2} {...props} />
     </div>
   );
 };

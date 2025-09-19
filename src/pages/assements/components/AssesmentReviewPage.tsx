@@ -69,122 +69,122 @@ type ReviewUserRole = 'county_admin' | 'admin';
 
 // Sample assessment submissions for review
 const sampleSubmissions: FacilityAssessmentSubmission[] = [
-  {
-    id: 'SUB001',
-    schoolName: 'Mzumbe Primary School',
-    facilityType: 'Classroom',
-    region: 'Morogoro',
-    district: 'Mvomero',
-    submittedBy: 'John Mwalimu',
-    submissionDate: '2025-09-18',
-    assessmentDate: '2025-09-15',
-    urgentItems: 5,
-    attentionItems: 3,
-    goodItems: 2,
-    totalItems: 10,
-    overallCondition: 'critical',
-    schoolAdminRemarks: 'Roof leaking badly, windows broken, desks damaged. Urgent repairs needed before rainy season.',
-    reviewStatus: 'pending-county'
-  },
-  {
-    id: 'SUB002',
-    schoolName: 'Kivukoni Secondary School',
-    facilityType: 'ICT Lab',
-    region: 'Dar es Salaam',
-    district: 'Kinondoni',
-    submittedBy: 'Mary Teknolojia',
-    submissionDate: '2025-09-17',
-    assessmentDate: '2025-09-14',
-    urgentItems: 2,
-    attentionItems: 4,
-    goodItems: 6,
-    totalItems: 12,
-    overallCondition: 'needs-attention',
-    schoolAdminRemarks: 'Some computers not working, need new software licenses, air conditioning unit broken.',
-    reviewStatus: 'pending-national',
-    countyReview: {
-      reviewerId: 'CAD001',
-      reviewerName: 'Dr. Hassan Mwamba',
-      reviewDate: '2025-09-18',
-      status: 'approved',
-      remarks: 'Assessment looks thorough. ICT lab improvements are essential for digital learning. Recommend approval.',
-      priority: 'medium',
-      recommendedAction: 'Approve funding for computer repairs and software licenses'
-    }
-  },
-  {
-    id: 'SUB003',
-    schoolName: 'Dodoma Girls Secondary',
-    facilityType: 'Dormitories',
-    region: 'Dodoma',
-    district: 'Dodoma Urban',
-    submittedBy: 'Sister Agnes Mwalimu',
-    submissionDate: '2025-09-16',
-    assessmentDate: '2025-09-13',
-    urgentItems: 1,
-    attentionItems: 2,
-    goodItems: 9,
-    totalItems: 12,
-    overallCondition: 'good',
-    schoolAdminRemarks: 'Overall condition is good. Need to improve ventilation in two rooms.',
-    reviewStatus: 'approved',
-    countyReview: {
-      reviewerId: 'CAD002',
-      reviewerName: 'Eng. Fatma Said',
-      reviewDate: '2025-09-17',
-      status: 'approved',
-      remarks: 'Minor improvements needed. Good maintenance practices observed.',
-      priority: 'low'
+    {
+        id: 'SUB001',
+        schoolName: 'Nyeri Primary School',
+        facilityType: 'Classroom',
+        region: 'Central',
+        district: 'Nyeri County',
+        submittedBy: 'John Wanjiku',
+        submissionDate: '2025-09-18',
+        assessmentDate: '2025-09-15',
+        urgentItems: 5,
+        attentionItems: 3,
+        goodItems: 2,
+        totalItems: 10,
+        overallCondition: 'critical',
+        schoolAdminRemarks: 'Roof leaking badly, windows broken, desks damaged. Urgent repairs needed before rainy season.',
+        reviewStatus: 'pending-county'
     },
-    nationalReview: {
-      reviewerId: 'NAD001',
-      reviewerName: 'Prof. James Mkapa',
-      reviewDate: '2025-09-18',
-      status: 'approved',
-      remarks: 'Approved for minor ventilation improvements. Well-maintained facility.',
-      priority: 'low',
-      recommendedAction: 'Allocate funds for ventilation system upgrade'
-    }
-  },
-  {
-    id: 'SUB004',
-    schoolName: 'Arusha Technical Institute',
-    facilityType: 'Laboratories',
-    region: 'Arusha',
-    district: 'Arusha City',
-    submittedBy: 'Dr. Paul Msomi',
-    submissionDate: '2025-09-19',
-    assessmentDate: '2025-09-16',
-    urgentItems: 0,
-    attentionItems: 1,
-    goodItems: 11,
-    totalItems: 12,
-    overallCondition: 'excellent',
-    schoolAdminRemarks: 'Laboratory equipment in excellent condition. Only minor calibration needed.',
-    reviewStatus: 'disbursed',
-    countyReview: {
-      reviewerId: 'CAD003',
-      reviewerName: 'Dr. Mariam Juma',
-      reviewDate: '2025-09-18',
-      status: 'approved',
-      remarks: 'Exemplary maintenance. Minimal funding required.',
-      priority: 'low'
+    {
+        id: 'SUB002',
+        schoolName: 'Mombasa Secondary School',
+        facilityType: 'ICT Lab',
+        region: 'Coast',
+        district: 'Mombasa County',
+        submittedBy: 'Mary Achieng',
+        submissionDate: '2025-09-17',
+        assessmentDate: '2025-09-14',
+        urgentItems: 2,
+        attentionItems: 4,
+        goodItems: 6,
+        totalItems: 12,
+        overallCondition: 'needs-attention',
+        schoolAdminRemarks: 'Some computers not working, need new software licenses, air conditioning unit broken.',
+        reviewStatus: 'pending-national',
+        countyReview: {
+            reviewerId: 'CAD001',
+            reviewerName: 'Dr. Hassan Juma',
+            reviewDate: '2025-09-18',
+            status: 'approved',
+            remarks: 'Assessment looks thorough. ICT lab improvements are essential for digital learning. Recommend approval.',
+            priority: 'medium',
+            recommendedAction: 'Approve funding for computer repairs and software licenses'
+        }
     },
-    nationalReview: {
-      reviewerId: 'NAD001',
-      reviewerName: 'Prof. James Mkapa',
-      reviewDate: '2025-09-19',
-      status: 'approved',
-      remarks: 'Approved for equipment calibration. This is a model facility.',
-      recommendedAction: 'Allocate minimal funds for calibration services'
+    {
+        id: 'SUB003',
+        schoolName: 'Nakuru Girls Secondary',
+        facilityType: 'Dormitories',
+        region: 'Rift Valley',
+        district: 'Nakuru County',
+        submittedBy: 'Sister Agnes Wafula',
+        submissionDate: '2025-09-16',
+        assessmentDate: '2025-09-13',
+        urgentItems: 1,
+        attentionItems: 2,
+        goodItems: 9,
+        totalItems: 12,
+        overallCondition: 'good',
+        schoolAdminRemarks: 'Overall condition is good. Need to improve ventilation in two rooms.',
+        reviewStatus: 'approved',
+        countyReview: {
+            reviewerId: 'CAD002',
+            reviewerName: 'Eng. Fatuma Abdi',
+            reviewDate: '2025-09-17',
+            status: 'approved',
+            remarks: 'Minor improvements needed. Good maintenance practices observed.',
+            priority: 'low'
+        },
+        nationalReview: {
+            reviewerId: 'NAD001',
+            reviewerName: 'Prof. James Ochieng',
+            reviewDate: '2025-09-18',
+            status: 'approved',
+            remarks: 'Approved for minor ventilation improvements. Well-maintained facility.',
+            priority: 'low',
+            recommendedAction: 'Allocate funds for ventilation system upgrade'
+        }
     },
-    disbursementDetails: {
-      disbursementDate: '2025-09-19',
-      amount: 150000,
-      disbursedBy: 'Ministry of Education',
-      transactionId: 'TXN-2025-001'
+    {
+        id: 'SUB004',
+        schoolName: 'Kisumu Technical Institute',
+        facilityType: 'Laboratories',
+        region: 'Nyanza',
+        district: 'Kisumu County',
+        submittedBy: 'Dr. Paul Otieno',
+        submissionDate: '2025-09-19',
+        assessmentDate: '2025-09-16',
+        urgentItems: 0,
+        attentionItems: 1,
+        goodItems: 11,
+        totalItems: 12,
+        overallCondition: 'excellent',
+        schoolAdminRemarks: 'Laboratory equipment in excellent condition. Only minor calibration needed.',
+        reviewStatus: 'disbursed',
+        countyReview: {
+            reviewerId: 'CAD003',
+            reviewerName: 'Dr. Mariam Kamau',
+            reviewDate: '2025-09-18',
+            status: 'approved',
+            remarks: 'Exemplary maintenance. Minimal funding required.',
+            priority: 'low'
+        },
+        nationalReview: {
+            reviewerId: 'NAD001',
+            reviewerName: 'Prof. James Ochieng',
+            reviewDate: '2025-09-19',
+            status: 'approved',
+            remarks: 'Approved for equipment calibration. This is a model facility.',
+            recommendedAction: 'Allocate minimal funds for calibration services'
+        },
+        disbursementDetails: {
+            disbursementDate: '2025-09-19',
+            amount: 150000,
+            disbursedBy: 'Ministry of Education',
+            transactionId: 'TXN-2025-001'
+        }
     }
-  }
 ];
 
 const AssessmentReviewPage: React.FC = () => {
@@ -353,9 +353,7 @@ const AssessmentReviewPage: React.FC = () => {
               {currentUserRole === 'county_admin' ? 'County Administrator' : 'National Administrator'} Review Panel
             </p>
           </div>
-          <Badge variant="outline" className="px-3 py-1">
-            {filteredSubmissions.length} Submissions
-          </Badge>
+          
         </div>
 
         {/* Filters */}
@@ -500,7 +498,7 @@ const AssessmentReviewPage: React.FC = () => {
                 )}
 
                 {/* Disbursement Info */}
-                {submission.disbursementDetails && (
+                {/* {submission.disbursementDetails && (
                   <div className="bg-purple-50 p-3 rounded-md">
                     <div className="text-sm font-medium text-purple-700 mb-1">Disbursement:</div>
                     <div className="text-sm text-purple-600">
@@ -510,7 +508,7 @@ const AssessmentReviewPage: React.FC = () => {
                       Date: {new Date(submission.disbursementDetails.disbursementDate).toLocaleDateString()}
                     </div>
                   </div>
-                )}
+                )} */}
               </CardContent>
             </Card>
           ))}
