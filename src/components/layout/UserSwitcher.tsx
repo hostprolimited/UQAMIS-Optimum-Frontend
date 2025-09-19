@@ -2,6 +2,7 @@ import React from 'react';
 import { Check, ChevronsUpDown, UserIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Command,
   CommandEmpty,
@@ -57,16 +58,21 @@ export function UserSwitcher() {
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
-          variant="outline"
+          variant="ghost"
           role="combobox"
           aria-expanded={open}
-          className="w-64 justify-between"
+          className="w-48 justify-between text-white hover:bg-red-700 focus:bg-red-700"
         >
           <div className="flex items-center space-x-2">
-            <UserIcon className="h-4 w-4" />
+            <Avatar className="h-8 w-8">
+              <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${currentUser.name}`} />
+              <AvatarFallback className="bg-red-800">
+                {currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
             <div className="flex flex-col text-left">
-              <span className="text-sm font-medium">{currentUser.name}</span>
-              <span className="text-xs text-muted-foreground">
+              <span className="text-sm font-semibold">{currentUser.name}</span>
+              <span className="text-xs opacity-80">
                 {formatRole(currentUser.role)}
               </span>
             </div>

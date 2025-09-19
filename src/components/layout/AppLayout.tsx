@@ -1,9 +1,13 @@
 import React from 'react';
-import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
-import { AppSidebar } from './AppSidebar';
-import { UserSwitcher } from './UserSwitcher';
+import { AppSidebar as AppSidebar } from './AppSidebarMini';
+import { Taskbar } from './Taskbar';
 import { useRole } from '@/contexts/RoleContext';
 import { Badge } from '@/components/ui/badge';
+import Box from '@mui/material/Box';
+import IconButton from '@mui/material/IconButton';
+import MenuIcon from '@mui/icons-material/Menu';
+import Typography from '@mui/material/Typography';
+import { useTheme } from '@mui/material/styles';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -11,6 +15,7 @@ interface AppLayoutProps {
 
 export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const { currentUser } = useRole();
+  const theme = useTheme();
   
   const getRoleBadgeVariant = (role: string) => {
     switch (role) {
@@ -31,53 +36,52 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     ).join(' ');
   };
 
-  return (
-    <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-background">
-        <AppSidebar />
-        
-        <div className="flex-1 flex flex-col">
-          {/* Header */}
-          <header className="h-16 border-b border-border bg-card flex items-center justify-between px-6">
-            <div className="flex items-center space-x-4">
-              <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
-              <div className="h-6 w-px bg-border" />
-              <div>
-                <h1 className="text-lg font-semibold text-foreground">
-                  Quality Assurance System
-                </h1>
-                <p className="text-sm text-muted-foreground">
-                  Educational Institution Management
-                </p>
-              </div>
-            </div>
-            
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <Badge className={getRoleBadgeVariant(currentUser.role)}>
-                  {formatRole(currentUser.role)}
-                </Badge>
-                {currentUser.county && (
-                  <Badge variant="outline">
-                    {currentUser.county}
-                  </Badge>
-                )}
-                {currentUser.school && (
-                  <Badge variant="outline" className="max-w-32 truncate">
-                    {currentUser.school}
-                  </Badge>
-                )}
-              </div>
-              <UserSwitcher />
-            </div>
-          </header>
+  // Function to toggle the mobile drawer - will be passed to the AppSidebar
+  const [mobileOpen, setMobileOpen] = React.useState(false);
+  
+  const handleDrawerToggle = () => {
+    setMobileOpen(!mobileOpen);
+  };
 
-          {/* Main Content */}
-          <main className="flex-1 p-6 overflow-auto">
-            {children}
-          </main>
-        </div>
-      </div>
-    </SidebarProvider>
+  return (
+    <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+      {/* New Taskbar component added at the top */}
+      <Taskbar />
+      
+      <Box sx={{ display: 'flex', mt: '0' }}> {/* Remove margin since the taskbar is fixed */}
+        <AppSidebar mobileOpen={mobileOpen} handleDrawerToggle={handleDrawerToggle} />
+        
+        <Box component="main" sx={{ 
+          flexGrow: 1, 
+          p: { xs: 1, sm: 2, md: 3 }, // Responsive padding
+          backgroundColor: '#f5f5f5', // Gray background color
+          minHeight: 'calc(100vh - 56px)', // Adjust for taskbar height
+          width: '100%', // Ensure it takes full width
+          overflowX: 'hidden', // Prevent horizontal scrolling
+          mt: '56px' // Add top margin to account for the fixed taskbar
+        }}>
+        
+        {/* Main Content with white background and rounded corners */}
+        <Box 
+          component="main" 
+          sx={{
+            padding: { xs: '0.75rem', sm: '1rem', md: '1.5rem' }, // Responsive padding
+            overflow: 'auto',
+            backgroundColor: 'white',
+            borderRadius: '0.5rem',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+            height: { 
+              xs: 'calc(100vh - 8rem)',  // Smaller spacing on mobile
+              sm: 'calc(100vh - 9rem)', 
+              md: 'calc(100vh - 11rem)' 
+            },
+            maxWidth: '100%'  // Ensure it doesn't overflow
+          }}
+        >
+          {children}
+          </Box>
+        </Box>
+      </Box>
+    </Box>
   );
 };
