@@ -7,7 +7,8 @@ import { RoleProvider } from "@/contexts/RoleContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import Overview from "./pages/dashboard/components/OverviewPage";
 import Onboard from "./pages/onboarding/components/OnboardPage";
-import Assessment from "./pages/assements/components/AssessmentPage";
+import RoleBasedAssessmentPage from "./pages/assements/components/RoleBasedAssessmentPage";
+import AssessmentAdd from "./pages/assements/components/AssessmentAddPage";
 import Reports from "./pages/dashboard/components/ReportsPage";
 import Users from "./pages/settings/components/UsersPage";
 import RolesPermissions from "./pages/settings/components/RolesPermissionsPage";
@@ -26,7 +27,10 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Overview />} />
               <Route path="/onboard" element={<Onboard />} />
-              <Route path="/assessment" element={<Assessment />} />
+              <Route path="/assessment" element={<RoleBasedAssessmentPage />} />
+              <Route path="/assessments" element={<RoleBasedAssessmentPage />} />
+              <Route path="/assessments/add" element={<AssessmentAdd />} />
+              <Route path="/assessments/edit/:id" element={<AssessmentAdd />} />
               <Route path="/reports" element={<Reports />} />
               <Route path="/users" element={<Users />} />
               <Route path="/roles" element={<RolesPermissions />} />
