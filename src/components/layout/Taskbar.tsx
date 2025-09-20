@@ -45,9 +45,8 @@ export function Taskbar() {
   
   // Handle sign out action
   const handleSignOut = () => {
-    // In a real app, you'd handle authentication logout here
     console.log('Signing out...');
-    navigate('/auth/login');
+    navigate('/');
   };
   
   return (
