@@ -1,17 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { ArrowLeft, Plus } from 'lucide-react';
+import { ArrowLeft, Plus, Upload, X, FileText } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Form,
   FormControl,
   FormField,
   FormItem,
+  FormLabel,
   FormMessage,
 } from '@/components/ui/form';
 import {
@@ -28,7 +31,9 @@ const facilityAssessmentSchema = z.object({
     condition: z.enum(['urgent', 'attention', 'good'], {
       required_error: 'Please select a condition'
     })
-  }))
+  })),
+  reviewRemarks: z.string().min(1, 'Review remarks are required'),
+  files: z.array(z.instanceof(File)).optional()
 });
 
 type FacilityAssessmentData = z.infer<typeof facilityAssessmentSchema>;
@@ -216,19 +221,53 @@ const AssessmentAddPage: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedFacility, setSelectedFacility] = useState<typeof facilitiesConfig[0] | null>(null);
   const [assessments, setAssessments] = useState<any[]>([]);
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const facilityForm = useForm<FacilityAssessmentData>({
     resolver: zodResolver(facilityAssessmentSchema),
     defaultValues: {
-      facility: []
+      facility: [],
+      reviewRemarks: '',
+      files: []
     }
   });
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    const newFiles = [...uploadedFiles, ...files];
+    setUploadedFiles(newFiles);
+    facilityForm.setValue('files', newFiles);
+  };
+
+  const removeFile = (index: number) => {
+    const newFiles = uploadedFiles.filter((_, i) => i !== index);
+    setUploadedFiles(newFiles);
+    facilityForm.setValue('files', newFiles);
+  };
+
+  const handleDragOver = (event: React.DragEvent) => {
+    event.preventDefault();
+  };
+
+  const handleDrop = (event: React.DragEvent) => {
+    event.preventDefault();
+    const files = Array.from(event.dataTransfer.files);
+    const newFiles = [...uploadedFiles, ...files];
+    setUploadedFiles(newFiles);
+    facilityForm.setValue('files', newFiles);
+  };
 
   const openAssessmentModal = (facility: typeof facilitiesConfig[0]) => {
     setSelectedFacility(facility);
     // Initialize form with default values for each part
     const defaultFacility = facility.parts.map(() => ({ condition: undefined }));
-    facilityForm.reset({ facility: defaultFacility });
+    facilityForm.reset({ 
+      facility: defaultFacility,
+      reviewRemarks: '',
+      files: []
+    });
+    setUploadedFiles([]);
     setIsModalOpen(true);
   };
 
@@ -245,6 +284,13 @@ const AssessmentAddPage: React.FC = () => {
           name: part,
           condition: data.facility[index]?.condition || 'good'
         })),
+        reviewRemarks: data.reviewRemarks,
+        files: uploadedFiles.map(file => ({
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          lastModified: file.lastModified
+        })),
         assessmentDate: new Date().toISOString(),
         assessor: 'Current User' // Replace with actual user
       };
@@ -258,6 +304,7 @@ const AssessmentAddPage: React.FC = () => {
       });
 
       setIsModalOpen(false);
+      setUploadedFiles([]);
       facilityForm.reset();
     } catch (error) {
       toast({
@@ -414,6 +461,93 @@ const AssessmentAddPage: React.FC = () => {
                       ))}
                     </tbody>
                   </table>
+                </div>
+
+                {/* File Upload Section */}
+                <div className="space-y-4">
+                  <FormField
+                    control={facilityForm.control}
+                    name="files"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-base font-semibold">Upload Supporting Documents</FormLabel>
+                        <FormControl>
+                          <div className="space-y-4">
+                            {/* File Upload Area */}
+                            <div
+                              onDragOver={handleDragOver}
+                              onDrop={handleDrop}
+                              className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors cursor-pointer"
+                              onClick={() => fileInputRef.current?.click()}
+                            >
+                              <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                              <p className="text-lg font-medium text-gray-700">Drop files here or click to upload</p>
+                              <p className="text-sm text-gray-500 mt-1">Support for multiple files (PDF, DOC, JPG, PNG)</p>
+                              <input
+                                ref={fileInputRef}
+                                type="file"
+                                multiple
+                                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif"
+                                onChange={handleFileUpload}
+                                className="hidden"
+                              />
+                            </div>
+
+                            {/* Uploaded Files List */}
+                            {uploadedFiles.length > 0 && (
+                              <div className="space-y-2">
+                                <h4 className="font-medium text-gray-700">Uploaded Files ({uploadedFiles.length})</h4>
+                                <div className="space-y-2 max-h-32 overflow-y-auto">
+                                  {uploadedFiles.map((file, index) => (
+                                    <div key={index} className="flex items-center justify-between bg-gray-50 p-3 rounded-md">
+                                      <div className="flex items-center space-x-3">
+                                        <FileText className="h-5 w-5 text-gray-500" />
+                                        <div>
+                                          <p className="text-sm font-medium text-gray-700">{file.name}</p>
+                                          <p className="text-xs text-gray-500">
+                                            {(file.size / 1024 / 1024).toFixed(2)} MB
+                                          </p>
+                                        </div>
+                                      </div>
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => removeFile(index)}
+                                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                      >
+                                        <X className="h-4 w-4" />
+                                      </Button>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Review Remarks Section */}
+                  <FormField
+                    control={facilityForm.control}
+                    name="reviewRemarks"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-base font-semibold">Review Remarks</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            {...field}
+                            placeholder="Enter detailed review remarks, observations, and recommendations for this facility assessment..."
+                            className="min-h-[120px] resize-none"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
 
                 <div className="flex gap-2 pt-4">

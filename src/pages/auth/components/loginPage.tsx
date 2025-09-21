@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -5,17 +6,50 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { EyeIcon, EyeOffIcon, GraduationCapIcon, ShieldCheckIcon, BookOpenIcon, GlobeIcon } from "lucide-react";
+import { login } from "@/pages/auth/core/_requests";
+import { useRole } from "@/contexts/RoleContext";
 
 const LoginPage = () => {
   const navigate = useNavigate();
+  const { setCurrentUser } = useRole();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Login attempt:", { email, password });
-    navigate("/dashboard");
+    setError(null);
+    setIsSubmitting(true);
+    try {
+      const res = await login(email, password);
+      const validRoles = ['ministry_admin', 'agent', 'school_admin'];
+      if (!res || !res.user || !res.token || !res.user.role || !validRoles.includes(res.user.role)) {
+        setError("Invalid credentials");
+        setIsSubmitting(false);
+        return;
+      }
+      // Save token/user as needed
+      localStorage.setItem("auth_token", res.token);
+      setCurrentUser({ ...res.user, id: String(res.user.id) });
+      navigate('/dashboard');
+    } catch (err: any) {
+      let msg = "Login failed. Please try again.";
+      if (err?.response?.status === 401) {
+        msg = "Invalid credentials";
+      } else if (err?.response?.data?.message) {
+        msg = err.response.data.message;
+      } else if (err?.message) {
+        msg = err.message;
+      }
+      setError(msg);
+      // Do not set user or navigate on error
+      console.error("Login error:", err);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -139,6 +173,9 @@ const LoginPage = () => {
           <CardContent className="p-6 lg:p-10">
             {/* Form */}
             <form className="w-full" onSubmit={handleSubmit}>
+              {error && (
+                <div className="mb-4 text-red-600 text-center text-sm font-medium">{error}</div>
+              )}
               {/* Heading */}
               <div className="text-center mb-11">
                 <h1 className="text-gray-900 font-bold text-3xl mb-3">Sign In</h1>
@@ -202,7 +239,7 @@ const LoginPage = () => {
               <div className="mb-10">
                 <Button
                   type="submit"
-                  className="w-full h-12 font-medium text-white transition-all duration-200 hover:shadow-lg"
+                  className="w-full h-12 font-medium text-white transition-all duration-200 hover:shadow-lg flex items-center justify-center"
                   style={{ backgroundColor: "#010162" }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.backgroundColor = "#000140";
@@ -210,8 +247,19 @@ const LoginPage = () => {
                   onMouseLeave={(e) => {
                     e.currentTarget.style.backgroundColor = "#010162";
                   }}
+                  disabled={isSubmitting}
                 >
-                  <span>Sign In</span>
+                  {isSubmitting ? (
+                    <>
+                      <svg className="animate-spin h-5 w-5 mr-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                      </svg>
+                      Logging in...
+                    </>
+                  ) : (
+                    <span>Sign In</span>
+                  )}
                 </Button>
               </div>
             </form>
@@ -219,7 +267,7 @@ const LoginPage = () => {
             {/* Footer */}
             <div className="flex justify-between mt-10 pt-6 border-t border-gray-200">
               {/* Languages */}
-              <div className="flex items-center">
+              {/* <div className="flex items-center">
                 <Button variant="ghost" className="flex items-center text-gray-700 text-sm p-0">
                   <img 
                     src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHZpZXdCb3g9IjAgMCAyMCAyMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjIwIiBoZWlnaHQ9IjIwIiBmaWxsPSIjMDA1MkZGIi8+CjxyZWN0IHk9IjEzLjMzMzMiIHdpZHRoPSIyMCIgaGVpZ2h0PSI2LjY2NjY3IiBmaWxsPSIjRkYwMDAwIi8+CjxyZWN0IHk9IjYuNjY2NjciIHdpZHRoPSIyMCIgaGVpZ2h0PSI2LjY2NjY3IiBmaWxsPSIjRkZGRkZGIi8+Cjwvc3ZnPgo="
@@ -231,7 +279,7 @@ const LoginPage = () => {
                     <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
                   </svg>
                 </Button>
-              </div>
+              </div> */}
 
               {/* Links */}
               <div className="flex space-x-5 text-sm font-semibold">

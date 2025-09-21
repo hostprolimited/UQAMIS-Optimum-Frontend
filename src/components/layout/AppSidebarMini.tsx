@@ -114,7 +114,7 @@ const Drawer = styled(MuiDrawer, { shouldForwardProp: (prop) => prop !== 'open' 
 const navigationItems = [
   { 
     title: 'Overview', 
-    url: '/', 
+    url: '/dashboard', 
     icon: BarChart3, 
     page: 'overview' 
   },

@@ -3,6 +3,57 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useRole } from '@/contexts/RoleContext';
+
+// Kenya county code to name mapping
+const countyCodeToName: Record<string, string> = {
+  '1': 'Mombasa',
+  '2': 'Kwale',
+  '3': 'Kilifi',
+  '4': 'Tana River',
+  '5': 'Lamu',
+  '6': 'Taita Taveta',
+  '7': 'Garissa',
+  '8': 'Wajir',
+  '9': 'Mandera',
+  '10': 'Marsabit',
+  '11': 'Isiolo',
+  '12': 'Meru',
+  '13': 'Tharaka-Nithi',
+  '14': 'Embu',
+  '15': 'Kitui',
+  '16': 'Machakos',
+  '17': 'Makueni',
+  '18': 'Nyandarua',
+  '19': 'Nyeri',
+  '20': 'Kirinyaga',
+  '21': 'Murang’a',
+  '22': 'Kiambu',
+  '23': 'Turkana',
+  '24': 'West Pokot',
+  '25': 'Samburu',
+  '26': 'Trans Nzoia',
+  '27': 'Uasin Gishu',
+  '28': 'Elgeyo Marakwet',
+  '29': 'Nandi',
+  '30': 'Baringo',
+  '31': 'Laikipia',
+  '32': 'Nakuru',
+  '33': 'Narok',
+  '34': 'Kajiado',
+  '35': 'Kericho',
+  '36': 'Bomet',
+  '37': 'Kakamega',
+  '38': 'Vihiga',
+  '39': 'Bungoma',
+  '40': 'Busia',
+  '41': 'Siaya',
+  '42': 'Kisumu',
+  '43': 'Homa Bay',
+  '44': 'Migori',
+  '45': 'Kisii',
+  '46': 'Nyamira',
+  '47': 'Nairobi',
+};
 import { School, Users, FileText, TrendingUp, CheckCircle, AlertTriangle, XCircle, BarChart3 } from 'lucide-react';
 
 // Mock data for different levels
@@ -34,12 +85,16 @@ const Overview = () => {
 
   const getOverviewTitle = () => {
     switch (currentUser.role) {
-      case 'admin':
+      case 'ministry_admin':
         return 'National Overview';
-      case 'county_admin':
-        return `${currentUser.county} County Overview`;
+      case 'agent': {
+        // Use county_code to get county name
+        const code = (currentUser as any).county_code || currentUser.county_code || currentUser.county_name;
+        const countyName = countyCodeToName[String(code)] || 'Unknown';
+        return `${countyName} County Overview`;
+      }
       case 'school_admin':
-        return `${currentUser.school} Overview`;
+        return `${currentUser.name} Overview`;
       default:
         return 'Overview';
     }
@@ -47,14 +102,14 @@ const Overview = () => {
 
   const getKPIData = () => {
     switch (currentUser.role) {
-      case 'admin':
+      case 'ministry_admin':
         return [
           { title: 'Total Counties', value: '47', icon: Users, trend: '+2', color: 'text-primary' },
           { title: 'Total Schools', value: '1,248', icon: School, trend: '+45', color: 'text-success' },
           { title: 'Assessments', value: '971', icon: FileText, trend: '+123', color: 'text-info' },
           { title: 'Avg Score', value: '86.5', icon: TrendingUp, trend: '+2.3', color: 'text-warning' },
         ];
-      case 'county_admin':
+      case 'agent':
         return [
           { title: 'Sub-Counties', value: '8', icon: Users, trend: '0', color: 'text-primary' },
           { title: 'Schools', value: '245', icon: School, trend: '+3', color: 'text-success' },
@@ -84,11 +139,11 @@ const Overview = () => {
             Monitor and track quality assurance metrics across your jurisdiction
           </p>
         </div>
-        <div className="flex items-center space-x-2">
+        {/* <div className="flex items-center space-x-2">
           <Badge variant="outline" className="text-sm">
             Last updated: 2 minutes ago
           </Badge>
-        </div>
+        </div> */}
       </div>
 
       {/* KPI Cards */}
@@ -220,13 +275,13 @@ const Overview = () => {
       </div>
 
       {/* County/Regional Performance (for Admin and County Admin) */}
-      {(currentUser.role === 'admin' || currentUser.role === 'county_admin') && (
+      {(currentUser.role === 'ministry_admin' || currentUser.role === 'agent') && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <BarChart3 className="h-5 w-5 text-primary" />
               <span>
-                {currentUser.role === 'admin' ? 'County Performance' : 'Sub-County Performance'}
+                {currentUser.role === 'ministry_admin' ? 'County Performance' : 'Sub-County Performance'}
               </span>
             </CardTitle>
             <CardDescription>

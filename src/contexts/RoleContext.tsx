@@ -1,29 +1,24 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 
-export type UserRole = 'admin' | 'county_admin' | 'school_admin';
+export type UserRole = 'school_admin' | 'agent' | 'ministry_admin';
 
 export interface User {
   id: string;
   name: string;
   email: string;
   role: UserRole;
-  county?: string;
+  county_code?: string;
+  county_name?: string;
   school?: string;
 }
 
 interface RoleContextType {
-  currentUser: User;
-  setCurrentUser: (user: User) => void;
+  currentUser: User | null;
+  setCurrentUser: (user: User | null) => void;
   hasAccess: (page: string) => boolean;
 }
 
 const RoleContext = createContext<RoleContextType | undefined>(undefined);
-
-const mockUsers: User[] = [
-  { id: '1', name: 'John Admin', email: 'admin@qa.gov', role: 'admin' },
-  { id: '2', name: 'Mary County', email: 'mary@county.gov', role: 'county_admin', county: 'Nairobi' },
-  { id: '3', name: 'Peter School', email: 'peter@school.gov', role: 'school_admin', county: 'Nairobi', school: 'Green Valley Primary' }
-];
 
 export const useRole = () => {
   const context = useContext(RoleContext);
@@ -38,24 +33,37 @@ interface RoleProviderProps {
 }
 
 export const RoleProvider: React.FC<RoleProviderProps> = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState<User>(mockUsers[0]); // Default to admin
+  const [currentUser, setCurrentUserState] = useState<User | null>(() => {
+    const stored = localStorage.getItem('user');
+    return stored ? JSON.parse(stored) : null;
+  });
+
+  const setCurrentUser = (user: User | null) => {
+    setCurrentUserState(user);
+    if (user) {
+      localStorage.setItem('user', JSON.stringify(user));
+    } else {
+      localStorage.removeItem('user');
+    }
+  };
 
   const hasAccess = (page: string): boolean => {
+    if (!currentUser) return false;
     switch (currentUser.role) {
-      case 'admin':
-        return true; // Admin can access everything
-      case 'county_admin':
+      case 'ministry_admin':
+        return true;
+      case 'agent':
         return [
-          'overview', 
-          'onboard', 
-          'assessment', 
-          'reports', 
-          'user_management'
+          'overview',
+          'reports',
+          'assessment',
+          'onboard',
+          // 'user_management'
         ].includes(page);
       case 'school_admin':
         return [
-          'overview', 
-          'assessment', 
+          'overview',
+          'assessment',
           'reports'
         ].includes(page);
       default:

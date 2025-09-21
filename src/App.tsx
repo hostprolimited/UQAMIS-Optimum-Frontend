@@ -2,7 +2,16 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { useRole } from "@/contexts/RoleContext";
+import Unauthorized from "./pages/Unauthorized";
+// ProtectedRoute component using RoleContext
+const ProtectedRoute = ({ allowedRoles, children }: { allowedRoles: string[]; children: React.ReactNode }) => {
+  const { currentUser } = useRole();
+  if (!currentUser) return <Navigate to="/unauthorized" replace />;
+  if (!allowedRoles.includes(currentUser.role)) return <Navigate to="/unauthorized" replace />;
+  return <>{children}</>;
+};
 import { RoleProvider } from "@/contexts/RoleContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import Overview from "./pages/dashboard/components/OverviewPage";
@@ -27,20 +36,57 @@ const App = () => (
           <Routes>
             {/* Public Routes */}
             <Route path="/" element={<LoginPage />} />
-            
+            <Route path="/unauthorized" element={<Unauthorized />} />
             {/* Protected Routes with AppLayout */}
             <Route path="/*" element={
               <AppLayout>
                 <Routes>
-                  <Route path="/dashboard" element={<Overview />} />
-                  <Route path="/onboard" element={<Onboard />} />
-                  <Route path="/assessment" element={<RoleBasedAssessmentPage />} />
-                  <Route path="/assessments" element={<RoleBasedAssessmentPage />} />
-                  <Route path="/assessments/add" element={<AssessmentAdd />} />
-                  <Route path="/assessments/edit/:id" element={<AssessmentAdd />} />
-                  <Route path="/reports" element={<Reports />} />
-                  <Route path="/users" element={<Users />} />
-                  <Route path="/roles" element={<RolesPermissions />} />
+                  {/* School Admin: dashboard, reports, assessments (list/add) */}
+                  <Route path="/dashboard" element={
+                    <ProtectedRoute allowedRoles={["school_admin", "agent", "ministry_admin"]}>
+                      <Overview />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/onboard" element={
+                    <ProtectedRoute allowedRoles={["ministry_admin", "agent"]}>
+                      <Onboard />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/assessment" element={
+                    <ProtectedRoute allowedRoles={["school_admin", "agent", "ministry_admin"]}>
+                      <RoleBasedAssessmentPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/assessments" element={
+                    <ProtectedRoute allowedRoles={["school_admin", "agent", "ministry_admin"]}>
+                      <RoleBasedAssessmentPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/assessments/add" element={
+                    <ProtectedRoute allowedRoles={["school_admin", "ministry_admin"]}>
+                      <AssessmentAdd />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/assessments/edit/:id" element={
+                    <ProtectedRoute allowedRoles={["school_admin", "ministry_admin"]}>
+                      <AssessmentAdd />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/reports" element={
+                    <ProtectedRoute allowedRoles={["school_admin", "agent", "ministry_admin"]}>
+                      <Reports />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/users" element={
+                    <ProtectedRoute allowedRoles={["agent", "ministry_admin"]}>
+                      <Users />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/roles" element={
+                    <ProtectedRoute allowedRoles={["ministry_admin"]}>
+                      <RolesPermissions />
+                    </ProtectedRoute>
+                  } />
                   <Route path="/system-safety" element={<div className="p-6"><h1 className="text-2xl font-bold">System Safety</h1><p className="text-muted-foreground">System safety features coming soon...</p></div>} />
                   <Route path="/backup" element={<div className="p-6"><h1 className="text-2xl font-bold">Backup & Recovery</h1><p className="text-muted-foreground">Backup management coming soon...</p></div>} />
                   <Route path="*" element={<NotFound />} />

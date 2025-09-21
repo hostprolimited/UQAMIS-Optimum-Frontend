@@ -6,14 +6,14 @@ import AssessmentReviewPage from './AssesmentReviewPage';
 const RoleBasedAssessmentPage: React.FC = () => {
   const { currentUser } = useRole();
 
-  // School admins see the data table (AssessmentListPage)
+  // Institution admins see the data table (AssessmentListPage)
   // County and National admins see the review page (AssessmentReviewPage)
   if (currentUser.role === 'school_admin') {
     return <AssessmentListPage />;
   } 
-  
-  // County admins and National admins (admin role) see the review page
-  if (currentUser.role === 'county_admin' || currentUser.role === 'admin') {
+
+  // Agent admins and Institution admins (admin role) see the review page
+  if (currentUser.role === 'agent' || currentUser.role === 'ministry_admin') {
     return <AssessmentReviewPage />;
   }
 

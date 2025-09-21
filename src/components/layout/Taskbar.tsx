@@ -21,10 +21,10 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { UserSwitcher } from './UserSwitcher';
+// import { UserSwitcher } from './UserSwitcher';
 
 export function Taskbar() {
-  const { currentUser } = useRole();
+  const { currentUser, setCurrentUser } = useRole();
   const navigate = useNavigate();
   
   // Format user's role (e.g., county_admin -> County Admin)
@@ -46,6 +46,8 @@ export function Taskbar() {
   // Handle sign out action
   const handleSignOut = () => {
     console.log('Signing out...');
+    setCurrentUser(null);
+    localStorage.removeItem('auth_token');
     navigate('/');
   };
   
@@ -59,9 +61,9 @@ export function Taskbar() {
         
         {/* Right side - User switcher menu */}
         <div className="flex items-center space-x-4">
-          <div className="user-switcher-wrapper">
+          {/* <div className="user-switcher-wrapper">
             <UserSwitcher />
-          </div>
+          </div> */}
           
           {/* Sign out button */}
           <Button 
