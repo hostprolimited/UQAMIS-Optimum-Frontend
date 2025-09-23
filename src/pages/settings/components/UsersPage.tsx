@@ -45,11 +45,14 @@ const Users = () => {
 
   // Fetch institutions for select and listing
   const fetchInstitutions = async () => {
+    setLoading(true);
     try {
       const data = await getInstitutions();
-      setInstitutions(data);
+      setInstitutions(Array.isArray(data.institutions) ? data.institutions : []);
     } catch (e) {
       setInstitutions([]);
+    } finally {
+      setLoading(false);
     }
   };
 
