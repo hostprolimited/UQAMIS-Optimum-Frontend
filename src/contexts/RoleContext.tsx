@@ -7,7 +7,7 @@ export interface User {
   name: string;
   email: string;
   role: UserRole;
-  county_code?: string;
+  county?: string;
   county_name?: string;
   school?: string;
 }

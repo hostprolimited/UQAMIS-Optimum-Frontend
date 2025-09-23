@@ -24,7 +24,7 @@ const Users = () => {
     setLoading(true);
     try {
       const data = await getUsers();
-      setUsers(data);
+      setUsers(Array.isArray(data) ? data : []);
     } catch (error) {
       setUsers([]);
     } finally {
@@ -253,8 +253,8 @@ const Users = () => {
               .filter(inst => {
                 if (currentUser?.role === 'agent') {
                   return inst.created_by === currentUser.id;
-                } else if (currentUser?.county_code) {
-                  return inst.county_code === currentUser.county_code;
+                } else if (currentUser?.county) {
+                  return inst.county === currentUser.county;
                 }
                 return true;
               })
