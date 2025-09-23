@@ -13,6 +13,13 @@ export const Urls = {
    INSTITUTIONS_URL: '/institutions',
    INSTITUTION_DETAIL_URL: (id: number) => `/institutions/${id}`,
 
+   // Facilities Endpoints
+   FACILITIES_URL: '/facilities',
+   CREATE_FACILITY_URL: '/facilities/create',
+   GET_FACILITY_URL: (id: number) => `/facilities/${id}`,
+   UPDATE_FACILITY_URL: (id: number) => `/facilities/${id}`,
+   DELETE_FACILITY_URL: (id: number) => `/facilities/${id}`,
+  
   // User Management Endpoints
   CREATE_USERS_URL: '/users/create',
   GET_USERS_URL: '/users',

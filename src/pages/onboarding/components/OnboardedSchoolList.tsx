@@ -39,16 +39,17 @@ const OnboardedSchoolList: React.FC = () => {
   const navigate = useNavigate();
 
   const fetchInstitutions = async () => {
-    setLoading(true);
-    try {
-      const data = await getInstitutions();
-      setInstitutions(data);
-    } catch (e) {
-      setInstitutions([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  setLoading(true);
+  try {
+    const data = await getInstitutions();
+    // If your API returns { institutions: [...] }
+    setInstitutions(Array.isArray(data.institutions) ? data.institutions : []);
+  } catch (e) {
+    setInstitutions([]);
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     fetchInstitutions();
