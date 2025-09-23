@@ -10,6 +10,8 @@ export const Urls = {
 
   // onboard schools
    ONBOARD_SCHOOLS_URL: 'institutions/onboard',
+   INSTITUTIONS_URL: '/institutions',
+   INSTITUTION_DETAIL_URL: (id: number) => `/institutions/${id}`,
 
   // User Management Endpoints
   CREATE_USERS_URL: '/users/create',

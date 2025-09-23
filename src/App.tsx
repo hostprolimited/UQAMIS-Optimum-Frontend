@@ -16,11 +16,13 @@ import { RoleProvider } from "@/contexts/RoleContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import Overview from "./pages/dashboard/components/OverviewPage";
 import Onboard from "./pages/onboarding/components/OnboardPage";
+import OnboardedSchoolList from "./pages/onboarding/components/OnboardedSchoolList";
 import RoleBasedAssessmentPage from "./pages/assements/components/RoleBasedAssessmentPage";
 import AssessmentAdd from "./pages/assements/components/AssessmentAddPage";
 import Reports from "./pages/dashboard/components/ReportsPage";
 import Users from "./pages/settings/components/UsersPage";
 import RolesPermissions from "./pages/settings/components/RolesPermissionsPage";
+
 import LoginPage from "./pages/auth/components/loginPage";
 import NotFound from "./pages/NotFound";
 
@@ -52,6 +54,11 @@ const App = () => (
                       <Onboard />
                     </ProtectedRoute>
                   } />
+                  <Route path="/onboarded-schools" element={
+                    <ProtectedRoute allowedRoles={["ministry_admin", "agent"]}>
+                      <OnboardedSchoolList />
+                    </ProtectedRoute>
+                  } />
                   <Route path="/assessment" element={
                     <ProtectedRoute allowedRoles={["school_admin", "agent", "ministry_admin"]}>
                       <RoleBasedAssessmentPage />
@@ -62,6 +69,7 @@ const App = () => (
                       <RoleBasedAssessmentPage />
                     </ProtectedRoute>
                   } />
+
                   <Route path="/assessments/add" element={
                     <ProtectedRoute allowedRoles={["school_admin", "ministry_admin"]}>
                       <AssessmentAdd />
@@ -83,7 +91,7 @@ const App = () => (
                     </ProtectedRoute>
                   } />
                   <Route path="/roles" element={
-                    <ProtectedRoute allowedRoles={["ministry_admin"]}>
+                    <ProtectedRoute allowedRoles={["agent", "ministry_admin"]}>
                       <RolesPermissions />
                     </ProtectedRoute>
                   } />

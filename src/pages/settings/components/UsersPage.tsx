@@ -6,7 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { getUsers, createUser } from '../core/_requests';
+import { getInstitutions } from '@/pages/onboarding/core/_requests';
 import { User as UserModel, CreateUserInput } from '../core/_models';
+import { useRole } from '@/contexts/RoleContext';
 
 const Users = () => {
   const [users, setUsers] = useState<UserModel[]>([]);
@@ -15,6 +17,8 @@ const Users = () => {
   const [form, setForm] = useState<CreateUserInput>({ name: '', email: '', password: '', phone: '', role: '' });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [institutions, setInstitutions] = useState<any[]>([]);
+  const { currentUser } = useRole();
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -28,8 +32,19 @@ const Users = () => {
     }
   };
 
+  // Fetch institutions for select and listing
+  const fetchInstitutions = async () => {
+    try {
+      const data = await getInstitutions();
+      setInstitutions(data);
+    } catch (e) {
+      setInstitutions([]);
+    }
+  };
+
   useEffect(() => {
     fetchUsers();
+    fetchInstitutions();
   }, []);
 
   const formatRole = (role: string) => {
@@ -130,17 +145,46 @@ const Users = () => {
                 <label className="block text-sm font-medium mb-1">Phone</label>
                 <Input name="phone" value={form.phone} onChange={handleChange} disabled={submitting} />
               </div>
+              {/*  gender Field */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Gender</label>
+                <select name="gender" value={form.gender} onChange={handleChange} className="w-full border rounded px-2 py-1" disabled={submitting}>
+                  <option value="">Select gender</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Password <span className="text-destructive">*</span></label>
                 <Input name="password" type="password" value={form.password} onChange={handleChange} required disabled={submitting} />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Role</label>
-                <select name="role" value={form.role} onChange={handleChange} className="w-full border rounded px-2 py-1" disabled={submitting}>
-                  {/* <option value="">Select role</option> */}
-                  <option value="school_admin">School Admin</option>
+                <label className="block text-sm font-medium mb-1">Institution (School)</label>
+                <select name="institution_id" value={form.institution_id || ''} onChange={handleChange} className="w-full border rounded px-2 py-1" disabled={submitting}>
+                  <option value="">Select institution</option>
+                  {institutions.map(inst => (
+                    <option key={inst.id} value={inst.id}>{inst.name}</option>
+                  ))}
                 </select>
               </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Role</label>
+                <select name="role" value={form.role} onChange={handleChange} className="w-full border rounded px-2 py-1" disabled={submitting}>
+                  <option value="">Select role</option>
+                 
+                  {/* <option value="county_admin">County Admin</option> */}
+                  <option value="school_admin">School Admin</option>
+                  {/* Only show agent option if current user is NOT agent */}
+                  {currentUser?.role !== 'agent' && (
+                    <option value="agent">County Admin</option>
+                  )}
+                  {currentUser?.role !== 'agent' && (
+                    <option value="agent">Admin</option>
+                  )}
+                </select>
+              </div>
+              
               {error && <div className="text-destructive text-sm">{error}</div>}
               <div className="flex justify-end">
                 <Button type="button" variant="outline" className="mr-2" onClick={handleCloseModal} disabled={submitting}>Cancel</Button>
@@ -196,6 +240,29 @@ const Users = () => {
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* List institutions for this agent/county */}
+      <div className="mt-8">
+        <h2 className="text-lg font-bold mb-2">Institutions Onboarded {currentUser?.role === 'agent' ? 'by You' : 'in Your County'}</h2>
+        <ul className="list-disc pl-6">
+          {institutions.length === 0 ? (
+            <li className="text-muted-foreground">No institutions found.</li>
+          ) : (
+            institutions
+              .filter(inst => {
+                if (currentUser?.role === 'agent') {
+                  return inst.created_by === currentUser.id;
+                } else if (currentUser?.county_code) {
+                  return inst.county_code === currentUser.county_code;
+                }
+                return true;
+              })
+              .map(inst => (
+                <li key={inst.id}>{inst.name} <span className="text-xs text-muted-foreground">({inst.county})</span></li>
+              ))
+          )}
+        </ul>
       </div>
 
       {/* Users Table */}

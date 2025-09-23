@@ -120,7 +120,7 @@ const navigationItems = [
   },
   { 
     title: 'Onboard', 
-    url: '/onboard', 
+    url: '/onboarded-schools', 
     icon: UserPlus, 
     page: 'onboard' 
   },

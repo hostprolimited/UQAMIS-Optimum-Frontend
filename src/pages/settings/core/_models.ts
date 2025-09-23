@@ -8,8 +8,10 @@ export interface User {
   name: string;
   email: string;
   phone?: string;
+  gender?: string;
   role?: string;
   status?: string;
+  institution_id?: number;
   created_at?: string;
   updated_at?: string;
 }
@@ -17,6 +19,9 @@ export interface User {
 export interface CreateUserInput {
   name: string;
   email: string;
+  gender?: string;
+  institution_id?: number;
+  county?: string;
   phone?: string;
   password: string;
   role?: string;
