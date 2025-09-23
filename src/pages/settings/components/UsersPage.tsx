@@ -24,7 +24,14 @@ const Users = () => {
     setLoading(true);
     try {
       const data = await getUsers();
-      setUsers(Array.isArray(data) ? data : []);
+      // If backend returns { users: [...] }
+      if (Array.isArray(data)) {
+        setUsers(data);
+      } else if (data && Array.isArray(data.users)) {
+        setUsers(data.users);
+      } else {
+        setUsers([]);
+      }
     } catch (error) {
       setUsers([]);
     } finally {
