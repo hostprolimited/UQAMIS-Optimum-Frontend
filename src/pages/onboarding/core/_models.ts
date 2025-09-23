@@ -4,6 +4,7 @@ export interface  onboardSchoolData {
     county: string,
     subcounty: string,
     ward: string,
+    county_code?: string,
     address: string,
     phone_number: string,
     location: string,
