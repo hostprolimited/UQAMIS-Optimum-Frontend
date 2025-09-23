@@ -58,7 +58,7 @@ export const RoleProvider: React.FC<RoleProviderProps> = ({ children }) => {
           'reports',
           'assessment',
           'onboard',
-          // 'user_management'
+          'user_management'
         ].includes(page);
       case 'school_admin':
         return [
