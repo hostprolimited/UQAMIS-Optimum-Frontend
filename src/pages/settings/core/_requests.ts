@@ -5,14 +5,7 @@ import { User, CreateUserInput, UpdateUserInput, Role, Permission } from './_mod
 // Get all users
 export const getUsers = async (): Promise<User[]> => {
   const res = await api.get(Urls.GET_USERS_URL);
-  // If API returns { data: [...] }, return res.data.data, else res.data
-  if (Array.isArray(res.data)) {
-    return res.data;
-  } else if (res.data && Array.isArray(res.data.data)) {
-    return res.data.data;
-  } else {
-    return [];
-  }
+  return res.data;
 };
 
 // Get user by ID
