@@ -24,11 +24,15 @@ const Users = () => {
     setLoading(true);
     try {
       const data = await getUsers();
-      // If backend returns { users: [...] }
       if (Array.isArray(data)) {
         setUsers(data);
-      } else if (data && Array.isArray(data)) {
-        setUsers(data);
+      } else if (
+        data &&
+        typeof data === 'object' &&
+        'users' in data &&
+        Array.isArray((data as { users: UserModel[] }).users)
+      ) {
+        setUsers((data as { users: UserModel[] }).users);
       } else {
         setUsers([]);
       }
