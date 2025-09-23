@@ -3,11 +3,12 @@ import React, { createContext, useContext, useState, ReactNode } from 'react';
 export type UserRole = 'school_admin' | 'agent' | 'ministry_admin';
 
 export interface User {
+  county_id: any;
   id: string;
   name: string;
   email: string;
   role: UserRole;
-  county?: string;
+  county_code?: string;
   county_name?: string;
   school?: string;
 }

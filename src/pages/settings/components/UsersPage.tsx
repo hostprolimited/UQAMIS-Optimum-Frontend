@@ -267,8 +267,8 @@ const Users = () => {
               .filter(inst => {
                 if (currentUser?.role === 'agent') {
                   return inst.created_by === currentUser.id;
-                } else if (currentUser?.county) {
-                  return inst.county === currentUser.county;
+                } else if (currentUser?.county_id) {
+                  return inst.county === currentUser.county_id;
                 }
                 return true;
               })
