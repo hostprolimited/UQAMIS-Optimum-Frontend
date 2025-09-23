@@ -27,8 +27,8 @@ const Users = () => {
       // If backend returns { users: [...] }
       if (Array.isArray(data)) {
         setUsers(data);
-      } else if (data && Array.isArray(data.users)) {
-        setUsers(data.users);
+      } else if (data && Array.isArray(data)) {
+        setUsers(data);
       } else {
         setUsers([]);
       }
