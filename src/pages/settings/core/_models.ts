@@ -40,9 +40,32 @@ export interface UpdateUserInput {
 export interface Role {
   id: number;
   name: string;
+  guard_name?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface Permission {
   id: number;
   name: string;
+  guard_name?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface CreatePermissionInput {
+  name: string;
+}
+
+export interface AssignPermissionRoleInput {
+  permission_name: string;
+  role_name: string;
+  permission_id: number;
+  role_id: number;
+}
+
+export interface AssignUserRoleInput {
+  user_id: number;
+  role_id: number;
+  role_name: string;
 }

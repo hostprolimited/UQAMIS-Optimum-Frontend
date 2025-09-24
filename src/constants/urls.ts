@@ -19,7 +19,13 @@ export const Urls = {
    GET_FACILITY_URL: (id: number) => `/facilities/${id}`,
    UPDATE_FACILITY_URL: (id: number) => `/facilities/${id}`,
    DELETE_FACILITY_URL: (id: number) => `/facilities/${id}`,
-  
+  // Maintenance Endpoints
+  CREATE_MAINTENANCE_REPORT_URL: '/maintenance/create',
+  GET_MAINTENANCE_REPORT_URL: '/maintenance',
+  GET_MAINTENANCE_REPORT_BY_ID_URL: (id: number) => `/maintenance/${id}`,
+  UPDATE_MAINTENANCE_REPORT_URL: (id: number) => `/maintenance/${id}`,
+  DELETE_MAINTENANCE_REPORT_URL: (id: number) => `/maintenance/${id}`,
+  MAINTENANCE_ASSESSMENT: '/maintenance/create',
   // User Management Endpoints
   CREATE_USERS_URL: '/users/create',
   GET_USERS_URL: '/users',
@@ -27,20 +33,14 @@ export const Urls = {
   UPDATE_USER_URL: (id: number) => `/users/${id}`,
   DELETE_USER_URL: (id: number) => `/users/${id}`,
 
-  // Permissions Management Endpoints
+  // Roles & permission  Management Endpoints
   GET_PERMISSIONS_URL: '/permissions',
+  GET_USER_ROLE: (id: number) => `/users/${id}/role`,
+  ASSIGN_USER_ROLE_URL: (id: number) => `/users/${id}/assign-role`,
   CREATE_PERMISSION_URL: '/permissions/create',
   ASSIGN_PERMISSION_ROLE_URL: '/permissions/assign-to-role',
-  ASSIGN_PERMISSION_USER_URL: '/permissions/assign-to-user',
-  REMOVE_PERMISSION_URL: (id: number) => `/permissions/${id}/remove`, 
-  UPDATE_PERMISSION_URL: (id: number) => `/permissions/${id}`,
-  DELETE_PERMISSION_URL: (id: number) => `/permissions/${id}`,
-
-  // roles management endpoints
-  ROLES_URL: '/roles',
-  CREATE_ROLE_URL: (id: number) => `/users/${id}/assign-role`,
-  GET_USER_ROLES_URL: (id: number) => `/users/${id}/roles`,
-  UPDATE_ROLE_URL: (id: number) => `/users/${id}/async-role`,
-  DELETE_ROLE_URL: (id: number) => `/users/${id}/remove-role`,
+  UPDATE_ROLE_URL: (id: number) => `/sync-role/${id}`,
+  DELETE_ROLE_URL: (id: number) => `/remove-role/${id}`,
+  
 
 }

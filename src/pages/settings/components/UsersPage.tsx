@@ -1,14 +1,26 @@
 import React, { useEffect, useState } from 'react';
-import { User, Mail, Shield, Edit, X } from 'lucide-react';
+import { User, Mail, Shield, Edit, X, Trash2, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from '@/components/ui/input';
-import { getUsers, createUser } from '../core/_requests';
+import { getUsers, createUser, deleteUser, updateUser } from '../core/_requests';
 import { getInstitutions } from '@/pages/onboarding/core/_requests';
 import { User as UserModel, CreateUserInput } from '../core/_models';
 import { useRole } from '@/contexts/RoleContext';
+import { useToast } from "@/components/ui/use-toast";
+import { Toaster } from "@/components/ui/toaster";
 
 const Users = () => {
   const [users, setUsers] = useState<UserModel[]>([]);
@@ -18,7 +30,11 @@ const Users = () => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [institutions, setInstitutions] = useState<any[]>([]);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<UserModel | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
   const { currentUser } = useRole();
+  const { toast } = useToast();
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -102,10 +118,56 @@ const Users = () => {
   const handleCloseModal = () => {
     setShowModal(false);
     setError(null);
+    setIsEditing(false);
+    setSelectedUser(null);
+    setForm({ name: '', email: '', password: '', phone: '', role: '' });
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const handleEdit = (user: UserModel) => {
+    setSelectedUser(user);
+    setForm({
+      name: user.name,
+      email: user.email,
+      phone: user.phone || '',
+      role: user.role || '',
+      gender: user.gender,
+      institution_id: user.institution_id,
+      password: '' // Password is optional for updates
+    });
+    setIsEditing(true);
+    setShowModal(true);
+  };
+
+  const handleDelete = (user: UserModel) => {
+    setSelectedUser(user);
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!selectedUser) return;
+    
+    try {
+      await deleteUser(selectedUser.id);
+      toast({
+        title: "Success",
+        description: "User deleted successfully",
+        variant: "default",
+      });
+      fetchUsers(); // Refresh the users list
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to delete user",
+        variant: "destructive",
+      });
+    } finally {
+      setShowDeleteDialog(false);
+      setSelectedUser(null);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -113,17 +175,59 @@ const Users = () => {
     setSubmitting(true);
     setError(null);
     try {
-      await createUser(form);
+      if (isEditing && selectedUser) {
+        // Handle update
+        const updateData = { ...form };
+        if (!updateData.password) {
+          delete updateData.password; // Don't send empty password
+        }
+        await updateUser(selectedUser.id, updateData);
+        toast({
+          title: "Success",
+          description: "User updated successfully",
+          variant: "default",
+        });
+      } else {
+        // Handle create
+        await createUser(form);
+        toast({
+          title: "Success",
+          description: "User created successfully",
+          variant: "default",
+        });
+      }
       setShowModal(false);
       fetchUsers();
     } catch (err: any) {
-      setError(err?.response?.data?.message || 'Failed to create user');
+      const errorResponse = err?.response?.data;
+      if (errorResponse?.errors) {
+        // Handle validation errors
+        const validationErrors = Object.entries(errorResponse.errors)
+          .map(([field, messages]) => `${field}: ${(messages as string[]).join(', ')}`)
+          .join('\n');
+        
+        toast({
+          title: "Validation Error",
+          description: validationErrors,
+          variant: "destructive",
+        });
+        setError(validationErrors);
+      } else {
+        const errorMessage = errorResponse?.message || `Failed to ${isEditing ? 'update' : 'create'} user`;
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+        });
+        setError(errorMessage);
+      }
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
+    <>
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
@@ -138,6 +242,50 @@ const Users = () => {
         </Button>
       </div>
 
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 my-6">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+            <User className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{users.length}</div>
+            <p className="text-xs text-muted-foreground">
+              Active system users
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">System Admins</CardTitle>
+            <Shield className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {users.filter(user => user.role === 'admin').length}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Administrators
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Users</CardTitle>
+            <User className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {users.filter(user => user.status === 'Active').length}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Currently active users
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Modal for creating user */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
@@ -145,7 +293,7 @@ const Users = () => {
             <button className="absolute top-2 right-2 text-muted-foreground" onClick={handleCloseModal}>
               <X className="h-5 w-5" />
             </button>
-            <h2 className="text-xl font-bold mb-4">Create New User</h2>
+            <h2 className="text-xl font-bold mb-4">{isEditing ? 'Edit User' : 'Create New User'}</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-1">Name <span className="text-destructive">*</span></label>
@@ -210,51 +358,6 @@ const Users = () => {
           </div>
         </div>
       )}
-
-      {/* User Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Users</p>
-                <p className="text-2xl font-bold text-foreground">{users.length}</p>
-              </div>
-              <User className="h-8 w-8 text-primary" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Active Users</p>
-                <p className="text-2xl font-bold text-success">
-                  {users.filter(u => u.status === 'Active').length}
-                </p>
-              </div>
-              <div className="w-8 h-8 bg-success rounded-full flex items-center justify-center">
-                <span className="text-success-foreground text-sm font-bold">✓</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Admin Users</p>
-                <p className="text-2xl font-bold text-warning">
-                  {users.filter(u => u.role === 'admin').length}
-                </p>
-              </div>
-              <Shield className="h-8 w-8 text-warning" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
 
       {/* List institutions for this agent/county */}
       <div className="mt-8">
@@ -351,8 +454,20 @@ const Users = () => {
                     </TableCell>
                     <TableCell>
                       <div className="flex space-x-2">
-                        <Button variant="ghost" size="sm">
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => handleEdit(user)}
+                        >
                           <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => handleDelete(user)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </TableCell>
@@ -363,8 +478,31 @@ const Users = () => {
           </Table>
         </CardContent>
       </Card>
-    </div>
-  );
-};
+      </div>
 
-export default Users;
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the user
+              {selectedUser ? ` "${selectedUser.name}"` : ''} and remove their data from the system.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={confirmDelete}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <Toaster />
+    </>
+  );
+};export default Users;

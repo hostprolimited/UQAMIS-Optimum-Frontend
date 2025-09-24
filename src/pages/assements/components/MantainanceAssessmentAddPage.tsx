@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -25,6 +25,9 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 
+import { getFacilities, createMaintenanceAssessment } from "../core/_request";
+import { Facility } from "../core/_model";
+
 // Facility assessment schema
 const facilityAssessmentSchema = z.object({
   facility: z.array(z.object({
@@ -38,191 +41,33 @@ const facilityAssessmentSchema = z.object({
 
 type FacilityAssessmentData = z.infer<typeof facilityAssessmentSchema>;
 
-// Facility types with their configurations
-const facilitiesConfig = [
-  {
-    id: 'classroom',
-    name: 'Classroom',
-    description: 'Learning spaces for student education',
-    statistics: '12 assessment items • Primary learning facility',
-    color: 'bg-white hover:bg-gray-50 border-gray-200',
-    parts: [
-      "Outside wall",
-      "Verandah", 
-      "Roof",
-      "Door",
-      "Door lock",
-      "Window panes",
-      "Window lock",
-      "Floor",
-      "Inside wall",
-      "Black Board",
-      "Notice board",
-      "Ceiling"
-    ]
-  },
-  {
-    id: 'compound',
-    name: 'Compound',
-    description: 'School perimeter and external facilities',
-    statistics: '10 assessment items • Safety & security focus',
-    color: 'bg-white hover:bg-gray-50 border-gray-200',
-    parts: [
-      "Main gate",
-      "Fence perimeter",
-      "Pathways",
-      "Drainage system",
-      "Lighting",
-      "Security features",
-      "Landscape/Gardens",
-      "Parking area",
-      "Assembly area",
-      "Waste disposal area"
-    ]
-  },
-  {
-    id: 'ict-lab',
-    name: 'ICT Lab',
-    description: 'Information and Communication Technology facility',
-    statistics: '10 assessment items • Technology infrastructure',
-    color: 'bg-white hover:bg-gray-50 border-gray-200',
-    parts: [
-      "Computer workstations",
-      "Server/Network equipment",
-      "Electrical wiring",
-      "Air conditioning",
-      "Internet connectivity",
-      "Security systems",
-      "Furniture",
-      "Projection equipment",
-      "Software licenses",
-      "Cable management"
-    ]
-  },
-  {
-    id: 'toilets',
-    name: 'Toilets',
-    description: 'Sanitation and hygiene facilities',
-    statistics: '10 assessment items • Health & sanitation',
-    color: 'bg-white hover:bg-gray-50 border-gray-200',
-    parts: [
-      "Toilet bowls/Squat pans",
-      "Water supply",
-      "Sewerage system",
-      "Hand washing facilities",
-      "Doors and locks",
-      "Roof and walls",
-      "Ventilation",
-      "Accessibility features",
-      "Cleanliness supplies",
-      "Septic tank/Connection"
-    ]
-  },
-  {
-    id: 'laboratories',
-    name: 'Laboratories',
-    description: 'Science and research facilities',
-    statistics: '10 assessment items • Scientific equipment',
-    color: 'bg-white hover:bg-gray-50 border-gray-200',
-    parts: [
-      "Work benches",
-      "Chemical storage",
-      "Safety equipment",
-      "Ventilation system",
-      "Water supply",
-      "Gas connections",
-      "Electrical fittings",
-      "Emergency exits",
-      "Fire safety",
-      "Waste disposal"
-    ]
-  },
-  {
-    id: 'dining-halls',
-    name: 'Dining Halls',
-    description: 'Food service and dining facilities',
-    statistics: '10 assessment items • Nutrition & hygiene',
-    color: 'bg-white hover:bg-gray-50 border-gray-200',
-    parts: [
-      "Dining tables",
-      "Seating",
-      "Kitchen facilities",
-      "Food storage",
-      "Water supply",
-      "Waste management",
-      "Ventilation",
-      "Hygiene facilities",
-      "Serving area",
-      "Floor and walls"
-    ]
-  },
-  {
-    id: 'sports-facilities',
-    name: 'Sports Facilities',
-    description: 'Physical education and recreational areas',
-    statistics: '10 assessment items • Sports & recreation',
-    color: 'bg-white hover:bg-gray-50 border-gray-200',
-    parts: [
-      "Playing fields",
-      "Equipment storage",
-      "Changing rooms",
-      "Spectator areas",
-      "Boundary marking",
-      "Goal posts/Nets",
-      "Safety barriers",
-      "Lighting",
-      "Drainage",
-      "Access paths"
-    ]
-  },
-  {
-    id: 'dormitories',
-    name: 'Dormitories',
-    description: 'Student residential accommodation',
-    statistics: '10 assessment items • Accommodation & welfare',
-    color: 'bg-white hover:bg-gray-50 border-gray-200',
-    parts: [
-      "Sleeping areas",
-      "Beds and mattresses",
-      "Personal storage",
-      "Common areas",
-      "Bathroom access",
-      "Security features",
-      "Ventilation",
-      "Lighting",
-      "Emergency exits",
-      "Study areas"
-    ]
-  },
-  {
-    id: 'offices',
-    name: 'Offices',
-    description: 'Administrative and staff work areas',
-    statistics: '10 assessment items • Administration & management',
-    color: 'bg-white hover:bg-gray-50 border-gray-200',
-    parts: [
-      "Furniture",
-      "Filing systems",
-      "Electrical fittings",
-      "Communication systems",
-      "Security features",
-      "Ventilation",
-      "Lighting",
-      "Access control",
-      "Emergency equipment",
-      "Storage facilities"
-    ]
-  }
-];
-
 const AssessmentAddPage: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedFacility, setSelectedFacility] = useState<typeof facilitiesConfig[0] | null>(null);
+  const [selectedFacility, setSelectedFacility] = useState<Facility | null>(null);
   const [assessments, setAssessments] = useState<any[]>([]);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [facilities, setFacilities] = useState<Facility[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Fetch facilities from API
+  useEffect(() => {
+    const fetchFacilities = async () => {
+      try {
+        const response = await getFacilities();
+        setFacilities(response.data || []); // Access the data property of the APIResponse
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to load facilities.",
+          variant: "destructive",
+        });
+        setFacilities([]); // Set empty array as fallback
+      }
+    };
+    fetchFacilities();
+  }, [toast]);
 
   const facilityForm = useForm<FacilityAssessmentData>({
     resolver: zodResolver(facilityAssessmentSchema),
@@ -258,10 +103,10 @@ const AssessmentAddPage: React.FC = () => {
     facilityForm.setValue('files', newFiles);
   };
 
-  const openAssessmentModal = (facility: typeof facilitiesConfig[0]) => {
+  const openAssessmentModal = (facility: Facility) => {
     setSelectedFacility(facility);
     // Initialize form with default values for each part
-    const defaultFacility = facility.parts.map(() => ({ condition: undefined }));
+    const defaultFacility = (facility.parts || []).map(() => ({ condition: undefined }));
     facilityForm.reset({ 
       facility: defaultFacility,
       reviewRemarks: '',
@@ -274,35 +119,20 @@ const AssessmentAddPage: React.FC = () => {
   const handleFacilityAssessmentSubmit = async (data: FacilityAssessmentData) => {
     try {
       if (!selectedFacility) return;
-
-      // Create assessment object
-      const assessment = {
-        id: Date.now().toString(),
-        facilityType: selectedFacility.name,
+      const payload = {
         facilityId: selectedFacility.id,
-        parts: selectedFacility.parts.map((part, index) => ({
+        reviewRemarks: data.reviewRemarks,
+        parts: (selectedFacility.parts || []).map((part, index) => ({
           name: part,
           condition: data.facility[index]?.condition || 'good'
         })),
-        reviewRemarks: data.reviewRemarks,
-        files: uploadedFiles.map(file => ({
-          name: file.name,
-          size: file.size,
-          type: file.type,
-          lastModified: file.lastModified
-        })),
-        assessmentDate: new Date().toISOString(),
-        assessor: 'Current User' // Replace with actual user
+        files: uploadedFiles,
       };
-
-      // Add to assessments list
-      setAssessments(prev => [...prev, assessment]);
-
+      await createMaintenanceAssessment(payload);
       toast({
         title: "Success",
         description: `${selectedFacility.name} assessment submitted successfully`,
       });
-
       setIsModalOpen(false);
       setUploadedFiles([]);
       facilityForm.reset();
@@ -336,11 +166,10 @@ const AssessmentAddPage: React.FC = () => {
 
       {/* Facility Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {facilitiesConfig.map((facility) => {
-          const assessmentCount = getAssessmentCount(facility.id);
-          
+        {facilities.map((facility) => {
+          const assessmentCount = getAssessmentCount(facility.id.toString());
           return (
-            <Card key={facility.id} className={`${facility.color} cursor-pointer transition-all hover:shadow-lg border-2`}>
+            <Card key={facility.id} className={`${facility.color ?? "bg-white hover:bg-gray-50 border-gray-200"} cursor-pointer transition-all hover:shadow-lg border-2`}>
               <CardHeader className="pb-3">
                 <CardTitle className="text-xl font-semibold text-gray-800">{facility.name}</CardTitle>
                 <p className="text-sm text-gray-600 leading-relaxed">{facility.description}</p>
@@ -432,7 +261,7 @@ const AssessmentAddPage: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {selectedFacility.parts.map((part, index) => (
+                      {selectedFacility.parts?.map((part, index) => (
                         <tr key={index}>
                           <td className="border px-4 py-2">{index + 1}</td>
                           <td className="border px-4 py-2">{part}</td>

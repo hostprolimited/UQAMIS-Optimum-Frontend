@@ -1,9 +1,9 @@
 import api from '@/utils/api';
 import { Urls } from '@/constants/urls';
-import { User, CreateUserInput, UpdateUserInput, Role, Permission } from './_models';
+import { User, CreateUserInput, UpdateUserInput, Role, Permission, CreatePermissionInput, AssignPermissionRoleInput, AssignUserRoleInput } from './_models';
 
 // Get all users
-export const getUsers = async (): Promise<User[]> => {
+export const getUsers = async (): Promise<{ users: User[] }> => {
   const res = await api.get(Urls.GET_USERS_URL);
   return res.data;
 };
@@ -32,17 +32,50 @@ export const deleteUser = async (id: number): Promise<void> => {
 };
 
 // Get user roles
-export const getUserRoles = async (id: number): Promise<Role[]> => {
-  const res = await api.get(Urls.GET_USER_ROLES_URL(id));
+
+// Permissions
+export const getPermissions = async (): Promise<{ roles: Role[], permissions: Permission[] }> => {
+  const res = await api.get(Urls.GET_PERMISSIONS_URL);
   return res.data;
 };
 
-// Assign role to user
-export const assignRoleToUser = async (id: number, roleId: number): Promise<void> => {
-  await api.post(Urls.CREATE_ROLE_URL(id), { role_id: roleId });
+export const createPermission = async (data: CreatePermissionInput): Promise<Permission> => {
+  const res = await api.post(Urls.CREATE_PERMISSION_URL, {
+    name: data.name
+  });
+  return res.data;
 };
 
-// Remove role from user
-export const removeRoleFromUser = async (id: number): Promise<void> => {
+// Assign permission to role
+export const assignPermissionToRole = async (data: AssignPermissionRoleInput): Promise<void> => {
+  await api.post(Urls.ASSIGN_PERMISSION_ROLE_URL, {
+    permission_name: data.permission_name,
+    role_name: data.role_name
+  });
+};
+
+// Assign role to user
+export const assignUserRole = async (data: AssignUserRoleInput): Promise<void> => {
+  await api.post(Urls.ASSIGN_USER_ROLE_URL(data.user_id), {
+    role_name: data.role_name
+  });
+};
+
+// Get user role
+export const getUserRole = async (id: number): Promise<Role> => {
+  const res = await api.get(Urls.GET_USER_ROLE(id));
+  return res.data;
+};
+
+// Update role
+export const updateRole = async (id: number, data: { name: string }): Promise<Role> => {
+  const res = await api.put(Urls.UPDATE_ROLE_URL(id), data);
+  return res.data;
+};
+
+// Remove role
+export const removeRole = async (id: number): Promise<void> => {
   await api.delete(Urls.DELETE_ROLE_URL(id));
 };
+
+
