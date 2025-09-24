@@ -10,36 +10,37 @@ export const Urls = {
 
   // onboard schools
    ONBOARD_SCHOOLS_URL: 'institutions/onboard',
-   INSTITUTIONS_URL: '/institutions',
+   INSTITUTIONS_URL: '/institutions/list',
    INSTITUTION_DETAIL_URL: (id: number) => `/institutions/${id}`,
 
    // Facilities Endpoints
-   FACILITIES_URL: '/facilities',
+   FACILITIES_URL: '/facilities/list',
    CREATE_FACILITY_URL: '/facilities/create',
    GET_FACILITY_URL: (id: number) => `/facilities/${id}`,
    UPDATE_FACILITY_URL: (id: number) => `/facilities/${id}`,
    DELETE_FACILITY_URL: (id: number) => `/facilities/${id}`,
   // Maintenance Endpoints
   CREATE_MAINTENANCE_REPORT_URL: '/maintenance/create',
-  GET_MAINTENANCE_REPORT_URL: '/maintenance',
+  GET_MAINTENANCE_REPORT_URL: '/maintenance/list',
   GET_MAINTENANCE_REPORT_BY_ID_URL: (id: number) => `/maintenance/${id}`,
   UPDATE_MAINTENANCE_REPORT_URL: (id: number) => `/maintenance/${id}`,
   DELETE_MAINTENANCE_REPORT_URL: (id: number) => `/maintenance/${id}`,
   MAINTENANCE_ASSESSMENT: '/maintenance/create',
+
   // User Management Endpoints
   CREATE_USERS_URL: '/users/create',
-  GET_USERS_URL: '/users',
+  GET_USERS_URL: '/users/list',
   USER_DETAIL_URL: (id: number) => `/users/${id}`,
   UPDATE_USER_URL: (id: number) => `/users/${id}`,
   DELETE_USER_URL: (id: number) => `/users/${id}`,
 
   // Roles & permission  Management Endpoints
-  GET_PERMISSIONS_URL: '/permissions',
-  GET_USER_ROLE: (id: number) => `/users/${id}/role`,
-  ASSIGN_USER_ROLE_URL: (id: number) => `/users/${id}/assign-role`,
+  GET_PERMISSIONS_URL: '/permissions/list',
+  GET_USER_ROLE: (id: number) => `/users/role/${id}`,
+  ASSIGN_USER_ROLE_URL: (id: number) => `/users/assign-role/${id}`,
   CREATE_PERMISSION_URL: '/permissions/create',
   ASSIGN_PERMISSION_ROLE_URL: '/permissions/assign-to-role',
-  UPDATE_ROLE_URL: (id: number) => `/sync-role/${id}`,
+  UPDATE_ROLE_URL: (id: number) => `/update-role/${id}`,
   DELETE_ROLE_URL: (id: number) => `/remove-role/${id}`,
   
 

@@ -16,7 +16,24 @@ import {
 import { DataTable } from "@/components/ui/data-table";
 import { useToast } from "@/hooks/use-toast";
 
-// Facility Assessment data structure
+import { MaintenanceReport } from '../core/_model';
+import { getMaintenanceReports } from '../core/_request';
+
+// Convert API response to display format
+const mapMaintenanceReport = (report: MaintenanceReport): FacilityAssessment => ({
+  id: report.id.toString(),
+  schoolName: report.school_name,
+  facilityType: report.facility_type,
+  assessmentDate: report.assessment_date,
+  urgentItems: report.urgent_items,
+  attentionItems: report.attention_items,
+  goodItems: report.good_items,
+  totalItems: report.total_items,
+  overallCondition: report.overall_condition,
+  completionStatus: report.completion_status,
+});
+
+// Display interface
 interface FacilityAssessment {
   id: string;
   schoolName: string;
@@ -30,7 +47,7 @@ interface FacilityAssessment {
   completionStatus: 'completed' | 'in-progress' | 'pending';
 }
 
-// Sample facility assessment data
+// Temporary sample data for development
 const sampleFacilityAssessments: FacilityAssessment[] = [
   {
     id: '1',
@@ -149,9 +166,26 @@ const AssessmentListPage: React.FC = () => {
   const [selectedRows, setSelectedRows] = useState<FacilityAssessment[]>([]);
   
   useEffect(() => {
-    // Replace with actual API call
-    setAssessments(sampleFacilityAssessments);
-  }, []);
+    const fetchAssessments = async () => {
+      try {
+        const response = await getMaintenanceReports();
+        const mappedAssessments = response.data.map(mapMaintenanceReport);
+        setAssessments(mappedAssessments);
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to load assessments",
+          variant: "destructive",
+        });
+        // Fall back to sample data in development
+        if (process.env.NODE_ENV === 'development') {
+          setAssessments(sampleFacilityAssessments);
+        }
+      }
+    };
+    
+    fetchAssessments();
+  }, [toast]);
   
   const handleAddNew = () => {
     navigate('/assessments/add');
@@ -462,9 +496,9 @@ const AssessmentListPage: React.FC = () => {
     <div className="h-full flex flex-col p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold">Facility Assessment Management</h1>
+          <h1 className="text-3xl font-bold">Facility Maintenance Assessment Management</h1>
           <p className="text-muted-foreground mt-2">
-            Manage and track facility assessments with detailed condition reports
+            Manage and track facility maintenance assessments with detailed condition reports
           </p>
         </div>
         <div className="flex gap-2">

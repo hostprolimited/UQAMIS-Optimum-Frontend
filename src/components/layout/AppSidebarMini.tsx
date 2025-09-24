@@ -33,8 +33,8 @@ import {
 import { LucideIcon } from 'lucide-react';
 
 // Drawer width
-const drawerWidth = 240;
-const mobileDrawerWidth = 100; // Narrower drawer for mobile devices
+const drawerWidth = 280; // Increased from 240 to 280
+const mobileDrawerWidth = 120; // Increased mobile drawer width as well
 
 // Styles for the drawer when it's open
 const openedMixin = (theme: Theme): CSSObject => ({
@@ -125,8 +125,8 @@ const navigationItems = [
     page: 'onboard' 
   },
   { 
-    title: 'Assessment', 
-    url: '/assessment', 
+    title: 'Maintenance Assessment', 
+    url: '/maintenance/assessment', 
     icon: ClipboardCheck, 
     page: 'assessment' 
   },

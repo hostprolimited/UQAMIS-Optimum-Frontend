@@ -20,6 +20,20 @@ export interface MaintenanceAssessmentInput {
   files?: File[];
 }
 
+export interface MaintenanceReport {
+  id: number;
+  school_name: string;
+  facility_type: string;
+  assessment_date: string;
+  urgent_items: number;
+  attention_items: number;
+  good_items: number;
+  total_items: number;
+  overall_condition: 'excellent' | 'good' | 'needs-attention' | 'critical';
+  completion_status: 'completed' | 'in-progress' | 'pending';
+  files?: string[];
+}
+
 export interface APIResponse<T> {
   status: string;
   message: string;

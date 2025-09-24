@@ -64,7 +64,7 @@ const App = () => (
                       <RoleBasedAssessmentPage />
                     </ProtectedRoute>
                   } />
-                  <Route path="/assessments" element={
+                  <Route path="/maintenance/assessment" element={
                     <ProtectedRoute allowedRoles={["school_admin", "agent", "ministry_admin"]}>
                       <RoleBasedAssessmentPage />
                     </ProtectedRoute>

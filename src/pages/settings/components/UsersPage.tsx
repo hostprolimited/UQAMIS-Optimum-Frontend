@@ -360,7 +360,7 @@ const Users = () => {
       )}
 
       {/* List institutions for this agent/county */}
-      <div className="mt-8">
+      {/* <div className="mt-8">
         <h2 className="text-lg font-bold mb-2">Institutions Onboarded {currentUser?.role === 'agent' ? 'by You' : 'in Your County'}</h2>
         <ul className="list-disc pl-6">
           {institutions.length === 0 ? (
@@ -380,7 +380,7 @@ const Users = () => {
               ))
           )}
         </ul>
-      </div>
+      </div> */}
 
       {/* Users Table */}
       <Card>

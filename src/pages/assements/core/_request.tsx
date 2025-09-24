@@ -1,7 +1,7 @@
 
 import api from "@/utils/api";
 import { Urls } from "@/constants/urls";
-import { APIResponse, Facility, MaintenanceAssessmentInput } from "./_model";
+import { APIResponse, Facility, MaintenanceAssessmentInput, MaintenanceReport } from "./_model";
 
 // Fetch all facilities
 export const getFacilities = async (): Promise<APIResponse<Facility[]>> => {
@@ -31,5 +31,11 @@ export const createMaintenanceAssessment = async (data: MaintenanceAssessmentInp
       },
     }
   );
+  return response.data;
+};
+
+// Fetch all maintenance reports
+export const getMaintenanceReports = async (): Promise<APIResponse<MaintenanceReport[]>> => {
+  const response = await api.get<APIResponse<MaintenanceReport[]>>(Urls.GET_MAINTENANCE_REPORT_URL);
   return response.data;
 };
