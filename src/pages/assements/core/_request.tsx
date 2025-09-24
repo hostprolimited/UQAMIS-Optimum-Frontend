@@ -12,13 +12,20 @@ export const getFacilities = async (): Promise<APIResponse<Facility[]>> => {
 // Create maintenance assessment
 export const createMaintenanceAssessment = async (data: MaintenanceAssessmentInput): Promise<APIResponse<any>> => {
   const formData = new FormData();
-  formData.append('facilityId', data.facilityId.toString());
-  formData.append('reviewRemarks', data.reviewRemarks);
-  formData.append('parts', JSON.stringify(data.parts));
+  formData.append('institution_id', data.institution_id.toString());
+  formData.append('facility_id', data.facility_id.toString());
+  formData.append('status', data.status);
+  // Append each detail as details[i][field]
+  data.details.forEach((detail, i) => {
+    formData.append(`details[${i}][part_of_building]`, detail.part_of_building);
+    formData.append(`details[${i}][assessment_status]`, detail.assessment_status);
+  });
+  formData.append('school_feedback', data.school_feedback);
+  formData.append('agent_feedback', data.agent_feedback);
   
-  if (data.files) {
-    data.files.forEach((file) => {
-      formData.append('files', file);
+  if (data.files && data.files.length > 0) {
+    data.files.forEach((file: File) => {
+      formData.append('files[]', file);
     });
   }
 

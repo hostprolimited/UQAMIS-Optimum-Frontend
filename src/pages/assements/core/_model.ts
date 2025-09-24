@@ -11,12 +11,15 @@ export interface Facility {
 }
 
 export interface MaintenanceAssessmentInput {
-  facilityId: number;
-  reviewRemarks: string;
-  parts: {
-    name: string;
-    condition: 'urgent' | 'attention' | 'good';
+  institution_id: number;
+  facility_id: number;
+  status: 'pending' | 'in_progress' | 'completed';
+  details: {
+    part_of_building: string;
+    assessment_status: 'Urgent Attention' | 'Attention' | 'Good';
   }[];
+  school_feedback: string;
+  agent_feedback: string;
   files?: File[];
 }
 

@@ -28,24 +28,205 @@ import { useToast } from '@/hooks/use-toast';
 import { getFacilities, createMaintenanceAssessment } from "../core/_request";
 import { Facility } from "../core/_model";
 
+// Facility type mappings for consistent naming
+const FACILITY_TYPE_MAPPINGS: { [key: string]: string } = {
+  'class room': 'classroom',
+  'class rooms': 'classroom',
+  'classroom': 'classroom',
+  'classrooms': 'classroom',
+  'dormitory': 'dormitory',
+  'dormitories': 'dormitory',
+  'laboratory': 'laboratory',
+  'laboratories': 'laboratory',
+  'lab': 'laboratory',
+  'labs': 'laboratory',
+  'toilet': 'toilet',
+  'toilets': 'toilet',
+  'washroom': 'toilet',
+  'washrooms': 'toilet',
+  'library': 'library',
+  'libraries': 'library',
+  'office': 'office',
+  'offices': 'office',
+  'dining hall': 'dining_hall',
+  'dining halls': 'dining_hall',
+  'dining_hall': 'dining_hall',
+  'compound': 'compound',
+  'grounds': 'compound',
+  'school compound': 'compound'
+};
+
+// Facility parts configuration
+const FACILITY_PARTS = {
+  classroom: [
+    'Outside wall',
+    'Verandah',
+    'Roof',
+    'Door',
+    'Floor',
+    'Inside wall',
+    'Blackboard',
+    'Ceiling'
+  ],
+  dormitory: [
+    'Outside wall',
+    'Flower beds',
+    'Roof',
+    'Door',
+    'Window panes',
+    'Window lock',
+    'Floor',
+    'Inside wall',
+    'Hanging lines',
+    'Curtains',
+    'Ceiling'
+  ],
+  laboratory: [
+    'Outside wall',
+    'Gas taps',
+    'Roof',
+    'Door',
+    'Door lock',
+    'Window panes',
+    'Window lock',
+    'Floor',
+    'Inside wall',
+    'Water taps',
+    'Cupboards',
+    'Ceiling',
+    'Black board',
+    'Tables',
+    'Stools'
+  ],
+  toilet: [
+    'Outside wall',
+    'Drainage',
+    'Roof',
+    'Door',
+    'Door lock',
+    'Window panes',
+    'Window lock',
+    'Floor',
+    'Inside wall'
+  ],
+  library: [
+    'Outside wall',
+    'Verandah',
+    'Roof',
+    'Door',
+    'Door lock',
+    'Window panes',
+    'Window lock',
+    'Floor',
+    'Inside wall',
+    'Shelves',
+    'Tables/Chairs',
+    'Ceiling'
+  ],
+  office: [
+    'Outside wall',
+    'Verandah',
+    'Roof',
+    'Door',
+    'Door lock',
+    'Window panes',
+    'Window lock',
+    'Floor',
+    'Inside wall',
+    'Tables/Chairs',
+    'Ceiling'
+  ],
+  dining_hall: [
+    'Outside wall',
+    'Flower beds',
+    'Roof',
+    'Door',
+    'Door lock',
+    'Window panes',
+    'Window lock',
+    'Floor',
+    'Inside wall',
+    'Tables',
+    'Seats',
+    'Ceiling'
+  ],
+  compound: [
+    'Lawns',
+    'Flowers',
+    'Ornamentals',
+    'Hedges',
+    'Trees',
+    'Fences',
+    'Walk ways',
+    'Pavements',
+    'Road'
+  ],
+  ICTLab: [
+    'Outside wall',
+    'Verandah',
+    'Roof',
+    'Door',
+    'Door lock',
+    'Window panes',
+    'Window lock',
+    'Floor',
+    'Inside wall',
+    'Tables/Chairs',
+    'Ceiling'
+  ],
+  SportsFacilities: [
+    'Outside wall',
+    'Verandah',
+    'Roof',
+    'Door',
+    'Door lock',
+    'Window panes',
+    'Window lock',
+    'Floor',
+    'Inside wall',
+    'Tables/Chairs',
+    'Ceiling'
+  ]
+
+};
+
 // Facility assessment schema
 const facilityAssessmentSchema = z.object({
-  facility: z.array(z.object({
-    condition: z.enum(['urgent', 'attention', 'good'], {
+  institution_id: z.number(),
+  facility_id: z.number(),
+  status: z.enum(['pending', 'in_progress', 'completed']).default('pending'),
+  details: z.array(z.object({
+    part_of_building: z.string(),
+    assessment_status: z.enum(['Urgent Attention', 'Attention', 'Good'], {
       required_error: 'Please select a condition'
     })
   })),
-  reviewRemarks: z.string().min(1, 'Review remarks are required'),
+  school_feedback: z.string().min(1, 'School feedback is required'),
+  agent_feedback: z.string().optional(),
   files: z.array(z.instanceof(File)).optional()
 });
 
 type FacilityAssessmentData = z.infer<typeof facilityAssessmentSchema>;
+
+// Helper function to get facility parts based on facility type
+const getFacilityParts = (facilityType: string): string[] => {
+  // Clean and normalize the input facility type
+  const normalizedInput = facilityType.toLowerCase().trim();
+  // Get the standard type from our mappings
+  const standardType = FACILITY_TYPE_MAPPINGS[normalizedInput] || normalizedInput;
+  const parts = FACILITY_PARTS[standardType as keyof typeof FACILITY_PARTS];
+  if (!parts) {
+    
+  }
+  return parts || [];
+};
 
 const AssessmentAddPage: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedFacility, setSelectedFacility] = useState<Facility | null>(null);
+  const [facilityParts, setFacilityParts] = useState<string[]>([]);
   const [assessments, setAssessments] = useState<any[]>([]);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [facilities, setFacilities] = useState<Facility[]>([]);
@@ -69,14 +250,39 @@ const AssessmentAddPage: React.FC = () => {
     fetchFacilities();
   }, [toast]);
 
+  // Initialize form with empty values
   const facilityForm = useForm<FacilityAssessmentData>({
     resolver: zodResolver(facilityAssessmentSchema),
     defaultValues: {
-      facility: [],
-      reviewRemarks: '',
+      institution_id: 1,
+      facility_id: 0,
+      status: 'pending',
+      details: [],
+      school_feedback: '',
+      agent_feedback: '',
       files: []
     }
   });
+  
+  // Update form when a facility is selected
+  useEffect(() => {
+    if (selectedFacility) {
+      const parts = getFacilityParts(selectedFacility.name);
+      setFacilityParts(parts);
+      facilityForm.reset({
+        institution_id: selectedFacility.institution_id || 1,
+        facility_id: selectedFacility.id,
+        status: 'pending',
+        details: parts.map(name => ({
+          part_of_building: name,
+          assessment_status: 'Good'
+        })),
+        school_feedback: '',
+        agent_feedback: '',
+        files: []
+      });
+    }
+  }, [selectedFacility]);
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
@@ -105,42 +311,82 @@ const AssessmentAddPage: React.FC = () => {
 
   const openAssessmentModal = (facility: Facility) => {
     setSelectedFacility(facility);
+    
+    // Get the parts for this facility type
+    const facilityParts = getFacilityParts(facility.name);
+    setFacilityParts(facilityParts);
+    
     // Initialize form with default values for each part
-    const defaultFacility = (facility.parts || []).map(() => ({ condition: undefined }));
-    facilityForm.reset({ 
-      facility: defaultFacility,
-      reviewRemarks: '',
-      files: []
-    });
-    setUploadedFiles([]);
+      facilityForm.reset({ 
+        facility_id: facility.id,
+        details: facilityParts.map(name => ({ part_of_building: name, assessment_status: 'Good' })),
+        files: []
+      });    setUploadedFiles([]);
     setIsModalOpen(true);
   };
 
   const handleFacilityAssessmentSubmit = async (data: FacilityAssessmentData) => {
     try {
       if (!selectedFacility) return;
-      const payload = {
-        facilityId: selectedFacility.id,
-        reviewRemarks: data.reviewRemarks,
-        parts: (selectedFacility.parts || []).map((part, index) => ({
-          name: part,
-          condition: data.facility[index]?.condition || 'good'
+
+      // Create the assessment input object matching MaintenanceAssessmentInput type
+      const assessmentInput = {
+        institution_id: selectedFacility.institution_id || 1,
+        facility_id: data.facility_id,
+        status: 'pending' as 'pending',
+        details: data.details.map(detail => ({
+          part_of_building: detail.part_of_building,
+          assessment_status: detail.assessment_status
         })),
-        files: uploadedFiles,
+        school_feedback: data.school_feedback,
+        agent_feedback: data.agent_feedback,
+        files: uploadedFiles
       };
-      await createMaintenanceAssessment(payload);
+
+      const response = await createMaintenanceAssessment(assessmentInput);
+
+      if (response && response.status === 'error') {
+        toast({
+          title: 'Submission Error',
+          description: response.message || 'Failed to submit assessment',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Update the assessments list with the new assessment
+      const newAssessment = {
+        id: Date.now().toString(),
+        facilityId: data.facility_id,
+        facilityType: selectedFacility.name,
+        assessmentDate: new Date().toISOString(),
+        details: data.details,
+      };
+
+      setAssessments(prev => [newAssessment, ...prev]);
+
       toast({
-        title: "Success",
-        description: `${selectedFacility.name} assessment submitted successfully`,
+        title: 'Assessment Submitted',
+        description: `${selectedFacility.name} assessment submitted successfully!`,
+        variant: 'default',
       });
+
       setIsModalOpen(false);
       setUploadedFiles([]);
       facilityForm.reset();
-    } catch (error) {
+      setSelectedFacility(null);
+    } catch (error: any) {
+      // Try to extract backend error message
+      let message = 'Failed to submit assessment';
+      if (error?.response?.data?.message) {
+        message = error.response.data.message;
+      } else if (error?.message) {
+        message = error.message;
+      }
       toast({
-        title: "Error",
-        description: "Failed to submit assessment",
-        variant: "destructive",
+        title: 'Submission Error',
+        description: message,
+        variant: 'destructive',
       });
     }
   };
@@ -151,21 +397,23 @@ const AssessmentAddPage: React.FC = () => {
 
   return (
     <div className="container mx-auto py-6">
-      <div className="flex items-center gap-4 mb-6">
-        <Button variant="outline" onClick={() => navigate('/assessments')}>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div className="flex-1 min-w-0">
+          <h1 className="text-3xl font-bold truncate">Facility Assessment</h1>
+          <p className="text-muted-foreground mt-1">Select a facility type to begin assessment</p>
+        </div>
+        <Button
+          variant="outline"
+          onClick={() => navigate('/maintenance/assessment')}
+          className="flex-shrink-0 w-full sm:w-auto mt-2 sm:mt-0"
+        >
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Assessments
         </Button>
-        <div>
-          <h1 className="text-3xl font-bold">Facility Assessment</h1>
-          <p className="text-muted-foreground">
-            Select a facility type to begin assessment
-          </p>
-        </div>
       </div>
 
-      {/* Facility Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+  {/* Facility Cards Grid */}
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-10">
         {facilities.map((facility) => {
           const assessmentCount = getAssessmentCount(facility.id.toString());
           return (
@@ -197,42 +445,7 @@ const AssessmentAddPage: React.FC = () => {
         })}
       </div>
 
-      {/* Assessment History */}
-      {assessments.length > 0 && (
-        <div className="mt-8">
-          <h2 className="text-2xl font-bold mb-4">Recent Assessments</h2>
-          <div className="space-y-4">
-            {assessments.map((assessment) => (
-              <Card key={assessment.id}>
-                <CardHeader>
-                  <div className="flex justify-between items-center">
-                    <CardTitle className="text-lg">{assessment.facilityType}</CardTitle>
-                    <span className="text-sm text-muted-foreground">
-                      {new Date(assessment.assessmentDate).toLocaleDateString()}
-                    </span>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                    <div>
-                      <strong>Urgent Attention:</strong> {' '}
-                      {assessment.parts.filter((p: any) => p.condition === 'urgent').length}
-                    </div>
-                    <div>
-                      <strong>Needs Attention:</strong> {' '}
-                      {assessment.parts.filter((p: any) => p.condition === 'attention').length}
-                    </div>
-                    <div>
-                      <strong>Good Condition:</strong> {' '}
-                      {assessment.parts.filter((p: any) => p.condition === 'good').length}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      )}
+      
 
       {/* Assessment Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
@@ -261,24 +474,32 @@ const AssessmentAddPage: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {selectedFacility.parts?.map((part, index) => (
+                      {facilityParts.map((part, index) => (
                         <tr key={index}>
                           <td className="border px-4 py-2">{index + 1}</td>
                           <td className="border px-4 py-2">{part}</td>
-                          {["urgent", "attention", "good"].map((condition) => (
+                          {['urgent', 'attention', 'good'].map((condition) => (
                             <td key={condition} className="border px-4 py-2 text-center">
                               <FormField
                                 control={facilityForm.control}
-                                name={`facility.${index}.condition`}
+                                name={`details.${index}.assessment_status`}
                                 render={({ field }) => (
                                   <FormItem className="flex justify-center">
                                     <FormControl>
                                       <input
                                         type="radio"
                                         value={condition}
-                                        checked={field.value === condition}
-                                        onChange={() => field.onChange(condition)}
-                                        className="h-4 w-4"
+                                        checked={field.value === (condition === 'urgent' ? 'Urgent Attention' : condition === 'attention' ? 'Attention' : 'Good')}
+                                        onChange={() => {
+                                          const updatedDetails = [...facilityForm.getValues().details];
+                                          updatedDetails[index] = {
+                                            part_of_building: part,
+                                            assessment_status: condition === 'urgent' ? 'Urgent Attention' : condition === 'attention' ? 'Attention' : 'Good'
+                                          };
+                                          facilityForm.setValue('details', updatedDetails);
+                                        }}
+                                        className={`h-4 w-4 ${condition === 'urgent' && field.value === 'Urgent Attention' ? 'text-red-600' : ''}`}
+                                        style={condition === 'urgent' && field.value === 'Urgent Attention' ? { accentColor: '#dc2626' } : {}}
                                       />
                                     </FormControl>
                                   </FormItem>
@@ -359,17 +580,17 @@ const AssessmentAddPage: React.FC = () => {
                     )}
                   />
 
-                  {/* Review Remarks Section */}
+                  {/* School Feedback Section */}
                   <FormField
                     control={facilityForm.control}
-                    name="reviewRemarks"
+                    name="school_feedback"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-base font-semibold">Review Remarks</FormLabel>
+                        <FormLabel className="text-base font-semibold">Notes</FormLabel>
                         <FormControl>
                           <Textarea
                             {...field}
-                            placeholder="Enter detailed review remarks, observations, and recommendations for this facility assessment..."
+                            placeholder="Enter notes, concerns, and priorities..."
                             className="min-h-[120px] resize-none"
                           />
                         </FormControl>
@@ -377,6 +598,25 @@ const AssessmentAddPage: React.FC = () => {
                       </FormItem>
                     )}
                   />
+
+                  {/* Agent Feedback Section */}
+                  {/* <FormField
+                    control={facilityForm.control}
+                    name="agent_feedback"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-base font-semibold">Agent Feedback</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            {...field}
+                            placeholder="Enter your assessment notes, observations, and recommendations..."
+                            className="min-h-[120px] resize-none"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  /> */}
                 </div>
 
                 <div className="flex gap-2 pt-4">

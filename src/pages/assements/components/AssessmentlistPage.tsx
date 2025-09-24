@@ -19,18 +19,66 @@ import { useToast } from "@/hooks/use-toast";
 import { MaintenanceReport } from '../core/_model';
 import { getMaintenanceReports } from '../core/_request';
 
-// Convert API response to display format
-const mapMaintenanceReport = (report: MaintenanceReport): FacilityAssessment => ({
-  id: report.id.toString(),
-  schoolName: report.school_name,
-  facilityType: report.facility_type,
-  assessmentDate: report.assessment_date,
-  urgentItems: report.urgent_items,
-  attentionItems: report.attention_items,
-  goodItems: report.good_items,
-  totalItems: report.total_items,
-  overallCondition: report.overall_condition,
-  completionStatus: report.completion_status,
+// Extended types to match new backend response
+interface AssessmentDetail {
+  part_of_building: string;
+  assessment_status: string;
+  score?: number;
+}
+
+interface FacilityAssessment {
+  id: string;
+  schoolName: string;
+  facilityType: string;
+  assessmentDate: string;
+  urgentItems: number;
+  attentionItems: number;
+  goodItems: number;
+  totalItems: number;
+  overallCondition: 'excellent' | 'good' | 'needs-attention' | 'critical';
+  completionStatus: 'completed' | 'in-progress' | 'pending';
+  status?: string;
+  agentFeedback?: string;
+  totalScorePercentage?: number;
+  details?: AssessmentDetail[];
+}
+
+
+// Get current institution name from localStorage (from login response)
+const getCurrentInstitutionName = () => {
+  try {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      const user = JSON.parse(userStr);
+      return user?.school || user?.name || 'School';
+    }
+  } catch {}
+  return 'School';
+};
+
+import { getFacilities } from '../core/_request';
+import { Facility } from '../core/_model';
+
+// Convert API response to display format (extended for new backend fields)
+
+// Will be set after fetching facilities
+let facilityIdToName: Record<string, string> = {};
+
+const mapMaintenanceReport = (report: any): FacilityAssessment => ({
+  id: report.id?.toString() ?? '',
+  schoolName: getCurrentInstitutionName(),
+  facilityType: facilityIdToName[report.facility_id?.toString()] || report.facility_type || report.facility_id?.toString() || '',
+  assessmentDate: report.assessment_date ?? '',
+  urgentItems: report.urgent_items ?? 0,
+  attentionItems: report.attention_items ?? 0,
+  goodItems: report.good_items ?? 0,
+  totalItems: report.total_items ?? 0,
+  overallCondition: report.overall_condition ?? 'good',
+  completionStatus: report.completion_status ?? 'pending',
+  status: report.status,
+  agentFeedback: report.agent_feedback,
+  totalScorePercentage: report.total_score_percentage,
+  details: report.details ?? [],
 });
 
 // Display interface
@@ -165,9 +213,19 @@ const AssessmentListPage: React.FC = () => {
   const [assessments, setAssessments] = useState<FacilityAssessment[]>([]);
   const [selectedRows, setSelectedRows] = useState<FacilityAssessment[]>([]);
   
+
   useEffect(() => {
-    const fetchAssessments = async () => {
+    const fetchData = async () => {
       try {
+        // Fetch facilities first
+        const facilitiesRes = await getFacilities();
+        const facilities: Facility[] = facilitiesRes.data || [];
+        facilityIdToName = facilities.reduce((acc, f) => {
+          acc[f.id.toString()] = f.name;
+          return acc;
+        }, {} as Record<string, string>);
+
+        // Now fetch assessments
         const response = await getMaintenanceReports();
         const mappedAssessments = response.data.map(mapMaintenanceReport);
         setAssessments(mappedAssessments);
@@ -183,8 +241,7 @@ const AssessmentListPage: React.FC = () => {
         }
       }
     };
-    
-    fetchAssessments();
+    fetchData();
   }, [toast]);
   
   const handleAddNew = () => {
@@ -220,8 +277,8 @@ const AssessmentListPage: React.FC = () => {
       'needs-attention': { label: 'Needs Attention', variant: 'outline' as const, className: 'bg-yellow-100 text-yellow-800' },
       critical: { label: 'Critical', variant: 'destructive' as const, className: 'bg-red-100 text-red-800' },
     };
-    
     const config = conditionConfig[condition];
+    if (!config) return null;
     return <Badge className={config.className}>{config.label}</Badge>;
   };
 
@@ -231,8 +288,8 @@ const AssessmentListPage: React.FC = () => {
       'in-progress': { label: 'In Progress', className: 'bg-blue-100 text-blue-800' },
       pending: { label: 'Pending', className: 'bg-gray-100 text-gray-800' },
     };
-    
     const config = statusConfig[status];
+    if (!config) return null;
     return <Badge className={config.className}>{config.label}</Badge>;
   };
 
@@ -384,15 +441,13 @@ const AssessmentListPage: React.FC = () => {
   }
 
   const columns: ColumnDef<FacilityAssessment>[] = [
-    // {
-    //   accessorKey: "schoolName",
-    //   header: "School Name",
-    //   cell: ({ row }) => (
-    //     <div className="font-medium max-w-[200px] truncate" title={row.getValue("schoolName")}>
-    //       {row.getValue("schoolName")}
-    //     </div>
-    //   ),
-    // },
+    {
+      accessorKey: "schoolName",
+      header: "School Name",
+      cell: ({ row }) => (
+        <div className="font-medium max-w-[200px] truncate" title={row.getValue("schoolName")}>{row.getValue("schoolName")}</div>
+      ),
+    },
     {
       accessorKey: "facilityType",
       header: "Facility Type",
@@ -400,46 +455,51 @@ const AssessmentListPage: React.FC = () => {
         <div className="capitalize font-medium">{row.getValue("facilityType")}</div>
       ),
     },
+    // {
+    //   accessorKey: "assessmentDate",
+    //   header: "Assessment Date",
+    //   cell: ({ row }) => {
+    //     const date = new Date(row.getValue("assessmentDate"));
+    //     return <div className="text-sm">{date.toLocaleDateString()}</div>;
+    //   },
+    // },
     {
-      accessorKey: "assessmentDate",
-      header: "Assessment Date",
+      accessorKey: "totalScorePercentage",
+      header: "Score (%)",
+      cell: ({ row }) => (
+        <div className="text-center font-semibold">{row.getValue("totalScorePercentage") ?? '-'}</div>
+      ),
+    },
+    {
+      accessorKey: "status",
+      header: "Assessment Status",
+      cell: ({ row }) => (
+        <div className="capitalize">{row.getValue("status") ?? '-'}</div>
+      ),
+    },
+    {
+      accessorKey: "agentFeedback",
+      header: "Agent Feedback",
+      cell: ({ row }) => (
+        <div className="truncate max-w-[200px]" title={row.getValue("agentFeedback")}>{row.getValue("agentFeedback") ?? '-'}</div>
+      ),
+    },
+    {
+      accessorKey: "details",
+      header: "Details",
       cell: ({ row }) => {
-        const date = new Date(row.getValue("assessmentDate"));
-        return <div className="text-sm">{date.toLocaleDateString()}</div>;
+        const details = row.original.details;
+        if (!details || details.length === 0) return <span>-</span>;
+        return (
+          <div className="space-y-1">
+            {details.map((d, idx) => (
+              <div key={idx} className="text-xs border-b last:border-b-0 pb-1 last:pb-0">
+                <span className="font-semibold">{d.part_of_building}:</span> {d.assessment_status} {d.score !== undefined ? `(Score: ${d.score})` : ''}
+              </div>
+            ))}
+          </div>
+        );
       },
-    },
-    {
-      accessorKey: "urgentItems",
-      header: "Urgent",
-      cell: ({ row }) => (
-        <div className="text-center">
-          <span className="inline-flex items-center justify-center w-8 h-8 text-xs font-bold text-red-800 bg-red-100 rounded-full">
-            {row.getValue("urgentItems")}
-          </span>
-        </div>
-      ),
-    },
-    {
-      accessorKey: "attentionItems",
-      header: "Attention",
-      cell: ({ row }) => (
-        <div className="text-center">
-          <span className="inline-flex items-center justify-center w-8 h-8 text-xs font-bold text-yellow-800 bg-yellow-100 rounded-full">
-            {row.getValue("attentionItems")}
-          </span>
-        </div>
-      ),
-    },
-    {
-      accessorKey: "goodItems",
-      header: "Good",
-      cell: ({ row }) => (
-        <div className="text-center">
-          <span className="inline-flex items-center justify-center w-8 h-8 text-xs font-bold text-green-800 bg-green-100 rounded-full">
-            {row.getValue("goodItems")}
-          </span>
-        </div>
-      ),
     },
     {
       accessorKey: "overallCondition",
@@ -448,7 +508,7 @@ const AssessmentListPage: React.FC = () => {
     },
     {
       accessorKey: "completionStatus",
-      header: "Status",
+      header: "Completion Status",
       cell: ({ row }) => getCompletionStatusBadge(row.getValue("completionStatus")),
     },
     {
@@ -457,7 +517,6 @@ const AssessmentListPage: React.FC = () => {
       enableHiding: false,
       cell: ({ row }) => {
         const assessment = row.original;
-
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -468,9 +527,7 @@ const AssessmentListPage: React.FC = () => {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuItem
-                onClick={() => navigator.clipboard.writeText(assessment.id)}
-              >
+              <DropdownMenuItem onClick={() => navigator.clipboard.writeText(assessment.id)}>
                 Copy assessment ID
               </DropdownMenuItem>
               <DropdownMenuSeparator />
@@ -478,10 +535,7 @@ const AssessmentListPage: React.FC = () => {
                 <Edit className="mr-2 h-4 w-4" />
                 Edit assessment
               </DropdownMenuItem>
-              <DropdownMenuItem 
-                onClick={() => handleDelete(assessment.id)}
-                className="text-red-600"
-              >
+              <DropdownMenuItem onClick={() => handleDelete(assessment.id)} className="text-red-600">
                 <Trash2 className="mr-2 h-4 w-4" />
                 Delete assessment
               </DropdownMenuItem>

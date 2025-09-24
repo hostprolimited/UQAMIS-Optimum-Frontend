@@ -282,12 +282,12 @@ const RolesPermissions = () => {
           <h1 className="text-2xl font-bold text-foreground">Role & Permission Management</h1>
           <p className="text-muted-foreground">Manage system roles and their associated permissions</p>
         </div>
-        <Button
+        {/* <Button
           onClick={() => setShowAssignRoleModal(true)}
           className="bg-primary text-primary-foreground"
         >
           <Plus className="h-4 w-4 mr-1" /> Assign Role
-        </Button>
+        </Button> */}
       </div>
 
       {/* Statistics Cards */}
@@ -368,12 +368,12 @@ const RolesPermissions = () => {
                 <CardTitle>System Permissions</CardTitle>
                 <CardDescription>Manage and assign permissions</CardDescription>
               </div>
-              <Button
+              {/* <Button
                 onClick={openCreatePermissionModal}
                 className="bg-primary text-primary-foreground"
               >
                 <Plus className="h-4 w-4 mr-1" /> Create Permission
-              </Button>
+              </Button> */}
             </div>
           </CardHeader>
           <CardContent>
@@ -410,44 +410,6 @@ const RolesPermissions = () => {
                 </TableBody>
               </Table>
             )}
-          </CardContent>
-        </Card>
-
-        {/* Permission Matrix */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Permission Matrix</CardTitle>
-            <CardDescription>Overview of permissions across different roles</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Permission</TableHead>
-                  {rolePermissions.map(role => (
-                    <TableHead key={role.role} className="text-center">
-                      {role.name}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {permissions.map((permission) => (
-                  <TableRow key={permission.id}>
-                    <TableCell className="font-medium">
-                      {permission.name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                    </TableCell>
-                    {roles.map(role => (
-                      <TableCell key={role.id} className="text-center">
-                        <PermissionIcon
-                          hasPermission={false} // You'll need to implement a way to check if the role has this permission
-                        />
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
           </CardContent>
         </Card>
       </div>
