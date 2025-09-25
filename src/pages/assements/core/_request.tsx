@@ -1,7 +1,7 @@
 
 import api from "@/utils/api";
 import { Urls } from "@/constants/urls";
-import { APIResponse, Facility, MaintenanceAssessmentInput, MaintenanceReport } from "./_model";
+import { APIResponse, Facility, MaintenanceAssessmentInput, MaintenanceReport, SchoolMetric } from "./_model";
 
 // Fetch all facilities
 export const getFacilities = async (): Promise<APIResponse<Facility[]>> => {
@@ -45,4 +45,26 @@ export const createMaintenanceAssessment = async (data: MaintenanceAssessmentInp
 export const getMaintenanceReports = async (): Promise<APIResponse<MaintenanceReport[]>> => {
   const response = await api.get<APIResponse<MaintenanceReport[]>>(Urls.GET_MAINTENANCE_REPORT_URL);
   return response.data;
+};
+
+
+
+// add school metrics
+export const createSchoolMetrics = async (data: { institution_id: number; students_count: number; teachers_count: number; }): Promise<APIResponse<any>> => {
+  return api.post(Urls.CREATE_INSTITUTION_METRICS_URL, data);
+};
+
+// list school metrics
+export const getSchoolMetrics = async (): Promise<APIResponse<SchoolMetric[]>> => {
+  return api.get(Urls.INSTITUTIONS_METRICS_URL);
+};
+
+// update school metrics
+export const updateSchoolMetrics = async (id: number, data: { students_count: number; teachers_count: number; }): Promise<APIResponse<any>> => {
+  return api.put(Urls.UPDATE_INSTITUTION_METRICS_URL(id), data);
+};
+
+// delete school metrics
+export const deleteSchoolMetrics = async (id: number): Promise<APIResponse<any>> => {
+  return api.delete(Urls.DELETE_INSTITUTION_METRICS_URL(id));
 };

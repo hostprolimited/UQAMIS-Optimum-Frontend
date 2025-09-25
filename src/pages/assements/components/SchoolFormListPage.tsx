@@ -34,6 +34,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useToast } from '@/hooks/use-toast';
+import { getSchoolMetrics, updateSchoolMetrics, deleteSchoolMetrics } from '../core/_request';
+import { SchoolMetric } from '../core/_model';
 import { Plus, MoreHorizontal, Users, GraduationCap, Calendar, Clock, Edit, Trash2, Filter, Download, FileText, FileSpreadsheet, File } from 'lucide-react';
 
 // Types
@@ -275,7 +277,8 @@ type EditSchoolFormData = z.infer<typeof editSchoolFormSchema>;
 const SchoolFormListPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [schoolForms, setSchoolForms] = React.useState<SchoolForm[]>(mockSchoolForms);
+  const [schoolForms, setSchoolForms] = React.useState<SchoolForm[]>([]);
+  const [loading, setLoading] = React.useState(true);
   const [showEditModal, setShowEditModal] = React.useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
   const [selectedForm, setSelectedForm] = React.useState<SchoolForm | null>(null);
@@ -287,6 +290,43 @@ const SchoolFormListPage = () => {
   const [rowsPerPage, setRowsPerPage] = React.useState(5);
   const [termFilter, setTermFilter] = React.useState<string>('all');
   const [yearFilter, setYearFilter] = React.useState<string>('all');
+
+  // Fetch school metrics on component mount
+  React.useEffect(() => {
+    const fetchSchoolMetrics = async () => {
+      try {
+        setLoading(true);
+        const response = await getSchoolMetrics();
+        if (response.status === 'success') {
+          const mappedData: SchoolForm[] = response.data.map((metric: SchoolMetric) => ({
+            id: metric.id,
+            numberOfTeachers: metric.teachers_count,
+            numberOfStudents: metric.students_count,
+            term: metric.term,
+            year: metric.year.toString(),
+            createdAt: metric.created_at,
+          }));
+          setSchoolForms(mappedData);
+        } else {
+          toast({
+            title: 'Error',
+            description: response.message || 'Failed to fetch school metrics',
+            variant: 'destructive',
+          });
+        }
+      } catch (error: any) {
+        toast({
+          title: 'Error',
+          description: error?.message || 'Failed to fetch school metrics',
+          variant: 'destructive',
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSchoolMetrics();
+  }, [toast]);
 
   // Filter the data based on selected filters
   const filteredData = React.useMemo(() => {
@@ -328,25 +368,31 @@ const SchoolFormListPage = () => {
     if (!selectedForm) return;
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // Update the form in the list
-      setSchoolForms(prev =>
-        prev.map(form =>
-          form.id === selectedForm.id
-            ? { ...form, ...data }
-            : form
-        )
-      );
-
-      toast({
-        title: 'Success',
-        description: 'School form updated successfully',
+      const response = await updateSchoolMetrics(selectedForm.id, {
+        students_count: data.numberOfStudents,
+        teachers_count: data.numberOfTeachers,
       });
 
-      setShowEditModal(false);
-      setSelectedForm(null);
+      if (response.status === 'success') {
+        // Update the form in the list
+        setSchoolForms(prev =>
+          prev.map(form =>
+            form.id === selectedForm.id
+              ? { ...form, ...data }
+              : form
+          )
+        );
+
+        toast({
+          title: 'Success',
+          description: 'School form updated successfully',
+        });
+
+        setShowEditModal(false);
+        setSelectedForm(null);
+      } else {
+        throw new Error(response.message || 'Failed to update school form');
+      }
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -360,19 +406,22 @@ const SchoolFormListPage = () => {
     if (!formToDelete) return;
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const response = await deleteSchoolMetrics(formToDelete.id);
 
-      // Remove the form from the list
-      setSchoolForms(prev => prev.filter(form => form.id !== formToDelete.id));
+      if (response.status === 'success') {
+        // Remove the form from the list
+        setSchoolForms(prev => prev.filter(form => form.id !== formToDelete.id));
 
-      toast({
-        title: 'Success',
-        description: 'School form deleted successfully',
-      });
+        toast({
+          title: 'Success',
+          description: 'School form deleted successfully',
+        });
 
-      setShowDeleteDialog(false);
-      setFormToDelete(null);
+        setShowDeleteDialog(false);
+        setFormToDelete(null);
+      } else {
+        throw new Error(response.message || 'Failed to delete school form');
+      }
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -628,57 +677,71 @@ const SchoolFormListPage = () => {
                     rowCount={filteredData.length}
                   />
                   <TableBody>
-                    {visibleRows.map((row, index) => {
-                      const isItemSelected = selected.includes(row.id);
-                      const labelId = `enhanced-table-checkbox-${index}`;
+                    {loading ? (
+                      <TableRow>
+                        <TableCell colSpan={6} align="center">
+                          Loading...
+                        </TableCell>
+                      </TableRow>
+                    ) : visibleRows.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} align="center">
+                          No school forms found
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      visibleRows.map((row, index) => {
+                        const isItemSelected = selected.includes(row.id);
+                        const labelId = `enhanced-table-checkbox-${index}`;
 
-                      return (
-                        <TableRow
-                          hover
-                          onClick={(event) => handleClick(event, row.id)}
-                          role="checkbox"
-                          aria-checked={isItemSelected}
-                          tabIndex={-1}
-                          key={row.id}
-                          selected={isItemSelected}
-                          sx={{ cursor: 'pointer' }}
-                        >
-                          <TableCell padding="checkbox" sx={{ width: '5%' }}>
-                            <Checkbox
-                              color="primary"
-                              checked={isItemSelected}
-                              inputProps={{
-                                'aria-labelledby': labelId,
-                              }}
-                            />
-                          </TableCell>
-                          <TableCell align="right" sx={{ width: '20%' }}>{row.numberOfStudents}</TableCell>
-                          <TableCell sx={{ width: '15%' }}>{`Term ${row.term}`}</TableCell>
-                          <TableCell sx={{ width: '15%' }}>{row.year}</TableCell>
-                          <TableCell align="right" sx={{ width: '20%' }}>{row.numberOfTeachers}</TableCell>
-                          <TableCell align="right" sx={{ width: '25%' }}>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <IconButton size="small">
-                                  <MoreHorizontal />
-                                </IconButton>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => handleEdit(row)}>
-                                  <Edit className="h-4 w-4 mr-2" />
-                                  Edit
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleDeleteClick(row)} className="text-destructive">
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Delete
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                    {emptyRows > 0 && (
+                        return (
+                          <TableRow
+                            hover
+                            onClick={(event) => handleClick(event, row.id)}
+                            role="checkbox"
+                            aria-checked={isItemSelected}
+                            tabIndex={-1}
+                            key={row.id}
+                            selected={isItemSelected}
+                            sx={{ cursor: 'pointer' }}
+                          >
+                            <TableCell padding="checkbox" sx={{ width: '5%' }}>
+                              <Checkbox
+                                color="primary"
+                                checked={isItemSelected}
+                                inputProps={{
+                                  'aria-labelledby': labelId,
+                                }}
+                              />
+                            </TableCell>
+                            <TableCell align="right" sx={{ width: '20%' }}>{row.numberOfStudents}</TableCell>
+                            <TableCell sx={{ width: '15%' }}>{`Term ${row.term}`}</TableCell>
+                            <TableCell sx={{ width: '15%' }}>{row.year}</TableCell>
+                            <TableCell align="right" sx={{ width: '20%' }}>{row.numberOfTeachers}</TableCell>
+                            <TableCell align="right" sx={{ width: '25%' }}>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <IconButton size="small">
+                                    <MoreHorizontal />
+                                  </IconButton>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => handleEdit(row)}>
+                                    <Edit className="h-4 w-4 mr-2" />
+                                    Edit
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleDeleteClick(row)} className="text-destructive">
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Delete
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
+                    {emptyRows > 0 && !loading && (
                       <TableRow style={{ height: 53 * emptyRows }}>
                         <TableCell colSpan={6} />
                       </TableRow>

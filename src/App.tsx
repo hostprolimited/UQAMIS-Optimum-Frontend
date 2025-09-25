@@ -22,6 +22,7 @@ import AssessmentAdd from "./pages/assements/components/MantainanceAssessmentAdd
 import SchoolFormListPage from "./pages/assements/components/SchoolFormListPage";
 import SchoolFormAddPage from "./pages/assements/components/SchoolFormAddPage";
 import Reports from "./pages/dashboard/components/ReportsPage";
+import AssessmentReviewPage from "./pages/assements/components/AssesmentReviewPage";
 import Users from "./pages/settings/components/UsersPage";
 import RolesPermissions from "./pages/settings/components/RolesPermissionsPage";
 
@@ -61,22 +62,28 @@ const App = () => (
                       <OnboardedSchoolList />
                     </ProtectedRoute>
                   } />
-                  <Route path="/assessment" element={
+                  {/* <Route path="/assessment" element={
                     <ProtectedRoute allowedRoles={["school_admin", "agent", "ministry_admin"]}>
                       <RoleBasedAssessmentPage />
                     </ProtectedRoute>
-                  } />
-                  <Route path="/maintenance/assessment" element={
+                  } /> */}
+                  {/* <Route path="/maintenance/assessment" element={
                     <ProtectedRoute allowedRoles={["school_admin", "agent", "ministry_admin"]}>
                       <RoleBasedAssessmentPage />
                     </ProtectedRoute>
-                  } />
+                  } /> */}
 
                   <Route path="/assessments/add" element={
-                    <ProtectedRoute allowedRoles={["school_admin", "ministry_admin"]}>
+                    <ProtectedRoute allowedRoles={["school_admin"]}>
                       <AssessmentAdd />
                     </ProtectedRoute>
                   } />
+                  <Route path="/assessments/review" element={
+                    <ProtectedRoute allowedRoles={["agent", "ministry_admin"]}>
+                      <AssessmentReviewPage />
+                    </ProtectedRoute>
+                  } />
+                  
                   <Route path="/school-form/add" element={
                     <ProtectedRoute allowedRoles={["school_admin"]}>
                       <SchoolFormAddPage />

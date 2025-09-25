@@ -127,9 +127,16 @@ const navigationItems = [
   },
   { 
     title: 'Maintenance Assessment', 
-    url: '/maintenance/assessment', 
+    url: 'assessments/add', 
     icon: ClipboardCheck, 
     page: 'assessment' 
+  },
+
+  {
+    title: 'Assessment Review', 
+    url: 'assessments/review', 
+    icon: ClipboardCheck, 
+    page: 'assessment_review'
   },
   {
     title: 'School Form', 
@@ -142,6 +149,13 @@ const navigationItems = [
     url: '/reports', 
     icon: FileText, 
     page: 'reports' 
+  },
+ 
+  {
+    title: 'Institutions Report',
+    url: 'maintenance/assessment',
+    icon: FileText,
+    page: 'institutions_assessment'
   },
   {
     title: 'User Management',

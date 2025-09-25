@@ -9,7 +9,9 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Users, GraduationCap, Calendar, Clock } from 'lucide-react';
+import { useRole } from '@/contexts/RoleContext';
+import { Users, GraduationCap, Calendar, Clock, Building } from 'lucide-react';
+import { createSchoolMetrics } from '../core/_request';
 
 // Get current year and term
 const currentYear = new Date().getFullYear();
@@ -34,6 +36,7 @@ type SchoolFormData = z.infer<typeof schoolFormSchema>;
 
 const SchoolFormAddPage = () => {
   const { toast } = useToast();
+  const { currentUser } = useRole();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [formDataToSubmit, setFormDataToSubmit] = useState<SchoolFormData | null>(null);
@@ -54,26 +57,30 @@ const SchoolFormAddPage = () => {
   };
 
   const handleConfirmSubmit = async () => {
-    if (!formDataToSubmit) return;
+    if (!formDataToSubmit || !currentUser?.institution_id) return;
 
     try {
       setIsSubmitting(true);
       setShowConfirmDialog(false);
 
-      // Placeholder for API call
-      console.log('Submitting school form data:', formDataToSubmit);
-
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      toast({
-        title: 'Success',
-        description: 'School form submitted successfully',
+      const response = await createSchoolMetrics({
+        institution_id: currentUser.institution_id,
+        students_count: formDataToSubmit.numberOfStudents,
+        teachers_count: formDataToSubmit.numberOfTeachers,
       });
 
-      // Reset form after successful submission
-      form.reset();
-      setFormDataToSubmit(null);
+      if (response.status === 'success') {
+        toast({
+          title: 'Success',
+          description: 'School form submitted successfully',
+        });
+
+        // Reset form after successful submission
+        form.reset();
+        setFormDataToSubmit(null);
+      } else {
+        throw new Error(response.message || 'Failed to submit school form');
+      }
     } catch (error: any) {
       console.error('Error submitting form:', error);
       toast({
@@ -89,7 +96,7 @@ const SchoolFormAddPage = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">School Form Submission</h1>
+        <h1 className="text-2xl font-bold text-foreground">School Metrics Submission</h1>
         <p className="text-muted-foreground">
           Submit school statistics for the current term
         </p>

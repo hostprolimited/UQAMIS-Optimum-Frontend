@@ -42,3 +42,14 @@ export interface APIResponse<T> {
   message: string;
   data: T;
 }
+
+export interface SchoolMetric {
+  id: number;
+  institution_id: number;
+  students_count: number;
+  teachers_count: number;
+  year: number;
+  term: string;
+  created_at: string;
+  updated_at: string;
+}

@@ -8,6 +8,7 @@ export interface User {
   name: string;
   email: string;
   role: UserRole;
+  institution_id?: number;
   county_code?: string;
   county_name?: string;
   school?: string;
@@ -52,12 +53,19 @@ export const RoleProvider: React.FC<RoleProviderProps> = ({ children }) => {
     if (!currentUser) return false;
     switch (currentUser.role) {
       case 'ministry_admin':
-        return true;
+        return [
+          'overview',
+          'reports',
+          'assessment_review',
+          'onboard',
+          'user_management'
+        ].includes(page)
+
       case 'agent':
         return [
           'overview',
           'reports',
-          'assessment',
+          'assessment_review',
           'onboard',
           'user_management'
         ].includes(page);
@@ -65,8 +73,9 @@ export const RoleProvider: React.FC<RoleProviderProps> = ({ children }) => {
         return [
           'overview',
           'assessment',
-          'reports',
-          'school_form'
+          // 'reports',
+          'school_form',
+          'institutions_assessment'
         ].includes(page);
       default:
         return false;
