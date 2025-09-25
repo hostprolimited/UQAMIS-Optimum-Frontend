@@ -19,6 +19,8 @@ export const Urls = {
    GET_FACILITY_URL: (id: number) => `/facilities/${id}`,
    UPDATE_FACILITY_URL: (id: number) => `/facilities/${id}`,
    DELETE_FACILITY_URL: (id: number) => `/facilities/${id}`,
+
+
   // Maintenance Endpoints
   CREATE_MAINTENANCE_REPORT_URL: '/maintenance/create',
   GET_MAINTENANCE_REPORT_URL: '/maintenance/list',
@@ -34,12 +36,19 @@ export const Urls = {
   UPDATE_USER_URL: (id: number) => `/users/${id}`,
   DELETE_USER_URL: (id: number) => `/users/${id}`,
 
-  // Roles & permission  Management Endpoints
+  // Permission Management Endpoints
   GET_PERMISSIONS_URL: '/permissions/list',
-  GET_USER_ROLE: (id: number) => `/users/role/${id}`,
-  ASSIGN_USER_ROLE_URL: (id: number) => `/users/assign-role/${id}`,
   CREATE_PERMISSION_URL: '/permissions/create',
   ASSIGN_PERMISSION_ROLE_URL: '/permissions/assign-to-role',
+  UPDATE_PERMISSION_URL: (id: number) => `/permissions/${id}`,
+  DELETE_PERMISSION_URL: (id: number) => `/permissions/${id}`,
+
+  
+  // Roles Management Endpoints
+  GET_ROLES_URL: '/roles/list',
+  CREATE_ROLE_URL: '/create-role',
+  GET_USER_ROLE: (id: number) => `/users/role/${id}`,
+  ASSIGN_USER_ROLE_URL: (id: number) => `/users/assign-role/${id}`,
   UPDATE_ROLE_URL: (id: number) => `/update-role/${id}`,
   DELETE_ROLE_URL: (id: number) => `/remove-role/${id}`,
   

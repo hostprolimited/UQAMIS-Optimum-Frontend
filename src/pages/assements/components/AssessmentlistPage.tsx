@@ -1,10 +1,22 @@
 import React, { useState, useEffect } from 'react';
+import Swal from 'sweetalert2';
+import withReactContent from 'sweetalert2-react-content';
 import { useNavigate } from 'react-router-dom';
 import { ColumnDef } from "@tanstack/react-table";
 import { MoreHorizontal, Edit, Trash2, Plus, Download, FileText, FileSpreadsheet, FileImage } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogFooter,
+  DialogTitle,
+  DialogDescription,
+  DialogClose,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -248,25 +260,61 @@ const AssessmentListPage: React.FC = () => {
     navigate('/assessments/add');
   };
   
+
+  // Modal state for editing
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editAssessment, setEditAssessment] = useState<FacilityAssessment | null>(null);
+
   const handleEdit = (id: string) => {
-    navigate(`/assessments/edit/${id}`);
+    const found = assessments.find(a => a.id === id);
+    if (found) {
+      setEditAssessment(found);
+      setEditModalOpen(true);
+    }
+  };
+
+  const handleEditChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    if (!editAssessment) return;
+    const { name, value } = e.target;
+    setEditAssessment({ ...editAssessment, [name]: value });
+  };
+
+  const handleEditSave = () => {
+    if (!editAssessment) return;
+    setAssessments(prev => prev.map(a => a.id === editAssessment.id ? editAssessment : a));
+    setEditModalOpen(false);
+    toast({ title: 'Success', description: 'Assessment updated.' });
   };
   
+  const MySwal = withReactContent(Swal);
+
   const handleDelete = async (id: string) => {
-    try {
-      // Add actual API call here
-      const updatedAssessments = assessments.filter(assessment => assessment.id !== id);
-      setAssessments(updatedAssessments);
-      toast({
-        title: "Success",
-        description: "Assessment deleted successfully",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete assessment",
-        variant: "destructive",
-      });
+    const result = await MySwal.fire({
+      title: 'Are you sure?',
+      text: 'This action cannot be undone. Do you want to delete this assessment?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Yes, delete it!',
+      cancelButtonText: 'Cancel',
+    });
+    if (result.isConfirmed) {
+      try {
+        // Add actual API call here
+        const updatedAssessments = assessments.filter(assessment => assessment.id !== id);
+        setAssessments(updatedAssessments);
+        toast({
+          title: "Success",
+          description: "Assessment deleted successfully",
+        });
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to delete assessment",
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -527,9 +575,6 @@ const AssessmentListPage: React.FC = () => {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => navigator.clipboard.writeText(assessment.id)}>
-                Copy assessment ID
-              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => handleEdit(assessment.id)}>
                 <Edit className="mr-2 h-4 w-4" />
@@ -547,7 +592,76 @@ const AssessmentListPage: React.FC = () => {
   ];
 
   return (
-    <div className="h-full flex flex-col p-6">
+    <>
+      <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Assessment</DialogTitle>
+            <DialogDescription>Update the assessment details and save changes.</DialogDescription>
+          </DialogHeader>
+          {editAssessment && (
+            <form className="space-y-4" onSubmit={e => { e.preventDefault(); handleEditSave(); }}>
+              <div>
+                <label className="block text-sm font-medium">Facility Type</label>
+                <input
+                  className="w-full border rounded px-2 py-1"
+                  name="facilityType"
+                  value={editAssessment.facilityType}
+                  onChange={handleEditChange}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium">Assessment Date</label>
+                <input
+                  className="w-full border rounded px-2 py-1"
+                  name="assessmentDate"
+                  type="date"
+                  value={editAssessment.assessmentDate}
+                  onChange={handleEditChange}
+                  required
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium">Overall Condition</label>
+                <select
+                  className="w-full border rounded px-2 py-1"
+                  name="overallCondition"
+                  value={editAssessment.overallCondition}
+                  onChange={handleEditChange}
+                  required
+                >
+                  <option value="excellent">Urgent Attention</option>
+                  <option value="good">Attention</option>
+                  <option value="needs-attention">Good</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium">Completion Status</label>
+                <select
+                  className="w-full border rounded px-2 py-1"
+                  name="completionStatus"
+                  value={editAssessment.completionStatus}
+                  onChange={handleEditChange}
+                  required
+                >
+                  <option value="completed">Completed</option>
+                  <option value="in-progress">In Progress</option>
+                  <option value="pending">Pending</option>
+                </select>
+              </div>
+              <DialogFooter>
+                <Button type="submit">Save</Button>
+                <DialogClose asChild>
+                  <Button type="button" variant="outline">Cancel</Button>
+                </DialogClose>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+      {/* ...existing code... */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-3xl font-bold">Facility Maintenance Assessment Management</h1>
@@ -597,7 +711,7 @@ const AssessmentListPage: React.FC = () => {
           dense={true}
         />
       </div>
-    </div>
+    </>
   );
 };
 

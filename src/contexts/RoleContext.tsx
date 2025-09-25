@@ -65,7 +65,8 @@ export const RoleProvider: React.FC<RoleProviderProps> = ({ children }) => {
         return [
           'overview',
           'assessment',
-          'reports'
+          'reports',
+          'school_form'
         ].includes(page);
       default:
         return false;

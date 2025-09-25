@@ -28,7 +28,8 @@ import {
   Archive,
   ChevronDown,
   User,
-  Lock
+  Lock,
+  GraduationCap
 } from 'lucide-react';
 import { LucideIcon } from 'lucide-react';
 
@@ -129,6 +130,12 @@ const navigationItems = [
     url: '/maintenance/assessment', 
     icon: ClipboardCheck, 
     page: 'assessment' 
+  },
+  {
+    title: 'School Form', 
+    url: '/school-forms',
+    icon: GraduationCap,
+    page: 'school_form'
   },
   { 
     title: 'Reports', 

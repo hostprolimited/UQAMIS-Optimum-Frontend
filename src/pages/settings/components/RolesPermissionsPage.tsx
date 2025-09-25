@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Shield, Users, School, CheckCircle, XCircle, Plus, X, Lock } from 'lucide-react';
+import { Shield, Users, School, CheckCircle, XCircle, Plus, X, Lock, MoreHorizontal } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -18,6 +18,22 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   getUsers,
   getPermissions,
   createPermission,
@@ -26,6 +42,8 @@ import {
   getUserRole,
   updateRole,
   removeRole,
+  updatePermission,
+  deletePermission,
 } from '../core/_requests';
 import { User, Role, Permission } from '../core/_models';
 import { RolePermission } from '../core/_types';
@@ -115,7 +133,13 @@ const RolesPermissions = () => {
   const [selectedPermission, setSelectedPermission] = useState('');
   const [showAssignRoleModal, setShowAssignRoleModal] = useState(false);
   const [showCreatePermissionModal, setShowCreatePermissionModal] = useState(false);
+  const [showEditRoleModal, setShowEditRoleModal] = useState(false);
+  const [showEditPermissionModal, setShowEditPermissionModal] = useState(false);
+  const [showDeletePermissionAlert, setShowDeletePermissionAlert] = useState(false);
+  const [permissionToDelete, setPermissionToDelete] = useState<number | null>(null);
   const [newPermissionName, setNewPermissionName] = useState('');
+  const [editName, setEditName] = useState('');
+  const [selectedItemId, setSelectedItemId] = useState<number | null>(null);
   const [assigning, setAssigning] = useState(false);
   const [creatingPermission, setCreatingPermission] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -167,6 +191,96 @@ const RolesPermissions = () => {
     setShowAssignRoleModal(false);
     setSelectedUser(null);
     setSelectedRole('');
+  };
+
+  const handleEditRole = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedItemId || !editName) return;
+
+    try {
+      await updateRole(selectedItemId, { name: editName });
+      toast({
+        title: "Success",
+        description: "Role updated successfully",
+        variant: "default",
+      });
+      const permissionsData = await getPermissions();
+      setRoles(permissionsData.roles || []);
+      setShowEditRoleModal(false);
+    } catch (error: any) {
+      console.error('Error updating role:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update role",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteRole = async (id: number) => {
+    if (!window.confirm('Are you sure you want to delete this role?')) return;
+
+    try {
+      await removeRole(id);
+      toast({
+        title: "Success",
+        description: "Role deleted successfully",
+        variant: "default",
+      });
+      const permissionsData = await getPermissions();
+      setRoles(permissionsData.roles || []);
+    } catch (error: any) {
+      console.error('Error deleting role:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete role",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleEditPermission = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedItemId || !editName) return;
+
+    try {
+      await updatePermission(selectedItemId, { name: editName });
+      toast({
+        title: "Success",
+        description: "Permission updated successfully",
+        variant: "default",
+      });
+      const permissionsData = await getPermissions();
+      setPermissions(permissionsData.permissions || []);
+      setShowEditPermissionModal(false);
+    } catch (error: any) {
+      console.error('Error updating permission:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update permission",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeletePermission = async (id: number) => {
+    try {
+      await deletePermission(id);
+      toast({
+        title: "Success",
+        description: "Permission deleted successfully",
+        variant: "default",
+      });
+      const permissionsData = await getPermissions();
+      setPermissions(permissionsData.permissions || []);
+    } catch (error: any) {
+      console.error('Error deleting permission:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete permission",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleAssignRole = async (e: React.FormEvent) => {
@@ -349,9 +463,30 @@ const RolesPermissions = () => {
                           {role.name.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
                         </CardTitle>
                       </div>
+                      <div className="flex space-x-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedItemId(role.id);
+                            setEditName(role.name);
+                            setShowEditRoleModal(true);
+                          }}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive"
+                          onClick={() => handleDeleteRole(role.id)}
+                        >
+                          Delete
+                        </Button>
+                      </div>
                     </div>
                     <CardDescription className="text-sm mt-1">
-                      {/* {role.guard_name} */}
+                      {role.guard_name}
                     </CardDescription>
                   </CardHeader>
                 </Card>
@@ -387,6 +522,7 @@ const RolesPermissions = () => {
                   <TableRow>
                     <TableHead>Permission Name</TableHead>
                     <TableHead>Assign Permission to Role</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -404,6 +540,36 @@ const RolesPermissions = () => {
                             <option key={r.id} value={r.name}>{r.name}</option>
                           ))}
                         </select>
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <span className="sr-only">Open menu</span>
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setSelectedItemId(perm.id);
+                                setEditName(perm.name);
+                                setShowEditPermissionModal(true);
+                              }}
+                            >
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setPermissionToDelete(perm.id);
+                                setShowDeletePermissionAlert(true);
+                              }}
+                              className="text-destructive"
+                            >
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -534,6 +700,81 @@ const RolesPermissions = () => {
           </Card>
         </div>
       )}
+
+      {/* Edit Permission Modal */}
+      {showEditPermissionModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle>Edit Permission</CardTitle>
+              <Button
+                className="absolute top-2 right-2 text-muted-foreground"
+                variant="ghost"
+                onClick={() => setShowEditPermissionModal(false)}
+              >
+                <X className="h-5 w-5" />
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleEditPermission} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Permission Name</label>
+                  <input
+                    type="text"
+                    value={editName}
+                    onChange={e => setEditName(e.target.value)}
+                    className="w-full border rounded px-2 py-1"
+                    required
+                  />
+                </div>
+                <div className="flex justify-end space-x-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowEditPermissionModal(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    className="bg-primary text-primary-foreground"
+                  >
+                    Update Permission
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Delete Permission Alert */}
+      <AlertDialog open={showDeletePermissionAlert} onOpenChange={setShowDeletePermissionAlert}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the permission.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (permissionToDelete) {
+                  handleDeletePermission(permissionToDelete);
+                }
+                setShowDeletePermissionAlert(false);
+                setPermissionToDelete(null);
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       </div>
       <Toaster />
     </>

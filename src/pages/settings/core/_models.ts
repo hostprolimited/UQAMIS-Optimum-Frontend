@@ -40,6 +40,8 @@ export interface UpdateUserInput {
 export interface Role {
   id: number;
   name: string;
+  role_id?: number;
+  role: string;
   guard_name?: string;
   created_at?: string;
   updated_at?: string;

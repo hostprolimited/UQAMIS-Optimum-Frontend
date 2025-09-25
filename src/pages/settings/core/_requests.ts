@@ -31,10 +31,22 @@ export const deleteUser = async (id: number): Promise<void> => {
   await api.delete(Urls.DELETE_USER_URL(id));
 };
 
-// Get user roles
+// Get all roles
+export const getRoles = async (): Promise<{ roles: Role[] }> => {
+  const res = await api.get(Urls.GET_ROLES_URL);
+  return res.data;
+};
+
+// Create role
+export const createRole = async (data: { name: string }): Promise<Role> => {
+  const res = await api.post(Urls.CREATE_ROLE_URL, data);
+  return res.data;
+};
 
 // Permissions
-export const getPermissions = async (): Promise<{ roles: Role[], permissions: Permission[] }> => {
+export const getPermissions = async (): Promise<{
+  roles: any[]; permissions: Permission[] 
+}> => {
   const res = await api.get(Urls.GET_PERMISSIONS_URL);
   return res.data;
 };
@@ -78,4 +90,13 @@ export const removeRole = async (id: number): Promise<void> => {
   await api.delete(Urls.DELETE_ROLE_URL(id));
 };
 
+// Update permission
+export const updatePermission = async (id: number, data: { name: string }): Promise<Permission> => {
+  const res = await api.put(Urls.UPDATE_PERMISSION_URL(id), data);
+  return res.data;
+};
 
+// Delete permission
+export const deletePermission = async (id: number): Promise<void> => {
+  await api.delete(Urls.DELETE_PERMISSION_URL(id));
+};
