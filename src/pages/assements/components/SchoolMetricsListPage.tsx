@@ -15,7 +15,6 @@ import Typography from '@mui/material/Typography';
 import Paper from '@mui/material/Paper';
 import Checkbox from '@mui/material/Checkbox';
 import IconButton from '@mui/material/IconButton';
-import Tooltip from '@mui/material/Tooltip';
 import { visuallyHidden } from '@mui/utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -36,7 +35,7 @@ import * as z from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { getSchoolMetrics, updateSchoolMetrics, deleteSchoolMetrics } from '../core/_request';
 import { SchoolMetric } from '../core/_model';
-import { Plus, MoreHorizontal, Users, GraduationCap, Calendar, Clock, Edit, Trash2, Filter, Download, FileText, FileSpreadsheet, File } from 'lucide-react';
+import { Plus, MoreHorizontal, Users, GraduationCap, Calendar, Clock, Edit, Trash2, Filter, Download, FileText, FileSpreadsheet, File, Search } from 'lucide-react';
 
 // Types
 interface SchoolForm {
@@ -47,42 +46,6 @@ interface SchoolForm {
   year: string;
   createdAt: string;
 }
-
-// Mock data
-const mockSchoolForms: SchoolForm[] = [
-  {
-    id: 1,
-    numberOfTeachers: 25,
-    numberOfStudents: 500,
-    term: '1',
-    year: '2024',
-    createdAt: '2024-09-01',
-  },
-  {
-    id: 2,
-    numberOfTeachers: 30,
-    numberOfStudents: 650,
-    term: '2',
-    year: '2024',
-    createdAt: '2024-04-15',
-  },
-  {
-    id: 3,
-    numberOfTeachers: 22,
-    numberOfStudents: 420,
-    term: '3',
-    year: '2024',
-    createdAt: '2024-11-20',
-  },
-  {
-    id: 4,
-    numberOfTeachers: 28,
-    numberOfStudents: 580,
-    term: '1',
-    year: '2025',
-    createdAt: '2025-01-10',
-  },
-];
 
 function descendingComparator<T>(a: T, b: T, orderBy: keyof T) {
   if (b[orderBy] < a[orderBy]) {
@@ -113,32 +76,38 @@ interface HeadCell {
   id: keyof SchoolForm;
   label: string;
   numeric: boolean;
+  width?: string; // Add width property for custom column widths
 }
 
+// Re-order and set custom widths for columns
 const headCells: readonly HeadCell[] = [
+  {
+    id: 'numberOfTeachers',
+    numeric: true,
+    disablePadding: false,
+    label: 'Teachers',
+    width: '15%',
+  },
   {
     id: 'numberOfStudents',
     numeric: true,
     disablePadding: false,
     label: 'Students',
+    width: '15%',
   },
   {
     id: 'term',
     numeric: false,
     disablePadding: false,
     label: 'Term',
+    width: '15%',
   },
   {
     id: 'year',
     numeric: false,
     disablePadding: false,
     label: 'Year',
-  },
-  {
-    id: 'numberOfTeachers',
-    numeric: true,
-    disablePadding: false,
-    label: 'Teachers',
+    width: '15%',
   },
 ];
 
@@ -160,7 +129,7 @@ function EnhancedTableHead(props: EnhancedTableProps) {
     };
 
   return (
-    <TableHead>
+    <TableHead className="bg-muted/50">
       <TableRow>
         <TableCell padding="checkbox" sx={{ width: '5%' }}>
           <Checkbox
@@ -173,13 +142,13 @@ function EnhancedTableHead(props: EnhancedTableProps) {
             }}
           />
         </TableCell>
-        {headCells.map((headCell, index) => (
+        {headCells.map((headCell) => (
           <TableCell
             key={headCell.id}
             align={headCell.numeric ? 'right' : 'left'}
             padding={headCell.disablePadding ? 'none' : 'normal'}
             sortDirection={orderBy === headCell.id ? order : false}
-            sx={{ width: index === 0 ? '20%' : index === 1 ? '15%' : index === 2 ? '15%' : '20%' }}
+            sx={{ width: headCell.width, fontWeight: 'bold' }} // Apply custom width and bold header text
           >
             <TableSortLabel
               active={orderBy === headCell.id}
@@ -195,22 +164,20 @@ function EnhancedTableHead(props: EnhancedTableProps) {
             </TableSortLabel>
           </TableCell>
         ))}
-        <TableCell align="right" sx={{ width: '25%' }}>Actions</TableCell>
+        {/* Adjusted width for Actions column */}
+        <TableCell align="right" sx={{ width: '15%', fontWeight: 'bold' }}>Actions</TableCell>
       </TableRow>
     </TableHead>
   );
 }
 
+// Simplified Toolbar to only show selection count, as export is moved
 interface EnhancedTableToolbarProps {
   numSelected: number;
-  onAddNew: () => void;
-  onExportPDF: () => void;
-  onExportExcel: () => void;
-  onExportWord: () => void;
 }
 
 function EnhancedTableToolbar(props: EnhancedTableToolbarProps) {
-  const { numSelected, onAddNew, onExportPDF, onExportExcel, onExportWord } = props;
+  const { numSelected } = props;
 
   return (
     <Toolbar
@@ -218,6 +185,7 @@ function EnhancedTableToolbar(props: EnhancedTableToolbarProps) {
         {
           pl: { sm: 2 },
           pr: { xs: 1, sm: 1 },
+          minHeight: { xs: 56, sm: 64 },
         },
         numSelected > 0 && {
           bgcolor: (theme) =>
@@ -234,37 +202,22 @@ function EnhancedTableToolbar(props: EnhancedTableToolbarProps) {
         >
           {numSelected} selected
         </Typography>
-      ) : null}
-
-      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm">
-              <Download style={{ width: '16px', height: '16px', marginRight: '4px' }} />
-              Export
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={onExportPDF}>
-              <FileText style={{ width: '16px', height: '16px', marginRight: '8px' }} />
-              Export as PDF
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={onExportExcel}>
-              <FileSpreadsheet style={{ width: '16px', height: '16px', marginRight: '8px' }} />
-              Export as Excel
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={onExportWord}>
-              <File style={{ width: '16px', height: '16px', marginRight: '8px' }} />
-              Export as Word
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+      ) : (
+        <Typography
+          sx={{ flex: '1 1 100%' }}
+          variant="h6"
+          id="tableTitle"
+          component="div"
+          className="text-lg font-semibold"
+        >
+          School Forms
+        </Typography>
+      )}
     </Toolbar>
   );
 }
 
-// Form schema for editing
+// Form schema for editing (no change, but kept for completeness)
 const editSchoolFormSchema = z.object({
   numberOfTeachers: z.number().min(1, 'Number of teachers must be at least 1').max(1000, 'Number of teachers seems too high'),
   numberOfStudents: z.number().min(1, 'Number of students must be at least 1').max(10000, 'Number of students seems too high'),
@@ -290,19 +243,22 @@ const SchoolFormListPage = () => {
   const [rowsPerPage, setRowsPerPage] = React.useState(5);
   const [termFilter, setTermFilter] = React.useState<string>('all');
   const [yearFilter, setYearFilter] = React.useState<string>('all');
+  const [searchTerm, setSearchTerm] = React.useState<string>(''); // New state for search
 
-  // Fetch school metrics on component mount
+  // Fetch school metrics on component mount (No change needed)
   React.useEffect(() => {
     const fetchSchoolMetrics = async () => {
       try {
         setLoading(true);
+        // Simulate a delay for a better loading experience
+        await new Promise(resolve => setTimeout(resolve, 500)); 
         const response = await getSchoolMetrics();
         if (response.status === 'success') {
           const mappedData: SchoolForm[] = response.data.map((metric: SchoolMetric) => ({
             id: metric.id,
             numberOfTeachers: metric.teachers_count,
             numberOfStudents: metric.students_count,
-            term: metric.term,
+            term: metric.term.replace('Term ', ''),
             year: metric.year.toString(),
             createdAt: metric.created_at,
           }));
@@ -314,12 +270,6 @@ const SchoolFormListPage = () => {
             variant: 'destructive',
           });
         }
-      } catch (error: any) {
-        toast({
-          title: 'Error',
-          description: error?.message || 'Failed to fetch school metrics',
-          variant: 'destructive',
-        });
       } finally {
         setLoading(false);
       }
@@ -328,14 +278,20 @@ const SchoolFormListPage = () => {
     fetchSchoolMetrics();
   }, [toast]);
 
-  // Filter the data based on selected filters
+  // Filter the data based on selected filters AND search term
   const filteredData = React.useMemo(() => {
     return schoolForms.filter((form) => {
       const matchesTerm = termFilter === 'all' || form.term === termFilter;
       const matchesYear = yearFilter === 'all' || form.year === yearFilter;
-      return matchesTerm && matchesYear;
+      const matchesSearch = searchTerm.toLowerCase() === '' || 
+                            form.year.includes(searchTerm) ||
+                            `Term ${form.term}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            String(form.numberOfStudents).includes(searchTerm) ||
+                            String(form.numberOfTeachers).includes(searchTerm);
+      
+      return matchesTerm && matchesYear && matchesSearch;
     });
-  }, [schoolForms, termFilter, yearFilter]);
+  }, [schoolForms, termFilter, yearFilter, searchTerm]);
 
   const editForm = useForm<EditSchoolFormData>({
     resolver: zodResolver(editSchoolFormSchema),
@@ -346,7 +302,6 @@ const SchoolFormListPage = () => {
       year: '',
     },
   });
-
 
   const handleEdit = (form: SchoolForm) => {
     setSelectedForm(form);
@@ -368,9 +323,12 @@ const SchoolFormListPage = () => {
     if (!selectedForm) return;
 
     try {
+      // Simulate API call delay for better UX
+      await new Promise(resolve => setTimeout(resolve, 500));
       const response = await updateSchoolMetrics(selectedForm.id, {
         students_count: data.numberOfStudents,
         teachers_count: data.numberOfTeachers,
+        metric_id: selectedForm.id,
       });
 
       if (response.status === 'success') {
@@ -384,8 +342,8 @@ const SchoolFormListPage = () => {
         );
 
         toast({
-          title: 'Success',
-          description: 'School form updated successfully',
+          title: ' Success',
+          description: 'School form updated successfully.',
         });
 
         setShowEditModal(false);
@@ -395,8 +353,8 @@ const SchoolFormListPage = () => {
       }
     } catch (error: any) {
       toast({
-        title: 'Error',
-        description: error?.message || 'Failed to update school form',
+        title: ' Error',
+        description: error?.message || 'Failed to update school form.',
         variant: 'destructive',
       });
     }
@@ -406,15 +364,20 @@ const SchoolFormListPage = () => {
     if (!formToDelete) return;
 
     try {
+      // Simulate API call delay for better UX
+      await new Promise(resolve => setTimeout(resolve, 500));
       const response = await deleteSchoolMetrics(formToDelete.id);
 
       if (response.status === 'success') {
         // Remove the form from the list
         setSchoolForms(prev => prev.filter(form => form.id !== formToDelete.id));
 
+        // Unselect the item if it was selected
+        setSelected(prev => prev.filter(id => id !== formToDelete.id));
+
         toast({
-          title: 'Success',
-          description: 'School form deleted successfully',
+          title: '🗑️ Deleted',
+          description: 'School form deleted successfully.',
         });
 
         setShowDeleteDialog(false);
@@ -424,8 +387,8 @@ const SchoolFormListPage = () => {
       }
     } catch (error: any) {
       toast({
-        title: 'Error',
-        description: error?.message || 'Failed to delete school form',
+        title: '⚠️ Error',
+        description: error?.message || 'Failed to delete school form.',
         variant: 'destructive',
       });
     }
@@ -478,114 +441,142 @@ const SchoolFormListPage = () => {
   };
 
   const handleAddNew = () => {
-    navigate('/school-form/add');
+    navigate('/school-metrics/add');
   };
 
-  // Export functions
+  // Export functions (Ensure proper dynamic import structure)
   const exportToPDF = async () => {
-    const { jsPDF } = await import('jspdf');
-    const autoTable = (await import('jspdf-autotable')).default;
+    try {
+      const { jsPDF } = await import('jspdf');
+      const autoTable = (await import('jspdf-autotable')).default;
 
-    const doc = new jsPDF();
+      const doc = new jsPDF();
 
-    if (filteredData.length === 0) {
-      doc.text('No data to export', 20, 20);
-    } else {
-      const headers = ['Number of Students', 'Term', 'Year', 'Number of Teachers'];
-      const rows = filteredData.map(row => [
-        row.numberOfStudents,
-        `Term ${row.term}`,
-        row.year,
-        row.numberOfTeachers
-      ]);
+      if (filteredData.length === 0) {
+        doc.text('No data to export', 20, 20);
+      } else {
+        const headers = ['Number of Teachers', 'Number of Students', 'Term', 'Year'];
+        const rows = filteredData.map(row => [
+          row.numberOfTeachers,
+          row.numberOfStudents,
+          `Term ${row.term}`,
+          row.year,
+        ]);
 
-      autoTable(doc, {
-        head: [headers],
-        body: rows,
-        startY: 20,
-        styles: { fontSize: 8 },
-        headStyles: { fillColor: [41, 128, 185] },
-      });
+        autoTable(doc, {
+          head: [headers],
+          body: rows,
+          startY: 20,
+          styles: { fontSize: 8 },
+          headStyles: { fillColor: [41, 128, 185] },
+          theme: 'striped',
+        });
+      }
+
+      doc.save('school-forms.pdf');
+    } catch (error) {
+       toast({ title: 'Export Error', description: 'Failed to export PDF.', variant: 'destructive' });
     }
-
-    doc.save('school-forms.pdf');
   };
 
   const exportToExcel = async () => {
-    const XLSX = await import('xlsx');
-    const { saveAs } = await import('file-saver');
+    try {
+      const XLSX = await import('xlsx');
+      const { saveAs } = await import('file-saver');
 
-    const exportData = filteredData.map(row => ({
-      'Number of Students': row.numberOfStudents,
-      'Term': `Term ${row.term}`,
-      'Year': row.year,
-      'Number of Teachers': row.numberOfTeachers,
-    }));
+      const exportData = filteredData.map(row => ({
+        'Number of Teachers': row.numberOfTeachers,
+        'Number of Students': row.numberOfStudents,
+        'Term': `Term ${row.term}`,
+        'Year': row.year,
+      }));
 
-    const ws = XLSX.utils.json_to_sheet(exportData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'School Forms');
+      const ws = XLSX.utils.json_to_sheet(exportData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'School Forms');
 
-    const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-    const data = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    saveAs(data, 'school-forms.xlsx');
+      const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+      const data = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      saveAs(data, 'school-forms.xlsx');
+    } catch (error) {
+      toast({ title: 'Export Error', description: 'Failed to export Excel.', variant: 'destructive' });
+    }
   };
 
   const exportToWord = async () => {
-    const { Document, Packer, Paragraph, Table, TableCell, TableRow, TextRun } = await import('docx');
-    const { saveAs } = await import('file-saver');
+    try {
+      const { Document, Packer, Paragraph, Table, TableCell, TableRow, TextRun, AlignmentType } = await import('docx');
+      const { saveAs } = await import('file-saver');
 
-    if (filteredData.length === 0) {
+      if (filteredData.length === 0) {
+        const doc = new Document({
+          sections: [{
+            properties: {},
+            children: [new Paragraph({ children: [new TextRun("No data to export")] })]
+          }]
+        });
+
+        const blob = await Packer.toBlob(doc);
+        saveAs(blob, 'school-forms.docx');
+        return;
+      }
+
+      const headers = ['Number of Teachers', 'Number of Students', 'Term', 'Year'];
+
+      const table = new Table({
+        rows: [
+          new TableRow({
+            children: headers.map(header =>
+              new TableCell({
+                children: [new Paragraph({ children: [new TextRun({ text: header, bold: true })], alignment: AlignmentType.CENTER })],
+                verticalAlign: 'center',
+              })
+            ),
+            tableHeader: true,
+          }),
+          ...filteredData.map(row =>
+            new TableRow({
+              children: [
+                row.numberOfTeachers,
+                row.numberOfStudents,
+                `Term ${row.term}`,
+                row.year
+              ].map(cellValue =>
+                new TableCell({
+                  children: [new Paragraph({ children: [new TextRun(String(cellValue))] })]
+                })
+              )
+            })
+          )
+        ],
+        width: {
+          size: 100,
+          // type: "percent",
+        }
+      });
+
       const doc = new Document({
         sections: [{
           properties: {},
-          children: [new Paragraph({ children: [new TextRun("No data to export")] })]
+          children: [
+            new Paragraph({
+              text: "School Forms Report",
+              heading: 'Heading1',
+              alignment: AlignmentType.CENTER,
+              spacing: { after: 200 }
+            }),
+            table
+          ]
         }]
       });
 
       const blob = await Packer.toBlob(doc);
       saveAs(blob, 'school-forms.docx');
-      return;
+    } catch (error) {
+      toast({ title: 'Export Error', description: 'Failed to export Word document.', variant: 'destructive' });
     }
-
-    const headers = ['Number of Students', 'Term', 'Year', 'Number of Teachers'];
-
-    const table = new Table({
-      rows: [
-        new TableRow({
-          children: headers.map(header =>
-            new TableCell({
-              children: [new Paragraph({ children: [new TextRun({ text: header, bold: true })] })]
-            })
-          )
-        }),
-        ...filteredData.map(row =>
-          new TableRow({
-            children: [
-              row.numberOfStudents,
-              `Term ${row.term}`,
-              row.year,
-              row.numberOfTeachers
-            ].map(cellValue =>
-              new TableCell({
-                children: [new Paragraph({ children: [new TextRun(String(cellValue))] })]
-              })
-            )
-          })
-        )
-      ]
-    });
-
-    const doc = new Document({
-      sections: [{
-        properties: {},
-        children: [table]
-      }]
-    });
-
-    const blob = await Packer.toBlob(doc);
-    saveAs(blob, 'school-forms.docx');
   };
+
 
   // Avoid a layout jump when reaching the last page with empty rows.
   const emptyRows =
@@ -599,74 +590,125 @@ const SchoolFormListPage = () => {
     [order, orderBy, page, rowsPerPage, filteredData],
   );
 
+  const isSelected = (id: number) => selected.indexOf(id) !== -1;
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-start">
+      <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">School Forms</h1>
-          <p className="text-muted-foreground">
-            Manage school statistics and information
+          <h1 className="text-3xl font-extrabold text-gray-900 dark:text-gray-50 flex items-center">
+            <GraduationCap className="h-7 w-7 mr-3 text-primary" />
+            School Metrics
+          </h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Track and manage school statistics per term and year.
           </p>
         </div>
-        <Button onClick={handleAddNew} variant="default" size="sm">
-          <Plus style={{ width: '16px', height: '16px', marginRight: '4px' }} />
+        <Button onClick={handleAddNew} variant="default" size="lg" className="shadow-lg hover:shadow-xl transition-shadow duration-300">
+          <Plus className="h-5 w-5 mr-2" />
           Add School Info
         </Button>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>School Forms List</CardTitle>
+      {/* --- */}
+
+      <Card className="shadow-md">
+        <CardHeader className="py-4">
+          <CardTitle className="text-xl">School Forms List</CardTitle>
           <CardDescription>
-            View and manage all submitted school forms
+            View, filter, and export all submitted school records.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {/* Filter Bar */}
-          <div className="flex items-center space-x-2 py-4">
-            {/* Term Filter */}
-            <Select value={termFilter} onValueChange={setTermFilter}>
-              <SelectTrigger className="w-[120px]">
-                <Filter className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="Term" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Terms</SelectItem>
-                <SelectItem value="1">Term 1</SelectItem>
-                <SelectItem value="2">Term 2</SelectItem>
-                <SelectItem value="3">Term 3</SelectItem>
-              </SelectContent>
-            </Select>
+          
+          {/* Filter, Search, and Export Bar */}
+          <div className="flex flex-col sm:flex-row items-center justify-between space-y-4 sm:space-y-0 py-4">
+            
+            {/* Filters and Search - Left Side */}
+            <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+              {/* Search Input */}
+              <div className="relative w-full sm:w-[250px]">
+                <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Search by year, term, or count..."
+                  value={searchTerm}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setPage(0); // Reset page on search
+                  }}
+                  className="pl-9 h-10 w-full"
+                />
+              </div>
 
-            {/* Year Filter */}
-            <Select value={yearFilter} onValueChange={setYearFilter}>
-              <SelectTrigger className="w-[120px]">
-                <Calendar className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="Year" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Years</SelectItem>
-                <SelectItem value="2023">2023</SelectItem>
-                <SelectItem value="2024">2024</SelectItem>
-                <SelectItem value="2025">2025</SelectItem>
-                <SelectItem value="2026">2026</SelectItem>
-              </SelectContent>
-            </Select>
+              {/* Term Filter */}
+              <Select value={termFilter} onValueChange={(value) => {setTermFilter(value); setPage(0);}}>
+                <SelectTrigger className="w-full sm:w-[130px] h-10">
+                  <Filter className="h-4 w-4 mr-2 text-primary/80" />
+                  <SelectValue placeholder="Term" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Terms</SelectItem>
+                  <SelectItem value="1">Term 1</SelectItem>
+                  <SelectItem value="2">Term 2</SelectItem>
+                  <SelectItem value="3">Term 3</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Year Filter */}
+              <Select value={yearFilter} onValueChange={(value) => {setYearFilter(value); setPage(0);}}>
+                <SelectTrigger className="w-full sm:w-[120px] h-10">
+                  <Calendar className="h-4 w-4 mr-2 text-primary/80" />
+                  <SelectValue placeholder="Year" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Years</SelectItem>
+                  <SelectItem value="2023">2023</SelectItem>
+                  <SelectItem value="2024">2024</SelectItem>
+                  <SelectItem value="2025">2025</SelectItem>
+                  <SelectItem value="2026">2026</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Export Menu - Right Side */}
+            <div className="flex justify-end w-full sm:w-auto">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-10 text-primary border-primary hover:bg-primary/5">
+                    <Download className="h-4 w-4 mr-2" />
+                    Export
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-[180px]">
+                  <DropdownMenuItem onClick={exportToPDF} className="cursor-pointer">
+                    <FileText className="h-4 w-4 mr-2 text-red-500" />
+                    Export as PDF
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={exportToExcel} className="cursor-pointer">
+                    <FileSpreadsheet className="h-4 w-4 mr-2 text-green-600" />
+                    Export as Excel
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={exportToWord} className="cursor-pointer">
+                    <File className="h-4 w-4 mr-2 text-blue-500" />
+                    Export as Word
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
 
+          {/* --- */}
+          
           <Box sx={{ width: '100%' }}>
-            <Paper sx={{ width: '100%', mb: 2 }}>
+            <Paper sx={{ width: '100%', mb: 2, borderRadius: 2, overflow: 'hidden' }} elevation={0} className="border">
               <EnhancedTableToolbar
                 numSelected={selected.length}
-                onAddNew={handleAddNew}
-                onExportPDF={exportToPDF}
-                onExportExcel={exportToExcel}
-                onExportWord={exportToWord}
               />
               <TableContainer>
                 <Table
                   sx={{ minWidth: 750 }}
                   aria-labelledby="tableTitle"
+                  size='medium'
                 >
                   <EnhancedTableHead
                     numSelected={selected.length}
@@ -679,20 +721,31 @@ const SchoolFormListPage = () => {
                   <TableBody>
                     {loading ? (
                       <TableRow>
-                        <TableCell colSpan={6} align="center">
-                          Loading...
+                        <TableCell colSpan={6} align="center" className="py-10">
+                          <div className="flex justify-center items-center space-x-2">
+                            {/* Simple Loading Spinner */}
+                            <svg className="animate-spin h-5 w-5 text-primary" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span>Fetching school metrics...</span>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ) : visibleRows.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} align="center">
-                          No school forms found
+                        <TableCell colSpan={6} align="center" className="py-10">
+                          <div className="flex flex-col items-center space-y-2 text-muted-foreground">
+                            <FileText className="h-8 w-8" />
+                            <p className="font-medium">No school forms found</p>
+                            <p className="text-sm">Try adjusting your filters or search term.</p>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ) : (
-                      visibleRows.map((row, index) => {
-                        const isItemSelected = selected.includes(row.id);
-                        const labelId = `enhanced-table-checkbox-${index}`;
+                      visibleRows.map((row) => {
+                        const isItemSelected = isSelected(row.id);
+                        const labelId = `enhanced-table-checkbox-${row.id}`;
 
                         return (
                           <TableRow
@@ -703,7 +756,7 @@ const SchoolFormListPage = () => {
                             tabIndex={-1}
                             key={row.id}
                             selected={isItemSelected}
-                            sx={{ cursor: 'pointer' }}
+                            sx={{ cursor: 'pointer', '&:hover': { backgroundColor: alpha('#f5f5f5', 0.7) } }} // Improved hover effect
                           >
                             <TableCell padding="checkbox" sx={{ width: '5%' }}>
                               <Checkbox
@@ -714,23 +767,24 @@ const SchoolFormListPage = () => {
                                 }}
                               />
                             </TableCell>
-                            <TableCell align="right" sx={{ width: '20%' }}>{row.numberOfStudents}</TableCell>
+                            {/* Re-ordered and fixed spacing cells */}
+                            <TableCell align="right" sx={{ width: '15%' }}>{row.numberOfTeachers}</TableCell>
+                            <TableCell align="right" sx={{ width: '15%' }}>{row.numberOfStudents}</TableCell>
                             <TableCell sx={{ width: '15%' }}>{`Term ${row.term}`}</TableCell>
                             <TableCell sx={{ width: '15%' }}>{row.year}</TableCell>
-                            <TableCell align="right" sx={{ width: '20%' }}>{row.numberOfTeachers}</TableCell>
-                            <TableCell align="right" sx={{ width: '25%' }}>
+                            <TableCell align="right" sx={{ width: '15%' }}>
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                  <IconButton size="small">
-                                    <MoreHorizontal />
+                                  <IconButton size="small" aria-label="More actions" onClick={(e) => e.stopPropagation()}>
+                                    <MoreHorizontal className="h-5 w-5 text-muted-foreground hover:text-primary transition-colors duration-200" />
                                   </IconButton>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem onClick={() => handleEdit(row)}>
+                                <DropdownMenuContent align="end" className="w-40">
+                                  <DropdownMenuItem onClick={(e) => {e.stopPropagation(); handleEdit(row);}} className="cursor-pointer">
                                     <Edit className="h-4 w-4 mr-2" />
                                     Edit
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => handleDeleteClick(row)} className="text-destructive">
+                                  <DropdownMenuItem onClick={(e) => {e.stopPropagation(); handleDeleteClick(row);}} className="text-destructive cursor-pointer focus:text-destructive focus:bg-destructive/10">
                                     <Trash2 className="h-4 w-4 mr-2" />
                                     Delete
                                   </DropdownMenuItem>
@@ -750,7 +804,7 @@ const SchoolFormListPage = () => {
                 </Table>
               </TableContainer>
               <TablePagination
-                rowsPerPageOptions={[5, 10, 25]}
+                rowsPerPageOptions={[5, 10, 25, { label: 'All', value: filteredData.length }]}
                 component="div"
                 count={filteredData.length}
                 rowsPerPage={rowsPerPage}
@@ -763,31 +817,35 @@ const SchoolFormListPage = () => {
         </CardContent>
       </Card>
 
-      {/* Edit Modal */}
+      {/* --- */}
+
+      {/* Edit Modal (no major changes, kept for completeness) */}
       <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Edit School Form</DialogTitle>
             <DialogDescription>
-              Update the school form details below.
+              Update the school form details below. Click save when you're done.
             </DialogDescription>
           </DialogHeader>
           <Form {...editForm}>
-            <form onSubmit={editForm.handleSubmit(handleEditSubmit)} className="space-y-4">
+            <form onSubmit={editForm.handleSubmit(handleEditSubmit)} className="space-y-6">
               <div className="grid grid-cols-1 gap-4">
                 <FormField
                   control={editForm.control}
                   name="numberOfTeachers"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center space-x-2">
-                        <Users className="h-4 w-4" />
+                      <FormLabel className="flex items-center space-x-2 font-semibold">
+                        <Users className="h-4 w-4 text-indigo-500" />
                         <span>Number of Teachers</span>
                       </FormLabel>
                       <FormControl>
                         <Input
                           type="number"
-                          value={field.value ?? ''}
+                          placeholder="e.g. 50"
+                          // Fix for controlled number input: field.value is number|undefined, but onChange expects number|undefined
+                          value={field.value ?? ''} 
                           onChange={e => field.onChange(e.target.value === '' ? undefined : Number(e.target.value))}
                         />
                       </FormControl>
@@ -801,13 +859,14 @@ const SchoolFormListPage = () => {
                   name="numberOfStudents"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center space-x-2">
-                        <GraduationCap className="h-4 w-4" />
+                      <FormLabel className="flex items-center space-x-2 font-semibold">
+                        <GraduationCap className="h-4 w-4 text-green-500" />
                         <span>Number of Students</span>
                       </FormLabel>
                       <FormControl>
                         <Input
                           type="number"
+                          placeholder="e.g. 1200"
                           value={field.value ?? ''}
                           onChange={e => field.onChange(e.target.value === '' ? undefined : Number(e.target.value))}
                         />
@@ -822,8 +881,8 @@ const SchoolFormListPage = () => {
                   name="term"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center space-x-2">
-                        <Clock className="h-4 w-4" />
+                      <FormLabel className="flex items-center space-x-2 font-semibold">
+                        <Clock className="h-4 w-4 text-orange-500" />
                         <span>Term</span>
                       </FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
@@ -848,8 +907,8 @@ const SchoolFormListPage = () => {
                   name="year"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center space-x-2">
-                        <Calendar className="h-4 w-4" />
+                      <FormLabel className="flex items-center space-x-2 font-semibold">
+                        <Calendar className="h-4 w-4 text-blue-500" />
                         <span>Year</span>
                       </FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
@@ -875,8 +934,8 @@ const SchoolFormListPage = () => {
                 <Button type="button" variant="outline" onClick={() => setShowEditModal(false)}>
                   Cancel
                 </Button>
-                <Button type="submit" className="bg-primary hover:bg-primary-hover text-primary-foreground">
-                  Update Form
+                <Button type="submit" className="bg-primary hover:bg-primary/90">
+                  Save Changes
                 </Button>
               </DialogFooter>
             </form>
@@ -884,14 +943,17 @@ const SchoolFormListPage = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
+      {/* Delete Confirmation Dialog (no major changes, kept for completeness) */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogTitle className="text-red-600 flex items-center">
+              <Trash2 className="h-6 w-6 mr-2" />
+              Are you absolutely sure?
+            </AlertDialogTitle>
             <AlertDialogDescription>
               This action cannot be undone. This will permanently delete the school form
-              for Term {formToDelete?.term} {formToDelete?.year}.
+              for **Term {formToDelete?.term} {formToDelete?.year}** and remove its data from our servers.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -900,7 +962,7 @@ const SchoolFormListPage = () => {
               onClick={handleDeleteConfirm}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Delete
+              Confirm Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

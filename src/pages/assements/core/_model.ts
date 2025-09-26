@@ -32,9 +32,15 @@ export interface MaintenanceReport {
   attention_items: number;
   good_items: number;
   total_items: number;
+  agent_feedback: string;
+  school_feedback: string;
+  recommended_actions?: string;
+  priority_level?: 'low' | 'medium' | 'high';
+  total_score_percentage: number;
   overall_condition: 'excellent' | 'good' | 'needs-attention' | 'critical';
   completion_status: 'completed' | 'in-progress' | 'pending';
   files?: string[];
+  created_at: string;
 }
 
 export interface APIResponse<T> {
@@ -45,6 +51,7 @@ export interface APIResponse<T> {
 
 export interface SchoolMetric {
   id: number;
+  metrics_id: string;
   institution_id: number;
   students_count: number;
   teachers_count: number;
@@ -52,4 +59,12 @@ export interface SchoolMetric {
   term: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface AgentReview{
+  review_decision: 'approve' | 'reject' |  'require_clarification' | 'pending';
+  review_remarks: string;
+  maintenance_assessment_id: number;
+  recommended_actions?: string;
+  priority_level?: 'low' | 'medium' | 'high';
 }

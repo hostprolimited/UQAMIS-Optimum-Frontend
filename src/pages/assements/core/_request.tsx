@@ -50,21 +50,38 @@ export const getMaintenanceReports = async (): Promise<APIResponse<MaintenanceRe
 
 
 // add school metrics
-export const createSchoolMetrics = async (data: { institution_id: number; students_count: number; teachers_count: number; }): Promise<APIResponse<any>> => {
-  return api.post(Urls.CREATE_INSTITUTION_METRICS_URL, data);
+export const createSchoolMetrics = async (data: { institution_id: number; students_count: number; teachers_count: number; term: string; year: string; }): Promise<APIResponse<any>> => {
+  const response = await api.post<APIResponse<any>>(Urls.CREATE_INSTITUTION_METRICS_URL, data);
+  return response.data;
 };
 
 // list school metrics
 export const getSchoolMetrics = async (): Promise<APIResponse<SchoolMetric[]>> => {
-  return api.get(Urls.INSTITUTIONS_METRICS_URL);
+  const response = await api.get<APIResponse<SchoolMetric[]>>(Urls.INSTITUTIONS_METRICS_URL);
+  return response.data;
 };
 
 // update school metrics
-export const updateSchoolMetrics = async (id: number, data: { students_count: number; teachers_count: number; }): Promise<APIResponse<any>> => {
-  return api.put(Urls.UPDATE_INSTITUTION_METRICS_URL(id), data);
+export const updateSchoolMetrics = async (id: number, data: { students_count: number; teachers_count: number; metric_id: number; }): Promise<APIResponse<any>> => {
+  const response = await api.put<APIResponse<any>>(Urls.UPDATE_INSTITUTION_METRICS_URL(id), data);
+  return response.data;
 };
 
 // delete school metrics
 export const deleteSchoolMetrics = async (id: number): Promise<APIResponse<any>> => {
-  return api.delete(Urls.DELETE_INSTITUTION_METRICS_URL(id));
+  const response = await api.delete<APIResponse<any>>(Urls.DELETE_INSTITUTION_METRICS_URL(id));
+  return response.data;
+};
+
+
+// get maintainance report by id
+export const getMaintenanceReportById = async (id: number): Promise<APIResponse<MaintenanceReport>> => {
+  const response = await api.get<APIResponse<MaintenanceReport>>(Urls.GET_MAINTENANCE_REPORT_BY_ID_URL(id));
+  return response.data;
+};
+
+// agent review maintainance report by id
+export const agentReviewMaintenanceReport = async (id: number, data: { review_decision: 'approve' | 'reject' |  'require_clarification' | 'pending'; review_remarks: string; }): Promise<APIResponse<any>> => {
+  const response = await api.post<APIResponse<any>>(Urls.AGENT_REVIEW_MAINTENANCE_ASSESSMENT(id), data);
+  return response.data;
 };

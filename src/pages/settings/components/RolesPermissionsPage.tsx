@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Shield, Users, School, CheckCircle, XCircle, Plus, X, Lock, MoreHorizontal } from 'lucide-react';
+import { Shield, Users, School, CheckCircle, XCircle, Plus, X, Lock } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -17,22 +17,6 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import {
   getUsers,
   getPermissions,
@@ -135,8 +119,6 @@ const RolesPermissions = () => {
   const [showCreatePermissionModal, setShowCreatePermissionModal] = useState(false);
   const [showEditRoleModal, setShowEditRoleModal] = useState(false);
   const [showEditPermissionModal, setShowEditPermissionModal] = useState(false);
-  const [showDeletePermissionAlert, setShowDeletePermissionAlert] = useState(false);
-  const [permissionToDelete, setPermissionToDelete] = useState<number | null>(null);
   const [newPermissionName, setNewPermissionName] = useState('');
   const [editName, setEditName] = useState('');
   const [selectedItemId, setSelectedItemId] = useState<number | null>(null);
@@ -264,6 +246,8 @@ const RolesPermissions = () => {
   };
 
   const handleDeletePermission = async (id: number) => {
+    if (!window.confirm('Are you sure you want to delete this permission?')) return;
+
     try {
       await deletePermission(id);
       toast({
@@ -542,34 +526,27 @@ const RolesPermissions = () => {
                         </select>
                       </TableCell>
                       <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                              <span className="sr-only">Open menu</span>
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={() => {
-                                setSelectedItemId(perm.id);
-                                setEditName(perm.name);
-                                setShowEditPermissionModal(true);
-                              }}
-                            >
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => {
-                                setPermissionToDelete(perm.id);
-                                setShowDeletePermissionAlert(true);
-                              }}
-                              className="text-destructive"
-                            >
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        <div className="flex space-x-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedItemId(perm.id);
+                              setEditName(perm.name);
+                              setShowEditPermissionModal(true);
+                            }}
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive"
+                            onClick={() => handleDeletePermission(perm.id)}
+                          >
+                            Delete
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -700,81 +677,6 @@ const RolesPermissions = () => {
           </Card>
         </div>
       )}
-
-      {/* Edit Permission Modal */}
-      {showEditPermissionModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <Card className="w-full max-w-md">
-            <CardHeader>
-              <CardTitle>Edit Permission</CardTitle>
-              <Button
-                className="absolute top-2 right-2 text-muted-foreground"
-                variant="ghost"
-                onClick={() => setShowEditPermissionModal(false)}
-              >
-                <X className="h-5 w-5" />
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleEditPermission} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Permission Name</label>
-                  <input
-                    type="text"
-                    value={editName}
-                    onChange={e => setEditName(e.target.value)}
-                    className="w-full border rounded px-2 py-1"
-                    required
-                  />
-                </div>
-                <div className="flex justify-end space-x-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setShowEditPermissionModal(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    className="bg-primary text-primary-foreground"
-                  >
-                    Update Permission
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Delete Permission Alert */}
-      <AlertDialog open={showDeletePermissionAlert} onOpenChange={setShowDeletePermissionAlert}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the permission.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (permissionToDelete) {
-                  handleDeletePermission(permissionToDelete);
-                }
-                setShowDeletePermissionAlert(false);
-                setPermissionToDelete(null);
-              }}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
       </div>
       <Toaster />
     </>

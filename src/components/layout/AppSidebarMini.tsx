@@ -126,10 +126,16 @@ const navigationItems = [
     page: 'onboard' 
   },
   { 
-    title: 'Maintenance Assessment', 
-    url: 'assessments/add', 
-    icon: ClipboardCheck, 
-    page: 'assessment' 
+    title: 'Assessments',
+    children: [
+      { title: 'Maintenance Assessment', url: '/assessments/add', icon: ClipboardCheck },
+      { title: 'Safety Assessment', url: '/assessment/safety', icon: ClipboardCheck },
+      { title: 'Assessment Report', url: '/maintenance/assessment', icon: FileText },
+    ],
+    // url: '/assessment',
+    // url: 'maintenance/assessment',
+    icon: ClipboardCheck,
+    page: 'assessment'
   },
 
   {
@@ -140,7 +146,7 @@ const navigationItems = [
   },
   {
     title: 'School Form', 
-    url: '/school-forms',
+    url: '/school-metrics',
     icon: GraduationCap,
     page: 'school_form'
   },
@@ -151,12 +157,12 @@ const navigationItems = [
     page: 'reports' 
   },
  
-  {
-    title: 'Institutions Report',
-    url: 'maintenance/assessment',
-    icon: FileText,
-    page: 'institutions_assessment'
-  },
+  // {
+  //   title: 'Institutions Report',
+  //   url: 'maintenance/assessment',
+  //   icon: FileText,
+  //   page: 'institutions_assessment'
+  // },
   {
     title: 'User Management',
     icon: Users,

@@ -25,8 +25,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useRole } from "@/contexts/RoleContext";
+import {getMaintenanceReportById, agentReviewMaintenanceReport} from '../core/_request';
 
-// TypeScript interfaces for the review system
+// TypeScript interfaces for theupdateMaintenanceReport review system
 interface FacilityAssessmentSubmission {
   id: string;
   schoolName: string;
@@ -198,7 +199,7 @@ const AssessmentReviewPage: React.FC = () => {
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   
   // Get the current user role for review permissions
-  const currentUserRole: ReviewUserRole = currentUser.role === 'admin' ? 'admin' : 'county_admin';
+  const currentUserRole: ReviewUserRole = currentUser.role === 'ministry_admin' ? 'admin' : 'county_admin';
   
   // Review form state
   const [reviewForm, setReviewForm] = useState({

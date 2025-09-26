@@ -408,7 +408,7 @@ const AssessmentAddPage: React.FC = () => {
           className="flex-shrink-0 w-full sm:w-auto mt-2 sm:mt-0"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Assessments
+          Back to Reports
         </Button>
       </div>
 

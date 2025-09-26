@@ -14,9 +14,9 @@ export const Urls = {
    INSTITUTION_DETAIL_URL: (id: number) => `/institutions/${id}`,
 
     // Institutions metrics Endpoints
-   INSTITUTIONS_METRICS_URL: '/institutions/metrics',
+   INSTITUTIONS_METRICS_URL: '/institutions/metrics/list',
    CREATE_INSTITUTION_METRICS_URL: '/institutions/metrics/create',
-   UPDATE_INSTITUTION_METRICS_URL: (id: number) => `/institutions/metrics/${id}`,
+   UPDATE_INSTITUTION_METRICS_URL: (id: number) => `/institutions/metrics/update`,
    DELETE_INSTITUTION_METRICS_URL: (id: number) => `/institutions/metrics/${id}`,
 
    // Facilities Endpoints
@@ -34,6 +34,7 @@ export const Urls = {
   UPDATE_MAINTENANCE_REPORT_URL: (id: number) => `/maintenance/${id}`,
   DELETE_MAINTENANCE_REPORT_URL: (id: number) => `/maintenance/${id}`,
   MAINTENANCE_ASSESSMENT: '/maintenance/create',
+  AGENT_REVIEW_MAINTENANCE_ASSESSMENT: (id: number) => `/maintenance/review/${id}`,
 
   // User Management Endpoints
   CREATE_USERS_URL: '/users/create',

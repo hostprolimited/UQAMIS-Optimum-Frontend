@@ -13,6 +13,8 @@ import { useRole } from '@/contexts/RoleContext';
 import { Users, GraduationCap, Calendar, Clock, Building } from 'lucide-react';
 import { createSchoolMetrics } from '../core/_request';
 
+import { useNavigate } from 'react-router-dom';
+
 // Get current year and term
 const currentYear = new Date().getFullYear();
 const currentMonth = new Date().getMonth() + 1; // 1-12
@@ -26,8 +28,8 @@ const getCurrentTerm = () => {
 };
 
 const schoolFormSchema = z.object({
-  numberOfTeachers: z.number().min(1, 'Number of teachers must be at least 1').max(1000, 'Number of teachers seems too high'),
-  numberOfStudents: z.number().min(1, 'Number of students must be at least 1').max(10000, 'Number of students seems too high'),
+  numberOfTeachers: z.number().min(0, 'Number of teachers must be at least 0').max(1000, 'Number of teachers seems too high'),
+  numberOfStudents: z.number().min(0, 'Number of students must be at least 0').max(10000, 'Number of students seems too high'),
   term: z.string().min(1, 'Please select a term'),
   year: z.string().min(1, 'Please select a year'),
 });
@@ -37,6 +39,7 @@ type SchoolFormData = z.infer<typeof schoolFormSchema>;
 const SchoolFormAddPage = () => {
   const { toast } = useToast();
   const { currentUser } = useRole();
+  const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [formDataToSubmit, setFormDataToSubmit] = useState<SchoolFormData | null>(null);
@@ -65,8 +68,10 @@ const SchoolFormAddPage = () => {
 
       const response = await createSchoolMetrics({
         institution_id: currentUser.institution_id,
-        students_count: formDataToSubmit.numberOfStudents,
-        teachers_count: formDataToSubmit.numberOfTeachers,
+        students_count: formDataToSubmit.numberOfStudents ?? 0,
+        teachers_count: formDataToSubmit.numberOfTeachers ?? 0,
+        term: formDataToSubmit.term,
+        year: formDataToSubmit.year,
       });
 
       if (response.status === 'success') {
@@ -74,22 +79,20 @@ const SchoolFormAddPage = () => {
           title: 'Success',
           description: 'School form submitted successfully',
         });
-
-        // Reset form after successful submission
-        form.reset();
-        setFormDataToSubmit(null);
+        navigate('/school-metrics');
       } else {
         throw new Error(response.message || 'Failed to submit school form');
       }
     } catch (error: any) {
-      console.error('Error submitting form:', error);
       toast({
         title: 'Error',
-        description: error?.message || 'Failed to submit school form',
+        description: error.message || 'Failed to submit school form',
         variant: 'destructive',
       });
+      form.reset();
     } finally {
       setIsSubmitting(false);
+      setFormDataToSubmit(null);
     }
   };
 

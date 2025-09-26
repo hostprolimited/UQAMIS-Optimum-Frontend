@@ -211,9 +211,9 @@ const Reports = () => {
         const matchesStatus = filterStatus === 'all' || report.status === filterStatus;
         
         // Role-based filtering
-        if (currentUser.role === 'county_admin') {
+        if (currentUser.role === 'agent') {
           return matchesSearch && matchesType && matchesSubCounty && matchesLocation && 
-                 matchesState && matchesStatus && report.county === currentUser.county;
+                 matchesState && matchesStatus && report.county === currentUser.county_code;
         }
         
         return matchesSearch && matchesType && matchesSubCounty && matchesLocation && 
@@ -473,7 +473,7 @@ const Reports = () => {
                         <Button variant="ghost" size="sm">
                           <Eye className="h-4 w-4" />
                         </Button>
-                        {currentUser.role === 'county_admin' && (
+                        {currentUser.role === 'agent' && (
                           <Button variant="ghost" size="sm">
                             <Download className="h-4 w-4" />
                           </Button>

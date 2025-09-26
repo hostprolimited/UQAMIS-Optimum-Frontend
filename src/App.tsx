@@ -19,11 +19,11 @@ import Onboard from "./pages/onboarding/components/OnboardPage";
 import OnboardedSchoolList from "./pages/onboarding/components/OnboardedSchoolList";
 import RoleBasedAssessmentPage from "./pages/assements/components/RoleBasedAssessmentsPage";
 import AssessmentAdd from "./pages/assements/components/MantainanceAssessmentAddPage";
-import SchoolFormListPage from "./pages/assements/components/SchoolFormListPage";
-import SchoolFormAddPage from "./pages/assements/components/SchoolFormAddPage";
 import Reports from "./pages/dashboard/components/ReportsPage";
-import AssessmentReviewPage from "./pages/assements/components/AssesmentReviewPage";
 import Users from "./pages/settings/components/UsersPage";
+import SchoolFormListPage from "./pages/assements/components/SchoolMetricsListPage";
+import SchoolFormAddPage from "./pages/assements/components/SchoolMetricsAddPage";
+import AssessmentReviewPage from "./pages/assements/components/AssessmentReviewPage";
 import RolesPermissions from "./pages/settings/components/RolesPermissionsPage";
 
 import LoginPage from "./pages/auth/components/loginPage";
@@ -62,41 +62,41 @@ const App = () => (
                       <OnboardedSchoolList />
                     </ProtectedRoute>
                   } />
-                  {/* <Route path="/assessment" element={
+                  <Route path="/assessment" element={
                     <ProtectedRoute allowedRoles={["school_admin", "agent", "ministry_admin"]}>
                       <RoleBasedAssessmentPage />
                     </ProtectedRoute>
-                  } /> */}
-                  {/* <Route path="/maintenance/assessment" element={
+                  } />
+                  <Route path="/maintenance/assessment" element={
                     <ProtectedRoute allowedRoles={["school_admin", "agent", "ministry_admin"]}>
                       <RoleBasedAssessmentPage />
                     </ProtectedRoute>
-                  } /> */}
+                  } />
+                  <Route path="/school-metrics" element={
+                    <ProtectedRoute allowedRoles={["school_admin"]}>
+                      <SchoolFormListPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/school-metrics/add" element={
+                    <ProtectedRoute allowedRoles={["school_admin"]}>
+                      <SchoolFormAddPage />
+                    </ProtectedRoute>
+                  } />
+                  
 
                   <Route path="/assessments/add" element={
-                    <ProtectedRoute allowedRoles={["school_admin"]}>
+                    <ProtectedRoute allowedRoles={["school_admin", "ministry_admin"]}>
+                      <AssessmentAdd />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/assessments/edit/:id" element={
+                    <ProtectedRoute allowedRoles={["school_admin", "ministry_admin"]}>
                       <AssessmentAdd />
                     </ProtectedRoute>
                   } />
                   <Route path="/assessments/review" element={
                     <ProtectedRoute allowedRoles={["agent", "ministry_admin"]}>
                       <AssessmentReviewPage />
-                    </ProtectedRoute>
-                  } />
-                  
-                  <Route path="/school-form/add" element={
-                    <ProtectedRoute allowedRoles={["school_admin"]}>
-                      <SchoolFormAddPage />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/school-forms" element={
-                    <ProtectedRoute allowedRoles={["school_admin"]}>
-                      <SchoolFormListPage />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/assessments/edit/:id" element={
-                    <ProtectedRoute allowedRoles={["school_admin", "ministry_admin"]}>
-                      <AssessmentAdd />
                     </ProtectedRoute>
                   } />
                   <Route path="/reports" element={
