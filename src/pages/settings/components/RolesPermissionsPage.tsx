@@ -470,7 +470,7 @@ const RolesPermissions = () => {
                       </div>
                     </div>
                     <CardDescription className="text-sm mt-1">
-                      {role.guard_name}
+                    
                     </CardDescription>
                   </CardHeader>
                 </Card>
