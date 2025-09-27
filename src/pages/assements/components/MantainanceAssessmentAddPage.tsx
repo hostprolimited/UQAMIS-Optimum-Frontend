@@ -23,10 +23,22 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 
 import { getFacilities, createMaintenanceAssessment } from "../core/_request";
 import { Facility } from "../core/_model";
+import ClassSafetyForm from './SafetyFormPage';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ChevronDown } from 'lucide-react';
 
 // Facility type mappings for consistent naming
 const FACILITY_TYPE_MAPPINGS: { [key: string]: string } = {
@@ -203,7 +215,9 @@ const facilityAssessmentSchema = z.object({
   })),
   school_feedback: z.string().min(1, 'School feedback is required'),
   agent_feedback: z.string().optional(),
-  files: z.array(z.instanceof(File)).optional()
+  files: z.array(z.instanceof(File)).optional(),
+  grade: z.string().optional(),
+  streams: z.array(z.string()).optional(),
 });
 
 type FacilityAssessmentData = z.infer<typeof facilityAssessmentSchema>;
@@ -260,7 +274,9 @@ const AssessmentAddPage: React.FC = () => {
       details: [],
       school_feedback: '',
       agent_feedback: '',
-      files: []
+      files: [],
+      grade: '',
+      streams: [],
     }
   });
   
@@ -279,7 +295,9 @@ const AssessmentAddPage: React.FC = () => {
         })),
         school_feedback: '',
         agent_feedback: '',
-        files: []
+        files: [],
+        grade: '',
+        streams: [],
       });
     }
   }, [selectedFacility]);
@@ -332,6 +350,7 @@ const AssessmentAddPage: React.FC = () => {
       // Create the assessment input object matching MaintenanceAssessmentInput type
       const assessmentInput = {
         institution_id: selectedFacility.institution_id || 1,
+        institution_name: 'Institution', // Add required institution_name
         facility_id: data.facility_id,
         status: 'pending' as 'pending',
         details: data.details.map(detail => ({
@@ -340,7 +359,9 @@ const AssessmentAddPage: React.FC = () => {
         })),
         school_feedback: data.school_feedback,
         agent_feedback: data.agent_feedback,
-        files: uploadedFiles
+        files: uploadedFiles,
+        grade: data.grade,
+        streams: data.streams,
       };
 
       const response = await createMaintenanceAssessment(assessmentInput);
@@ -390,6 +411,59 @@ const AssessmentAddPage: React.FC = () => {
       });
     }
   };
+
+const streamNames = [
+  'Blue',
+  'Green',
+  'Yellow',
+  'East',
+  'West',
+  'North',
+  'South',
+];
+
+interface StreamSelectProps {
+  onChange: (selected: string[]) => void;
+  value: string[];
+}
+
+const StreamSelect: React.FC<StreamSelectProps> = ({ onChange, value }) => {
+  const [open, setOpen] = useState(false);
+
+  const handleSelect = (stream: string) => {
+    const newValue = value.includes(stream) ? value.filter(s => s !== stream) : [...value, stream];
+    onChange(newValue);
+  };
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" className="w-full justify-between">
+          {value.length > 0 ? `${value.length} stream${value.length > 1 ? 's' : ''} selected` : "Select streams"}
+          <ChevronDown className="ml-2 h-4 w-4" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-full p-0">
+        <Command>
+          <CommandInput placeholder="Search streams..." />
+          <CommandEmpty>No streams found.</CommandEmpty>
+          <CommandGroup className="max-h-64 overflow-y-auto">
+            {streamNames.map((name) => (
+              <CommandItem key={name} onSelect={() => handleSelect(name)}>
+                <Checkbox
+                  checked={value.includes(name)}
+                  onCheckedChange={() => handleSelect(name)}
+                  className="mr-2"
+                />
+                {name}
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+};
 
   const getAssessmentCount = (facilityId: string) => {
     return assessments.filter(assessment => assessment.facilityId === facilityId).length;
@@ -458,183 +532,241 @@ const AssessmentAddPage: React.FC = () => {
           
           {selectedFacility && (
             <Form {...facilityForm}>
-              <form
-                onSubmit={facilityForm.handleSubmit(handleFacilityAssessmentSubmit)}
-                className="space-y-6"
-              >
-                <div className="overflow-x-auto">
-                  <table className="min-w-full border border-gray-300 text-sm">
-                    <thead className="bg-gray-100">
-                      <tr>
-                        <th className="border px-4 py-2 text-left">S/No</th>
-                        <th className="border px-4 py-2 text-left">Part of Building</th>
-                        <th className="border px-4 py-2 text-center">Urgent Attention</th>
-                        <th className="border px-4 py-2 text-center">Attention</th>
-                        <th className="border px-4 py-2 text-center">Good</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {facilityParts.map((part, index) => (
-                        <tr key={index}>
-                          <td className="border px-4 py-2">{index + 1}</td>
-                          <td className="border px-4 py-2">{part}</td>
-                          {['urgent', 'attention', 'good'].map((condition) => (
-                            <td key={condition} className="border px-4 py-2 text-center">
-                              <FormField
-                                control={facilityForm.control}
-                                name={`details.${index}.assessment_status`}
-                                render={({ field }) => (
-                                  <FormItem className="flex justify-center">
-                                    <FormControl>
-                                      <input
-                                        type="radio"
-                                        value={condition}
-                                        checked={field.value === (condition === 'urgent' ? 'Urgent Attention' : condition === 'attention' ? 'Attention' : 'Good')}
-                                        onChange={() => {
-                                          const updatedDetails = [...facilityForm.getValues().details];
-                                          updatedDetails[index] = {
-                                            part_of_building: part,
-                                            assessment_status: condition === 'urgent' ? 'Urgent Attention' : condition === 'attention' ? 'Attention' : 'Good'
-                                          };
-                                          facilityForm.setValue('details', updatedDetails);
-                                        }}
-                                        className={`h-4 w-4 ${condition === 'urgent' && field.value === 'Urgent Attention' ? 'text-red-600' : ''}`}
-                                        style={condition === 'urgent' && field.value === 'Urgent Attention' ? { accentColor: '#dc2626' } : {}}
-                                      />
-                                    </FormControl>
-                                  </FormItem>
-                                )}
-                              />
-                            </td>
+              <form onSubmit={facilityForm.handleSubmit(handleFacilityAssessmentSubmit)}>
+                <Tabs defaultValue="maintenance" className="space-y-4">
+                  <TabsList>
+                    <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
+                    <TabsTrigger value="safety">Safety</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="maintenance">
+                    <div className="max-w-5xl mx-auto bg-white shadow-lg rounded-xl p-6 mt-10">
+                      <h2 className="text-xl font-semibold text-center mb-6 text-gray-700">MAINTENANCE REPORT</h2>
+                      <table className="min-w-full border border-gray-300 text-sm">
+                        <thead className="bg-gray-100">
+                          <tr>
+                            <th className="border px-4 py-2 text-left">S/No</th>
+                            <th className="border px-4 py-2 text-left">Part of Building</th>
+                            <th className="border px-4 py-2 text-center">Urgent Attention</th>
+                            <th className="border px-4 py-2 text-center">Attention</th>
+                            <th className="border px-4 py-2 text-center">Good</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {facilityParts.map((part, index) => (
+                            <tr key={index}>
+                              <td className="border px-4 py-2">{index + 1}</td>
+                              <td className="border px-4 py-2">{part}</td>
+                              {['urgent', 'attention', 'good'].map((condition) => (
+                                <td key={condition} className="border px-4 py-2 text-center">
+                                  <FormField
+                                    control={facilityForm.control}
+                                    name={`details.${index}.assessment_status`}
+                                    render={({ field }) => (
+                                      <FormItem className="flex justify-center">
+                                        <FormControl>
+                                          <input
+                                            type="radio"
+                                            value={condition}
+                                            checked={field.value === (condition === 'urgent' ? 'Urgent Attention' : condition === 'attention' ? 'Attention' : 'Good')}
+                                            onChange={() => {
+                                              const updatedDetails = [...facilityForm.getValues().details];
+                                              updatedDetails[index] = {
+                                                part_of_building: part,
+                                                assessment_status: condition === 'urgent' ? 'Urgent Attention' : condition === 'attention' ? 'Attention' : 'Good'
+                                              };
+                                              facilityForm.setValue('details', updatedDetails);
+                                            }}
+                                            className={`h-4 w-4 ${condition === 'urgent' && field.value === 'Urgent Attention' ? 'text-red-600' : ''}`}
+                                            style={condition === 'urgent' && field.value === 'Urgent Attention' ? { accentColor: '#dc2626' } : {}}
+                                          />
+                                        </FormControl>
+                                      </FormItem>
+                                    )}
+                                  />
+                                </td>
+                              ))}
+                            </tr>
                           ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* File Upload Section */}
-                <div className="space-y-4">
-                  <FormField
-                    control={facilityForm.control}
-                    name="files"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-base font-semibold">Upload Supporting Documents</FormLabel>
-                        <FormControl>
-                          <div className="space-y-4">
-                            {/* File Upload Area */}
-                            <div
-                              onDragOver={handleDragOver}
-                              onDrop={handleDrop}
-                              className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors cursor-pointer"
-                              onClick={() => fileInputRef.current?.click()}
-                            >
-                              <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                              <p className="text-lg font-medium text-gray-700">Drop files here or click to upload</p>
-                              <p className="text-sm text-gray-500 mt-1">Support for multiple files (PDF, DOC, JPG, PNG)</p>
-                              <input
-                                ref={fileInputRef}
-                                type="file"
-                                multiple
-                                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif"
-                                onChange={handleFileUpload}
-                                className="hidden"
-                              />
-                            </div>
-
-                            {/* Uploaded Files List */}
-                            {uploadedFiles.length > 0 && (
-                              <div className="space-y-2">
-                                <h4 className="font-medium text-gray-700">Uploaded Files ({uploadedFiles.length})</h4>
-                                <div className="space-y-2 max-h-32 overflow-y-auto">
-                                  {uploadedFiles.map((file, index) => (
-                                    <div key={index} className="flex items-center justify-between bg-gray-50 p-3 rounded-md">
-                                      <div className="flex items-center space-x-3">
-                                        <FileText className="h-5 w-5 text-gray-500" />
-                                        <div>
-                                          <p className="text-sm font-medium text-gray-700">{file.name}</p>
-                                          <p className="text-xs text-gray-500">
-                                            {(file.size / 1024 / 1024).toFixed(2)} MB
-                                          </p>
-                                        </div>
-                                      </div>
-                                      <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => removeFile(index)}
-                                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                                      >
-                                        <X className="h-4 w-4" />
-                                      </Button>
-                                    </div>
-                                  ))}
-                                </div>
+                        </tbody>
+                      </table>
+                    </div>
+                  </TabsContent>
+                  <TabsContent value="safety">
+                    <ClassSafetyForm />
+                  </TabsContent>
+                  {/* Grade and Stream Selects */}
+                  {selectedFacility?.name.toLowerCase().includes('class') && (
+                    <div className="flex gap-4">
+                      <FormField
+                        control={facilityForm.control}
+                        name="grade"
+                        render={({ field }) => (
+                          <FormItem className="flex-1">
+                            <FormLabel>Grade</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select a grade" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="Grade 1">Grade 1</SelectItem>
+                                <SelectItem value="Grade 2">Grade 2</SelectItem>
+                                <SelectItem value="Grade 3">Grade 3</SelectItem>
+                                <SelectItem value="Grade 4">Grade 4</SelectItem>
+                                <SelectItem value="Grade 5">Grade 5</SelectItem>
+                                <SelectItem value="Grade 6">Grade 6</SelectItem>
+                                <SelectItem value="Grade 7">Grade 7</SelectItem>
+                                <SelectItem value="Grade 8">Grade 8</SelectItem>
+                                <SelectItem value="Form 1">Form 1</SelectItem>
+                                <SelectItem value="Form 2">Form 2</SelectItem>
+                                <SelectItem value="Form 3">Form 3</SelectItem>
+                                <SelectItem value="Form 4">Form 4</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={facilityForm.control}
+                        name="streams"
+                        render={({ field }) => (
+                          <FormItem className="flex-1">
+                            <FormLabel>Streams</FormLabel>
+                            <StreamSelect
+                              value={field.value || []}
+                              onChange={field.onChange}
+                            />
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  )}
+                  {/* File Upload Section */}
+                  <div className="space-y-4">
+                    <FormField
+                      control={facilityForm.control}
+                      name="files"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-base font-semibold">Upload Supporting Documents</FormLabel>
+                          <FormControl>
+                            <div className="space-y-4">
+                              {/* File Upload Area */}
+                              <div
+                                onDragOver={handleDragOver}
+                                onDrop={handleDrop}
+                                className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors cursor-pointer"
+                                onClick={() => fileInputRef.current?.click()}
+                              >
+                                <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                                <p className="text-lg font-medium text-gray-700">Drop files here or click to upload</p>
+                                <p className="text-sm text-gray-500 mt-1">Support for multiple files (PDF, DOC, JPG, PNG)</p>
+                                <input
+                                  ref={fileInputRef}
+                                  type="file"
+                                  multiple
+                                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif"
+                                  onChange={handleFileUpload}
+                                  className="hidden"
+                                />
                               </div>
-                            )}
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
 
-                  {/* School Feedback Section */}
-                  <FormField
-                    control={facilityForm.control}
-                    name="school_feedback"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-base font-semibold">Notes</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            {...field}
-                            placeholder="Enter notes, concerns, and priorities..."
-                            className="min-h-[120px] resize-none"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                              {/* Uploaded Files List */}
+                              {uploadedFiles.length > 0 && (
+                                <div className="space-y-2">
+                                  <h4 className="font-medium text-gray-700">Uploaded Files ({uploadedFiles.length})</h4>
+                                  <div className="space-y-2 max-h-32 overflow-y-auto">
+                                    {uploadedFiles.map((file, index) => (
+                                      <div key={index} className="flex items-center justify-between bg-gray-50 p-3 rounded-md">
+                                        <div className="flex items-center space-x-3">
+                                          <FileText className="h-5 w-5 text-gray-500" />
+                                          <div>
+                                            <p className="text-sm font-medium text-gray-700">{file.name}</p>
+                                            <p className="text-xs text-gray-500">
+                                              {(file.size / 1024 / 1024).toFixed(2)} MB
+                                            </p>
+                                          </div>
+                                        </div>
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => removeFile(index)}
+                                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                        >
+                                          <X className="h-4 w-4" />
+                                        </Button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                  {/* Agent Feedback Section */}
-                  {/* <FormField
-                    control={facilityForm.control}
-                    name="agent_feedback"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-base font-semibold">Agent Feedback</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            {...field}
-                            placeholder="Enter your assessment notes, observations, and recommendations..."
-                            className="min-h-[120px] resize-none"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  /> */}
-                </div>
+                    {/* School Feedback Section */}
+                    <FormField
+                      control={facilityForm.control}
+                      name="school_feedback"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-base font-semibold">Notes</FormLabel>
+                          <FormControl>
+                            <Textarea
+                              {...field}
+                              placeholder="Enter notes, concerns, and priorities..."
+                              className="min-h-[120px] resize-none"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                <div className="flex gap-2 pt-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setIsModalOpen(false)}
-                    className="flex-1"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    className="flex-1 bg-[#F89B0C] hover:bg-[#F89B0C]/90 text-primary-foreground"
-                  >
-                    Submit Assessment
-                  </Button>
-                </div>
+                    {/* Agent Feedback Section */}
+                    {/* <FormField
+                      control={facilityForm.control}
+                      name="agent_feedback"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-base font-semibold">Agent Feedback</FormLabel>
+                          <FormControl>
+                            <Textarea
+                              {...field}
+                              placeholder="Enter your assessment notes, observations, and recommendations..."
+                              className="min-h-[120px] resize-none"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    /> */}
+                  </div>
+
+                  <div className="flex gap-2 pt-4">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setIsModalOpen(false)}
+                      className="flex-1"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      className="flex-1 bg-[#F89B0C] hover:bg-[#F89B0C]/90 text-primary-foreground"
+                    >
+                      Submit Assessment
+                    </Button>
+                  </div>
+                </Tabs>
               </form>
             </Form>
           )}

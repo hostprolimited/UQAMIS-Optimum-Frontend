@@ -50,7 +50,7 @@ export const getMaintenanceReports = async (): Promise<APIResponse<MaintenanceRe
 
 
 // add school metrics
-export const createSchoolMetrics = async (data: { institution_id: number; students_count: number; teachers_count: number; term: string; year: string; }): Promise<APIResponse<any>> => {
+export const createSchoolMetrics = async (data: { institution_id: number; students_count: number; teachers_count: number; term: string; year: string; class: string; streams: string[]; }): Promise<APIResponse<any>> => {
   const response = await api.post<APIResponse<any>>(Urls.CREATE_INSTITUTION_METRICS_URL, data);
   return response.data;
 };

@@ -128,12 +128,10 @@ const navigationItems = [
   { 
     title: 'Assessments',
     children: [
-      { title: 'Maintenance Assessment', url: '/assessments/add', icon: ClipboardCheck },
-      { title: 'Safety Assessment', url: '/assessment/safety', icon: ClipboardCheck },
-      { title: 'Assessment Report', url: '/maintenance/assessment', icon: FileText },
+      { title: 'Facility Assessment', url: '/assessments/add', icon: ClipboardCheck },
+      { title: 'Safety  Report', url: '/assessment/safety', icon: ClipboardCheck },
+      { title: 'Maintenance Report', url: '/maintenance/assessment', icon: FileText },
     ],
-    // url: '/assessment',
-    // url: 'maintenance/assessment',
     icon: ClipboardCheck,
     page: 'assessment'
   },

@@ -32,6 +32,8 @@ const schoolFormSchema = z.object({
   numberOfStudents: z.number().min(0, 'Number of students must be at least 0').max(10000, 'Number of students seems too high'),
   term: z.string().min(1, 'Please select a term'),
   year: z.string().min(1, 'Please select a year'),
+  class: z.string().optional(),
+  streams: z.string().optional(),
 });
 
 type SchoolFormData = z.infer<typeof schoolFormSchema>;
@@ -51,6 +53,8 @@ const SchoolFormAddPage = () => {
       numberOfStudents: undefined,
       term: getCurrentTerm(),
       year: currentYear.toString(),
+      class: '',
+      streams: '',
     },
   });
 
@@ -72,6 +76,8 @@ const SchoolFormAddPage = () => {
         teachers_count: formDataToSubmit.numberOfTeachers ?? 0,
         term: formDataToSubmit.term,
         year: formDataToSubmit.year,
+        class: formDataToSubmit.class,
+        streams: formDataToSubmit.streams ? formDataToSubmit.streams.split(',').map(s => s.trim()) : [],
       });
 
       if (response.status === 'success') {
@@ -115,7 +121,7 @@ const SchoolFormAddPage = () => {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {/* Number of Teachers */}
                 <FormField
                   control={form.control}
@@ -209,6 +215,64 @@ const SchoolFormAddPage = () => {
                     </FormItem>
                   )}
                 />
+
+                {/* Class */}
+                <FormField
+                  control={form.control}
+                  name="class"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center space-x-2">
+                        <Building className="h-4 w-4" />
+                        <span>Class</span>
+                      </FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select class" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="Grade 1">Grade 1</SelectItem>
+                          <SelectItem value="Grade 2">Grade 2</SelectItem>
+                          <SelectItem value="Grade 3">Grade 3</SelectItem>
+                          <SelectItem value="Grade 4">Grade 4</SelectItem>
+                          <SelectItem value="Grade 5">Grade 5</SelectItem>
+                          <SelectItem value="Grade 6">Grade 6</SelectItem>
+                          <SelectItem value="Grade 7">Grade 7</SelectItem>
+                          <SelectItem value="Grade 8">Grade 8</SelectItem>
+                          <SelectItem value="Form 1">Form 1</SelectItem>
+                          <SelectItem value="Form 2">Form 2</SelectItem>
+                          <SelectItem value="Form 3">Form 3</SelectItem>
+                          <SelectItem value="Form 4">Form 4</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Streams */}
+                <FormField
+                  control={form.control}
+                  name="streams"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center space-x-2">
+                        <Users className="h-4 w-4" />
+                        <span>Streams</span>
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="e.g., Blue, Green, Yellow"
+                          value={field.value ?? ''}
+                          onChange={field.onChange}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
 
               <div className="flex justify-end">
@@ -251,6 +315,14 @@ const SchoolFormAddPage = () => {
               <div>
                 <span className="font-medium">Year:</span>
                 <p className="text-muted-foreground">{formDataToSubmit?.year}</p>
+              </div>
+              <div>
+                <span className="font-medium">Class:</span>
+                <p className="text-muted-foreground">{formDataToSubmit?.class || 'N/A'}</p>
+              </div>
+              <div>
+                <span className="font-medium">Streams:</span>
+                <p className="text-muted-foreground">{formDataToSubmit?.streams || 'N/A'}</p>
               </div>
             </div>
           </div>

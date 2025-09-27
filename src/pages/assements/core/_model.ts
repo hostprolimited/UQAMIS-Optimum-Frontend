@@ -58,6 +58,8 @@ export interface SchoolMetric {
   institution_id: number;
   students_count: number;
   teachers_count: number;
+  class: string;
+  streams: string[];
   year: number;
   term: string;
   created_at: string;
