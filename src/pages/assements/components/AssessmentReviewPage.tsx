@@ -404,7 +404,7 @@ const AssessmentReviewPage: React.FC = () => {
     }
     try {
       const data = {
-        review_decision: reviewForm.status as "approved" | "rejected" | "requires-clarification",
+        review_decision: reviewForm.status as "approved" | "rejected" | "requires_clarification",
         review_remarks: reviewForm.remarks,
         recommended_action: reviewForm.recommendedAction,
         priority: reviewForm.priority as "low" | "medium" | "high" | "urgent" | undefined,
@@ -423,9 +423,9 @@ const AssessmentReviewPage: React.FC = () => {
       {/* Header */}
       <header className="flex items-start justify-between gap-6">
         <div>
-          <h1 className="text-3xl md:text-4xl font-bold">Assesments Reports</h1>
+          <h1 className="text-3xl md:text-4xl font-bold">Assesments Records</h1>
           <p className="text-muted-foreground mt-2 max-w-2xl">
-            Monitor facility assessments across your institutions. Use the filters to focus on specific
+            Monitor facility assessments across institutions within the county. Use the filters to focus on specific
             facility types, conditions or date ranges. This dashboard is designed for quick decisions and
             accessible interactions.
           </p>

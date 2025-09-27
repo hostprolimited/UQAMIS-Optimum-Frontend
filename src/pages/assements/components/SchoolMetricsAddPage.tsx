@@ -172,7 +172,7 @@ const SchoolFormAddPage = () => {
                         <Clock className="h-4 w-4" />
                         <span>Term</span>
                       </FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <Select disabled onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select term" />
@@ -199,18 +199,12 @@ const SchoolFormAddPage = () => {
                         <Calendar className="h-4 w-4" />
                         <span>Year</span>
                       </FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select year" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value={(currentYear - 1).toString()}>{currentYear - 1}</SelectItem>
-                          <SelectItem value={currentYear.toString()}>{currentYear}</SelectItem>
-                          <SelectItem value={(currentYear + 1).toString()}>{currentYear + 1}</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <FormControl>
+                        <Input
+                          value={field.value}
+                          disabled
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
