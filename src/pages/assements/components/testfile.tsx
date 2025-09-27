@@ -1,534 +1,531 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Search, 
-  Filter, 
-  Eye, 
-  Clock, 
-  CheckCircle, 
-  XCircle, 
-  AlertTriangle,
+import React, { useEffect, useMemo, useState } from "react";
+import Swal from "sweetalert2";
+import withReactContent from "sweetalert2-react-content";
+import { useNavigate } from "react-router-dom";
+import { ColumnDef } from "@tanstack/react-table";
+import {
+  MoreHorizontal,
+  Edit,
+  Trash2,
+  Plus,
+  Download,
+  FileText,
+  FileSpreadsheet,
+  FileImage,
   Building2,
-  Calendar,
-  User,
-  MessageSquare,
-  ChevronDown,
-  MapPin
+  AlertTriangle,
+  BarChart3,
+  CheckCircle,
+  Filter,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogFooter,
+  DialogTitle,
+  DialogDescription,
+  DialogClose,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DataTable } from "@/components/ui/data-table";
 import { useToast } from "@/hooks/use-toast";
-import { useRole } from "@/contexts/RoleContext";
-import {getMaintenanceReportById, agentReviewMaintenanceReport} from '../core/_request';
 
-// TypeScript interfaces for theupdateMaintenanceReport review system
-interface FacilityAssessmentSubmission {
+import { getMaintenanceReports, getFacilities, agentReviewMaintenanceReport } from "../core/_request";
+import { Facility } from "../core/_model";
+
+// --- Types ---
+interface AssessmentDetail {
+  part_of_building: string;
+  assessment_status: string;
+  score?: number;
+}
+
+interface FacilityAssessment {
   id: string;
-  schoolName: string;
+  // schoolName: string;
+  institutionName
   facilityType: string;
-  region: string;
-  district: string;
-  submittedBy: string;
-  submissionDate: string;
-  assessmentDate: string;
+  assessmentDate: string; // ISO date string
   urgentItems: number;
   attentionItems: number;
   goodItems: number;
   totalItems: number;
-  overallCondition: 'excellent' | 'good' | 'needs-attention' | 'critical';
-  schoolAdminRemarks?: string;
-  reviewStatus: 'pending-county' | 'pending-national' | 'approved' | 'rejected' | 'disbursed';
-  countyReview?: AdminReview;
-  nationalReview?: AdminReview;
-  disbursementDetails?: DisbursementInfo;
+  overallCondition: "excellent" | "good" | "needs-attention" | "critical";
+  completionStatus: "completed" | "in-progress" | "pending";
+  status?: string;
+  agent_feedback?: string;
+  school_feedback?: string;
+  totalScorePercentage?: number;
+  created_at?: string;
+  details?: AssessmentDetail[];
 }
 
-interface AdminReview {
-  reviewerId: string;
-  reviewerName: string;
-  reviewDate: string;
-  status: 'approved' | 'rejected' | 'requires-clarification';
-  remarks: string;
-  priority?: 'low' | 'medium' | 'high' | 'urgent';
-  recommendedAction?: string;
-}
+// Mapping helper (adapts API response to our UI model)
+const mapMaintenanceReport = (report: any, facilityIdToName: Record<string, string>): FacilityAssessment => ({
+  id: report.id?.toString() ?? "",
+  // schoolName: report.school_name ?? report.school ?? getCurrentInstitutionName(),
+  facilityType:
+    facilityIdToName[report.facility_id?.toString()] || report.facility_type || report.facility_id?.toString() || "",
+  assessmentDate: report.assessment_date ?? report.date ?? "",
+  urgentItems: report.urgent_items ?? 0,
+  attentionItems: report.attention_items ?? 0,
+  goodItems: report.good_items ?? 0,
+  totalItems: report.total_items ?? 0,
+  overallCondition: report.overall_condition ?? "good",
+  completionStatus: report.completion_status ?? "pending",
+  status: report.status,
+  agent_feedback: report.agent_feedback,
+  institutionName: report.institutionName || report.school_name || getCurrentInstitutionName(),
+  school_feedback: report.school_feedback,
+  totalScorePercentage: report.total_score_percentage,
+  created_at: report.created_at,
+  details: report.details ?? [],
+});
 
-interface DisbursementInfo {
-  disbursementDate: string;
-  amount: number;
-  disbursedBy: string;
-  transactionId: string;
-}
-
-type ReviewUserRole = 'county_admin' | 'admin';
-
-// Sample assessment submissions for review
-const sampleSubmissions: FacilityAssessmentSubmission[] = [
-    {
-        id: 'SUB001',
-        schoolName: 'Nyeri Primary School',
-        facilityType: 'Classroom',
-        region: 'Central',
-        district: 'Nyeri County',
-        submittedBy: 'John Wanjiku',
-        submissionDate: '2025-09-18',
-        assessmentDate: '2025-09-15',
-        urgentItems: 5,
-        attentionItems: 3,
-        goodItems: 2,
-        totalItems: 10,
-        overallCondition: 'critical',
-        schoolAdminRemarks: 'Roof leaking badly, windows broken, desks damaged. Urgent repairs needed before rainy season.',
-        reviewStatus: 'pending-county'
-    },
-    {
-        id: 'SUB002',
-        schoolName: 'Mombasa Secondary School',
-        facilityType: 'ICT Lab',
-        region: 'Coast',
-        district: 'Mombasa County',
-        submittedBy: 'Mary Achieng',
-        submissionDate: '2025-09-17',
-        assessmentDate: '2025-09-14',
-        urgentItems: 2,
-        attentionItems: 4,
-        goodItems: 6,
-        totalItems: 12,
-        overallCondition: 'needs-attention',
-        schoolAdminRemarks: 'Some computers not working, need new software licenses, air conditioning unit broken.',
-        reviewStatus: 'pending-national',
-        countyReview: {
-            reviewerId: 'CAD001',
-            reviewerName: 'Dr. Hassan Juma',
-            reviewDate: '2025-09-18',
-            status: 'approved',
-            remarks: 'Assessment looks thorough. ICT lab improvements are essential for digital learning. Recommend approval.',
-            priority: 'medium',
-            recommendedAction: 'Approve funding for computer repairs and software licenses'
-        }
-    },
-    {
-        id: 'SUB003',
-        schoolName: 'Nakuru Girls Secondary',
-        facilityType: 'Dormitories',
-        region: 'Rift Valley',
-        district: 'Nakuru County',
-        submittedBy: 'Sister Agnes Wafula',
-        submissionDate: '2025-09-16',
-        assessmentDate: '2025-09-13',
-        urgentItems: 1,
-        attentionItems: 2,
-        goodItems: 9,
-        totalItems: 12,
-        overallCondition: 'good',
-        schoolAdminRemarks: 'Overall condition is good. Need to improve ventilation in two rooms.',
-        reviewStatus: 'approved',
-        countyReview: {
-            reviewerId: 'CAD002',
-            reviewerName: 'Eng. Fatuma Abdi',
-            reviewDate: '2025-09-17',
-            status: 'approved',
-            remarks: 'Minor improvements needed. Good maintenance practices observed.',
-            priority: 'low'
-        },
-        nationalReview: {
-            reviewerId: 'NAD001',
-            reviewerName: 'Prof. James Ochieng',
-            reviewDate: '2025-09-18',
-            status: 'approved',
-            remarks: 'Approved for minor ventilation improvements. Well-maintained facility.',
-            priority: 'low',
-            recommendedAction: 'Allocate funds for ventilation system upgrade'
-        }
-    },
-    {
-        id: 'SUB004',
-        schoolName: 'Kisumu Technical Institute',
-        facilityType: 'Laboratories',
-        region: 'Nyanza',
-        district: 'Kisumu County',
-        submittedBy: 'Dr. Paul Otieno',
-        submissionDate: '2025-09-19',
-        assessmentDate: '2025-09-16',
-        urgentItems: 0,
-        attentionItems: 1,
-        goodItems: 11,
-        totalItems: 12,
-        overallCondition: 'excellent',
-        schoolAdminRemarks: 'Laboratory equipment in excellent condition. Only minor calibration needed.',
-        reviewStatus: 'disbursed',
-        countyReview: {
-            reviewerId: 'CAD003',
-            reviewerName: 'Dr. Mariam Kamau',
-            reviewDate: '2025-09-18',
-            status: 'approved',
-            remarks: 'Exemplary maintenance. Minimal funding required.',
-            priority: 'low'
-        },
-        nationalReview: {
-            reviewerId: 'NAD001',
-            reviewerName: 'Prof. James Ochieng',
-            reviewDate: '2025-09-19',
-            status: 'approved',
-            remarks: 'Approved for equipment calibration. This is a model facility.',
-            recommendedAction: 'Allocate minimal funds for calibration services'
-        },
-        disbursementDetails: {
-            disbursementDate: '2025-09-19',
-            amount: 150000,
-            disbursedBy: 'Ministry of Education',
-            transactionId: 'TXN-2025-001'
-        }
+// Get current logged-in institution name from localStorage
+const getCurrentInstitutionName = () => {
+  const inst = localStorage.getItem("current_institution");
+  if (inst) {
+    try {
+      const parsed = JSON.parse(inst);
+      return parsed?.institution_name || "School";
+    } catch (e) {
+      // ignore
     }
-];
+  }
+  return "School";
+};
 
+// --- Component ---
 const AssessmentReviewPage: React.FC = () => {
+  const navigate = useNavigate();
   const { toast } = useToast();
-  const { currentUser } = useRole();
-  const [submissions, setSubmissions] = useState<FacilityAssessmentSubmission[]>(sampleSubmissions);
-  const [filteredSubmissions, setFilteredSubmissions] = useState<FacilityAssessmentSubmission[]>(sampleSubmissions);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [selectedSubmission, setSelectedSubmission] = useState<FacilityAssessmentSubmission | null>(null);
+
+  const [assessments, setAssessments] = useState<FacilityAssessment[]>([]);
+  const [filteredData, setFilteredData] = useState<FacilityAssessment[]>([]);
+  const [facilityIdToName, setFacilityIdToName] = useState<Record<string, string>>({});
+
+  const [selectedRows, setSelectedRows] = useState<FacilityAssessment[]>([]);
+
+  // Filters
+  const [facilityTypeFilter, setFacilityTypeFilter] = useState<string>("");
+  const [conditionFilter, setConditionFilter] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<string>("");
+  const [fromDate, setFromDate] = useState<string>("");
+  const [toDate, setToDate] = useState<string>("");
+
+  // Edit modal
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editAssessment, setEditAssessment] = useState<FacilityAssessment | null>(null);
+
+  // Review modal
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
-  
-  // Get the current user role for review permissions
-  const currentUserRole: ReviewUserRole = currentUser.role === 'ministry_admin' ? 'admin' : 'county_admin';
-  
-  // Review form state
+  const [selectedSubmission, setSelectedSubmission] = useState<FacilityAssessment | null>(null);
   const [reviewForm, setReviewForm] = useState({
     status: '',
-    remarks: '',
     priority: '',
-    recommendedAction: ''
+    remarks: '',
+    recommendedAction: '',
   });
 
-  // Filter submissions based on search and status
+  const MySwal = withReactContent(Swal);
+
+  // Fetch facilities and assessments
   useEffect(() => {
-    let filtered = submissions;
+    let mounted = true;
+    const fetch = async () => {
+      try {
+        const facilitiesRes = await getFacilities();
+        const facilities: Facility[] = facilitiesRes?.data || [];
+        const idToName = facilities.reduce((acc, f) => {
+          acc[f.id.toString()] = f.name;
+          return acc;
+        }, {} as Record<string, string>);
 
-    if (searchTerm) {
-      filtered = filtered.filter(submission =>
-        submission.schoolName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        submission.facilityType.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        submission.region.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        submission.district.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
+        if (!mounted) return;
+        setFacilityIdToName(idToName);
 
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(submission => submission.reviewStatus === statusFilter);
-    }
+        const resp = await getMaintenanceReports();
+        const data = resp?.data || [];
+        const mapped: FacilityAssessment[] = data.map((r: any) => mapMaintenanceReport(r, idToName));
 
-    // Filter based on user role - county admin sees pending-county, national admin sees pending-national
-    if (currentUserRole === 'county_admin') {
-      filtered = filtered.filter(submission => 
-        submission.reviewStatus === 'pending-county' || submission.reviewStatus === 'pending-national' || 
-        submission.reviewStatus === 'approved' || submission.reviewStatus === 'disbursed'
-      );
-    }
-
-    setFilteredSubmissions(filtered);
-  }, [submissions, searchTerm, statusFilter, currentUserRole]);
-
-  const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      'pending-county': { className: 'bg-yellow-100 text-yellow-800', label: 'Pending County Review' },
-      'pending-national': { className: 'bg-blue-100 text-blue-800', label: 'Pending National Review' },
-      'approved': { className: 'bg-green-100 text-green-800', label: 'Approved' },
-      'rejected': { className: 'bg-red-100 text-red-800', label: 'Rejected' },
-      'disbursed': { className: 'bg-purple-100 text-purple-800', label: 'Disbursed' }
+        if (!mounted) return;
+        setAssessments(mapped);
+        setFilteredData(mapped);
+      } catch (error) {
+        toast({ title: "Error", description: "Failed to load assessments", variant: "destructive" });
+      }
     };
-    
-    const config = statusConfig[status as keyof typeof statusConfig];
+    fetch();
+    return () => {
+      mounted = false;
+    };
+  }, [toast]);
+
+  // Filtering logic
+  useEffect(() => {
+    let data = assessments.slice();
+
+    if (facilityTypeFilter) {
+      data = data.filter((d) => d.facilityType === facilityTypeFilter);
+    }
+    if (conditionFilter) {
+      data = data.filter((d) => d.overallCondition === conditionFilter);
+    }
+    if (statusFilter) {
+      data = data.filter((d) => d.completionStatus === statusFilter);
+    }
+
+    if (fromDate) {
+      const from = new Date(fromDate);
+      data = data.filter((d) => new Date(d.assessmentDate) >= from);
+    }
+    if (toDate) {
+      const to = new Date(toDate);
+      // include the whole day
+      to.setHours(23, 59, 59, 999);
+      data = data.filter((d) => new Date(d.assessmentDate) <= to);
+    }
+
+    setFilteredData(data);
+  }, [assessments, facilityTypeFilter, conditionFilter, statusFilter, fromDate, toDate]);
+
+  // Stats (memoized)
+  const totalAssessments = useMemo(() => assessments.length, [assessments]);
+  const totalSchools = useMemo(() => new Set(assessments.map((a) => a.schoolName)).size, [assessments]);
+  const criticalFacilities = useMemo(() => assessments.filter((a) => a.overallCondition === "critical").length, [assessments]);
+  const avgScore = useMemo(() => {
+    if (assessments.length === 0) return 0;
+    const sum = assessments.reduce((s, a) => s + (a.totalScorePercentage ?? 0), 0);
+    return Math.round((sum / assessments.length) * 10) / 10;
+  }, [assessments]);
+
+  // Chart data
+  const conditionData = useMemo(() => [
+    { name: "Excellent", value: assessments.filter((a) => a.overallCondition === "excellent").length },
+    { name: "Good", value: assessments.filter((a) => a.overallCondition === "good").length },
+    { name: "Needs Attention", value: assessments.filter((a) => a.overallCondition === "needs-attention").length },
+    { name: "Critical", value: assessments.filter((a) => a.overallCondition === "critical").length },
+  ], [assessments]);
+
+  const statusData = useMemo(() => [
+    { name: "Completed", value: assessments.filter((a) => a.completionStatus === "completed").length },
+    { name: "In Progress", value: assessments.filter((a) => a.completionStatus === "in-progress").length },
+    { name: "Pending", value: assessments.filter((a) => a.completionStatus === "pending").length },
+  ], [assessments]);
+
+  const COLORS = ["#16a34a", "#3b82f6", "#facc15", "#dc2626"];
+
+  // Table columns (keeps original richer columns for actions & details)
+  const columns: ColumnDef<FacilityAssessment>[] = [
+
+     {
+      accessorKey: "institutionName",
+      header: "School name",
+      cell: ({ row }) => (
+        <div className="capitalize font-medium">{row.getValue("institutionName")}</div>
+      ),
+    },
+    {
+      accessorKey: "facilityType",
+      header: "Facility Type",
+      cell: ({ row }) => (
+        <div className="capitalize font-medium">{row.getValue("facilityType")}</div>
+      ),
+    },
+   
+    // {
+    //   accessorKey: "assessmentDate",
+    //   header: "Assessment Date",
+    //   cell: ({ row }) => {
+    //     <div className="font-medium max-w-[250px] truncate" title={String(row.getValue("created_at"))}>{row.getValue("created_at")}</div>
+    //   },
+    // },
+
+    {
+      accessorKey: "school_feedback",
+      header: "School Feedback",
+      cell: ({ row }) => (
+        <div className="font-medium max-w-[250px] truncate" title={String(row.getValue("school_feedback"))}>{row.getValue("school_feedback")}</div>
+      ),
+    },
+    {
+      accessorKey: "totalScorePercentage",
+      header: "Score (%)",
+      cell: ({ row }) => (
+        <div className="text-center font-semibold">{row.getValue("totalScorePercentage") ?? '-'}</div>
+      ),
+    },
+    {
+      accessorKey: "overallCondition",
+      header: "Condition",
+      cell: ({ row }) => {
+        const cond = row.getValue("overallCondition") as FacilityAssessment["overallCondition"];
+        return getOverallConditionBadge(cond);
+      },
+    },
+    {
+      accessorKey: "completionStatus",
+      header: "Status",
+      cell: ({ row }) => {
+        const s = row.getValue("completionStatus") as FacilityAssessment["completionStatus"];
+        return getCompletionStatusBadge(s);
+      },
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      cell: ({ row }) => {
+        const assessment = row.original;
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-8 w-8 p-0" aria-label={`Open actions for ${assessment.schoolName}`}>
+                <span className="sr-only">Open menu</span>
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => handleReview(assessment.id)}>
+                <Edit className="mr-2 h-4 w-4" />
+                Review assessment
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleDelete(assessment.id)} className="text-red-600">
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete assessment
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        );
+      },
+    },
+  ];
+
+  // --- Helpers for badges ---
+  function getOverallConditionBadge(condition?: FacilityAssessment["overallCondition"]) {
+    const conditionConfig: Record<string, { label: string; className: string }> = {
+      excellent: { label: "Excellent", className: "bg-green-100 text-green-800" },
+      good: { label: "Good", className: "bg-blue-100 text-blue-800" },
+      "needs-attention": { label: "Needs Attention", className: "bg-yellow-100 text-yellow-800" },
+      critical: { label: "Critical", className: "bg-red-100 text-red-800" },
+    };
+    if (!condition) return <Badge className="bg-gray-100 text-gray-800">-</Badge>;
+    const config = conditionConfig[condition];
     return <Badge className={config.className}>{config.label}</Badge>;
-  };
+  }
 
-  const getConditionBadge = (condition: string) => {
-    const conditionConfig = {
-      'excellent': { className: 'bg-green-100 text-green-800', icon: CheckCircle },
-      'good': { className: 'bg-blue-100 text-blue-800', icon: CheckCircle },
-      'needs-attention': { className: 'bg-yellow-100 text-yellow-800', icon: AlertTriangle },
-      'critical': { className: 'bg-red-100 text-red-800', icon: XCircle }
+  function getCompletionStatusBadge(status?: FacilityAssessment["completionStatus"]) {
+    const statusConfig: Record<string, { label: string; className: string }> = {
+      completed: { label: "Completed", className: "bg-green-100 text-green-800" },
+      "in-progress": { label: "In Progress", className: "bg-blue-100 text-blue-800" },
+      pending: { label: "Pending", className: "bg-gray-100 text-gray-800" },
     };
-    
-    const config = conditionConfig[condition as keyof typeof conditionConfig];
-    const IconComponent = config.icon;
-    
-    return (
-      <Badge className={config.className}>
-        <IconComponent className="w-3 h-3 mr-1" />
-        {condition.replace('-', ' ').toUpperCase()}
-      </Badge>
-    );
+    if (!status) return <Badge className="bg-gray-100 text-gray-800">-</Badge>;
+    const config = statusConfig[status];
+    return <Badge className={config.className}>{config.label}</Badge>;
+  }
+
+  // --- Actions: Edit / Delete ---
+  const handleEdit = (id: string) => {
+    const found = assessments.find((a) => a.id === id);
+    if (found) {
+      setEditAssessment(found);
+      setEditModalOpen(true);
+    }
   };
 
-  const openReviewModal = (submission: FacilityAssessmentSubmission) => {
-    setSelectedSubmission(submission);
-    setReviewForm({
-      status: '',
-      remarks: '',
-      priority: '',
-      recommendedAction: ''
+  const handleEditChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    if (!editAssessment) return;
+    const { name, value } = e.target;
+    setEditAssessment({ ...editAssessment, [name]: value } as FacilityAssessment);
+  };
+
+  const handleEditSave = () => {
+    if (!editAssessment) return;
+    setAssessments((prev) => prev.map((a) => (a.id === editAssessment.id ? editAssessment : a)));
+    setEditModalOpen(false);
+    toast({ title: "Success", description: "Assessment updated." });
+  };
+
+  const handleDelete = async (id: string) => {
+    const result = await MySwal.fire({
+      title: "Are you sure?",
+      text: "This action cannot be undone. Do you want to delete this assessment?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes, delete it!",
+      cancelButtonText: "Cancel",
     });
-    setIsReviewModalOpen(true);
+
+    if (result.isConfirmed) {
+      try {
+        // TODO: call API to delete on server
+        setAssessments((prev) => prev.filter((a) => a.id !== id));
+        toast({ title: "Success", description: "Assessment deleted successfully" });
+      } catch (error) {
+        toast({ title: "Error", description: "Failed to delete assessment", variant: "destructive" });
+      }
+    }
   };
 
-  const handleReviewSubmit = () => {
-    if (!selectedSubmission || !reviewForm.status || !reviewForm.remarks) {
-      toast({
-        title: "Error",
-        description: "Please fill in all required fields",
-        variant: "destructive"
-      });
+  // --- Actions: Review ---
+  const handleReview = (id: string) => {
+    const found = assessments.find((a) => a.id === id);
+    if (found) {
+      setSelectedSubmission(found);
+      setReviewForm({ status: '', priority: '', remarks: '', recommendedAction: '' });
+      setIsReviewModalOpen(true);
+    }
+  };
+
+  const handleReviewSubmit = async () => {
+    if (!reviewForm.status || !reviewForm.remarks || !reviewForm.recommendedAction) {
+      toast({ title: "Error", description: "Status, remarks, and recommended action are required", variant: "destructive" });
       return;
     }
-
-    const updatedSubmissions = submissions.map(submission => {
-      if (submission.id === selectedSubmission.id) {
-        const newReview: AdminReview = {
-          reviewerId: currentUserRole === 'county_admin' ? 'CAD004' : 'NAD002',
-          reviewerName: currentUserRole === 'county_admin' ? 'Current County Admin' : 'Current National Admin',
-          reviewDate: new Date().toISOString().split('T')[0],
-          status: reviewForm.status as 'approved' | 'rejected' | 'requires-clarification',
-          remarks: reviewForm.remarks,
-          priority: reviewForm.priority as 'low' | 'medium' | 'high' | 'urgent',
-          recommendedAction: reviewForm.recommendedAction
-        };
-
-        let newStatus = submission.reviewStatus;
-        if (currentUserRole === 'county_admin') {
-          submission.countyReview = newReview;
-          if (reviewForm.status === 'approved') {
-            newStatus = 'pending-national';
-          } else if (reviewForm.status === 'rejected') {
-            newStatus = 'rejected';
-          }
-        } else if (currentUserRole === 'admin') {
-          submission.nationalReview = newReview;
-          if (reviewForm.status === 'approved') {
-            newStatus = 'approved';
-          } else if (reviewForm.status === 'rejected') {
-            newStatus = 'rejected';
-          }
-        }
-
-        return { ...submission, reviewStatus: newStatus };
-      }
-      return submission;
-    });
-
-    setSubmissions(updatedSubmissions);
-    setIsReviewModalOpen(false);
-    setSelectedSubmission(null);
-    
-    toast({
-      title: "Success",
-      description: `Review submitted successfully`,
-    });
-  };
-
-  const canReview = (submission: FacilityAssessmentSubmission) => {
-    if (currentUserRole === 'county_admin') {
-      return submission.reviewStatus === 'pending-county';
-    } else if (currentUserRole === 'admin') {
-      return submission.reviewStatus === 'pending-national';
+    try {
+      const data = {
+        review_decision: reviewForm.status,
+        review_remarks: reviewForm.remarks,
+        recommended_action: reviewForm.recommendedAction,
+        priority: reviewForm.priority || undefined,
+      };
+      await agentReviewMaintenanceReport(parseInt(selectedSubmission!.id), data);
+      toast({ title: "Success", description: "Review submitted successfully" });
+      setIsReviewModalOpen(false);
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to submit review", variant: "destructive" });
     }
-    return false;
   };
 
+  // --- UI ---
   return (
-    <div className="container mx-auto px-4 py-6">
-      <div className="flex flex-col space-y-6">
-        {/* Header */}
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold">Assessment Review Dashboard</h1>
-            <p className="text-gray-600 mt-1">
-              {currentUserRole === 'county_admin' ? 'County Administrator' : 'National Administrator'} Review Panel
-            </p>
-          </div>
-          
+    <div className="space-y-8" role="main">
+      {/* Header */}
+      <header className="flex items-start justify-between gap-6">
+        <div>
+          <h1 className="text-3xl md:text-4xl font-bold">Assesments Reports</h1>
+          <p className="text-muted-foreground mt-2 max-w-2xl">
+            Monitor facility assessments across your institutions. Use the filters to focus on specific
+            facility types, conditions or date ranges. This dashboard is designed for quick decisions and
+            accessible interactions.
+          </p>
         </div>
+        <div className="flex items-center gap-2">
+          {/* <Button onClick={() => navigate("/assessments/add")} className="gap-2">
+            <Plus className="h-4 w-4" />
+            Add New Assessment
+          </Button> */}
+        </div>
+      </header>
 
-        {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <Input
-                placeholder="Search schools, facilities, regions..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+      {/* Filters */}
+      <section className="bg-white rounded-lg p-4 shadow border" aria-label="filters">
+        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 flex-1">
+            <label className="flex flex-col" aria-label="Filter by facility type">
+              <span className="text-xs text-gray-600 mb-1">Facility type</span>
+              <select value={facilityTypeFilter} onChange={(e) => setFacilityTypeFilter(e.target.value)} className="border rounded px-2 py-2">
+                <option value="">All facility types</option>
+                {Array.from(new Set(assessments.map((a) => a.facilityType))).map((ft) => (
+                  <option key={ft} value={ft}>{ft}</option>
+                ))}
+              </select>
+            </label>
+
+            <label className="flex flex-col" aria-label="Filter by condition">
+              <span className="text-xs text-gray-600 mb-1">Condition</span>
+              <select value={conditionFilter} onChange={(e) => setConditionFilter(e.target.value)} className="border rounded px-2 py-2">
+                <option value="">All conditions</option>
+                <option value="excellent">Excellent</option>
+                <option value="good">Good</option>
+                <option value="needs-attention">Needs Attention</option>
+                <option value="critical">Critical</option>
+              </select>
+            </label>
+
+            <label className="flex flex-col" aria-label="Filter by status">
+              <span className="text-xs text-gray-600 mb-1">Status</span>
+              <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="border rounded px-2 py-2">
+                <option value="">All statuses</option>
+                <option value="completed">Completed</option>
+                <option value="in-progress">In Progress</option>
+                <option value="pending">Pending</option>
+              </select>
+            </label>
+
+            <div className="grid grid-cols-2 gap-2">
+              <label className="flex flex-col" aria-label="Filter from date">
+                <span className="text-xs text-gray-600 mb-1">From</span>
+                <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="border rounded px-2 py-2" />
+              </label>
+              <label className="flex flex-col" aria-label="Filter to date">
+                <span className="text-xs text-gray-600 mb-1">To</span>
+                <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="border rounded px-2 py-2" />
+              </label>
             </div>
           </div>
-          <div className="min-w-[200px]">
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger>
-                <Filter className="w-4 h-4 mr-2" />
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="pending-county">Pending County Review</SelectItem>
-                <SelectItem value="pending-national">Pending National Review</SelectItem>
-                <SelectItem value="approved">Approved</SelectItem>
-                <SelectItem value="rejected">Rejected</SelectItem>
-                <SelectItem value="disbursed">Disbursed</SelectItem>
-              </SelectContent>
-            </Select>
+
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => {
+              setFacilityTypeFilter("");
+              setConditionFilter("");
+              setStatusFilter("");
+              setFromDate("");
+              setToDate("");
+            }} aria-label="Clear filters">
+              Clear
+            </Button>
+            {/* <Button onClick={() => navigate('/assessments/add')} className="hidden md:inline-flex gap-2">
+              <Plus className="h-4 w-4" /> New
+            </Button> */}
+          </div>
+        </div>
+      </section>
+
+      {/* Table */}
+      <section className="bg-white rounded-lg p-4 shadow border" aria-label="assessment records">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-lg font-semibold">Assessment Records</h2>
+            <p className="text-sm text-gray-500">Browse and manage facility maintenance assessments.</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" onClick={() => { /* Could toggle dense rows or other table prefs */ }} aria-label="Table preferences">
+              <Filter className="h-4 w-4" />
+            </Button>
           </div>
         </div>
 
-        {/* Assessment Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredSubmissions.map((submission) => (
-            <Card key={submission.id} className="bg-white hover:shadow-lg transition-shadow duration-300">
-              <CardHeader className="pb-3">
-                <div className="flex justify-between items-start">
-                  <CardTitle className="text-lg font-semibold text-gray-900">
-                    {submission.schoolName}
-                  </CardTitle>
-                  {getStatusBadge(submission.reviewStatus)}
-                </div>
-                <div className="flex items-center text-sm text-gray-600 mt-1">
-                  <Building2 className="w-4 h-4 mr-1" />
-                  {submission.facilityType}
-                </div>
-              </CardHeader>
-              
-              <CardContent className="space-y-4">
-                {/* Location and Date Info */}
-                <div className="space-y-2">
-                  <div className="flex items-center text-sm text-gray-600">
-                    <MapPin className="w-4 h-4 mr-2" />
-                    {submission.region}, {submission.district}
-                  </div>
-                  <div className="flex items-center text-sm text-gray-600">
-                    <Calendar className="w-4 h-4 mr-2" />
-                    Assessed: {new Date(submission.assessmentDate).toLocaleDateString()}
-                  </div>
-                  <div className="flex items-center text-sm text-gray-600">
-                    <User className="w-4 h-4 mr-2" />
-                    Submitted by: {submission.submittedBy}
-                  </div>
-                </div>
-
-                {/* Condition Summary */}
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">Overall Condition:</span>
-                    {getConditionBadge(submission.overallCondition)}
-                  </div>
-                  
-                  <div className="grid grid-cols-3 gap-2 text-center">
-                    <div className="bg-red-50 p-2 rounded">
-                      <div className="text-lg font-bold text-red-600">{submission.urgentItems}</div>
-                      <div className="text-xs text-red-600">Urgent</div>
-                    </div>
-                    <div className="bg-yellow-50 p-2 rounded">
-                      <div className="text-lg font-bold text-yellow-600">{submission.attentionItems}</div>
-                      <div className="text-xs text-yellow-600">Attention</div>
-                    </div>
-                    <div className="bg-green-50 p-2 rounded">
-                      <div className="text-lg font-bold text-green-600">{submission.goodItems}</div>
-                      <div className="text-xs text-green-600">Good</div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* School Admin Remarks */}
-                {submission.schoolAdminRemarks && (
-                  <div className="bg-gray-50 p-3 rounded-md">
-                    <div className="flex items-center mb-2">
-                      <MessageSquare className="w-4 h-4 mr-2 text-gray-600" />
-                      <span className="text-sm font-medium text-gray-700">School Admin Notes:</span>
-                    </div>
-                    <p className="text-sm text-gray-600 line-clamp-3">
-                      {submission.schoolAdminRemarks}
-                    </p>
-                  </div>
-                )}
-
-                {/* Review Status and Actions */}
-                <div className="flex gap-2 pt-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => {
-                      // View details functionality - could open a detailed view modal
-                      toast({
-                        title: "View Details",
-                        description: `Opening detailed view for ${submission.schoolName}`,
-                      });
-                    }}
-                  >
-                    <Eye className="w-4 h-4 mr-2" />
-                    View Details
-                  </Button>
-                  
-                  {canReview(submission) && (
-                    <Button
-                      size="sm"
-                      className="flex-1"
-                      onClick={() => openReviewModal(submission)}
-                    >
-                      Review
-                    </Button>
-                  )}
-                </div>
-
-                {/* Previous Review Info */}
-                {submission.countyReview && currentUserRole === 'admin' && (
-                  <div className="bg-blue-50 p-3 rounded-md mt-3">
-                    <div className="text-sm font-medium text-blue-700 mb-1">County Review:</div>
-                    <div className="text-sm text-blue-600">
-                      <strong>{submission.countyReview.reviewerName}</strong> - {submission.countyReview.status}
-                    </div>
-                    <p className="text-sm text-blue-600 mt-1">{submission.countyReview.remarks}</p>
-                  </div>
-                )}
-
-                {/* Disbursement Info */}
-                {/* {submission.disbursementDetails && (
-                  <div className="bg-purple-50 p-3 rounded-md">
-                    <div className="text-sm font-medium text-purple-700 mb-1">Disbursement:</div>
-                    <div className="text-sm text-purple-600">
-                      Amount: TZS {submission.disbursementDetails.amount.toLocaleString()}
-                    </div>
-                    <div className="text-sm text-purple-600">
-                      Date: {new Date(submission.disbursementDetails.disbursementDate).toLocaleDateString()}
-                    </div>
-                  </div>
-                )} */}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* Empty State */}
-        {filteredSubmissions.length === 0 && (
-          <div className="text-center py-12">
-            <Building2 className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No assessments found</h3>
-            <p className="text-gray-600">
-              {searchTerm || statusFilter !== 'all' 
-                ? 'Try adjusting your search or filter criteria.' 
-                : 'No assessment submissions available for review.'
-              }
-            </p>
-          </div>
-        )}
-      </div>
+        <DataTable
+          columns={columns}
+          data={filteredData}
+          searchKey="schoolName"
+          searchPlaceholder="Search schools or facilities..."
+          enableRowSelection
+          dense={false}
+          onSelectionChange={(rows: any[]) => setSelectedRows(rows)}
+        />
+      </section>
 
       {/* Review Modal */}
       <Dialog open={isReviewModalOpen} onOpenChange={setIsReviewModalOpen}>
@@ -536,7 +533,7 @@ const AssessmentReviewPage: React.FC = () => {
           <DialogHeader>
             <DialogTitle>Review Assessment - {selectedSubmission?.schoolName}</DialogTitle>
           </DialogHeader>
-          
+
           {selectedSubmission && (
             <div className="space-y-6">
               {/* Assessment Summary */}
@@ -556,11 +553,11 @@ const AssessmentReviewPage: React.FC = () => {
                     <span className="font-medium">Assessment Date:</span> {new Date(selectedSubmission.assessmentDate).toLocaleDateString()}
                   </div>
                 </div>
-                
-                {selectedSubmission.schoolAdminRemarks && (
+
+                {selectedSubmission.school_feedback && (
                   <div className="mt-3">
                     <span className="font-medium">School Admin Remarks:</span>
-                    <p className="text-sm text-gray-600 mt-1">{selectedSubmission.schoolAdminRemarks}</p>
+                    <p className="text-sm text-gray-600 mt-1">{selectedSubmission.school_feedback}</p>
                   </div>
                 )}
               </div>
@@ -632,6 +629,7 @@ const AssessmentReviewPage: React.FC = () => {
           )}
         </DialogContent>
       </Dialog>
+
     </div>
   );
 };

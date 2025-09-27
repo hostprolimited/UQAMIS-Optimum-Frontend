@@ -13,6 +13,7 @@ export interface Facility {
 export interface MaintenanceAssessmentInput {
   institution_id: number;
   facility_id: number;
+  institution_name: string;
   status: 'pending' | 'in_progress' | 'completed';
   details: {
     part_of_building: string;
@@ -27,6 +28,7 @@ export interface MaintenanceReport {
   id: number;
   school_name: string;
   facility_type: string;
+  institution_name: string;
   assessment_date: string;
   urgent_items: number;
   attention_items: number;
@@ -62,9 +64,9 @@ export interface SchoolMetric {
 }
 
 export interface AgentReview{
-  review_decision: 'approve' | 'reject' |  'require_clarification' | 'pending';
+  review_decision: 'approved' | 'rejected' |  'requires_clarification' | 'pending';
   review_remarks: string;
   maintenance_assessment_id: number;
   recommended_actions?: string;
-  priority_level?: 'low' | 'medium' | 'high';
+  priority?: 'low' | 'medium' | 'high';
 }

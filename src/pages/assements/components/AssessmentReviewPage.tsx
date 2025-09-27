@@ -39,10 +39,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { DataTable } from "@/components/ui/data-table";
 import { useToast } from "@/hooks/use-toast";
 
-import { getMaintenanceReports, getFacilities } from "../core/_request";
+import { getMaintenanceReports, getFacilities, agentReviewMaintenanceReport } from "../core/_request";
 import { Facility } from "../core/_model";
 
 // --- Types ---
@@ -54,7 +57,8 @@ interface AssessmentDetail {
 
 interface FacilityAssessment {
   id: string;
-  schoolName: string;
+  // schoolName: string;
+  institutionName
   facilityType: string;
   assessmentDate: string; // ISO date string
   urgentItems: number;
@@ -74,7 +78,7 @@ interface FacilityAssessment {
 // Mapping helper (adapts API response to our UI model)
 const mapMaintenanceReport = (report: any, facilityIdToName: Record<string, string>): FacilityAssessment => ({
   id: report.id?.toString() ?? "",
-  schoolName: report.school_name ?? report.school ?? getCurrentInstitutionName(),
+  // schoolName: report.school_name ?? report.school ?? getCurrentInstitutionName(),
   facilityType:
     facilityIdToName[report.facility_id?.toString()] || report.facility_type || report.facility_id?.toString() || "",
   assessmentDate: report.assessment_date ?? report.date ?? "",
@@ -86,6 +90,7 @@ const mapMaintenanceReport = (report: any, facilityIdToName: Record<string, stri
   completionStatus: report.completion_status ?? "pending",
   status: report.status,
   agent_feedback: report.agent_feedback,
+  institutionName: report.institution_name || report.school_name || getCurrentInstitutionName(),
   school_feedback: report.school_feedback,
   totalScorePercentage: report.total_score_percentage,
   created_at: report.created_at,
@@ -94,18 +99,17 @@ const mapMaintenanceReport = (report: any, facilityIdToName: Record<string, stri
 
 // Get current logged-in institution name from localStorage
 const getCurrentInstitutionName = () => {
-  try {
-    const userStr = localStorage.getItem("user");
-    if (userStr) {
-      const user = JSON.parse(userStr);
-      return user?.school || user?.name || "School";
+  const inst = localStorage.getItem("institutionName");
+  if (inst) {
+    try {
+      const parsed = JSON.parse(inst);
+      return parsed?.institution_name || "School";
+    } catch (e) {
+      // ignore
     }
-  } catch (e) {
-    // ignore
   }
   return "School";
 };
-
 
 // --- Component ---
 const AssessmentReviewPage: React.FC = () => {
@@ -128,6 +132,16 @@ const AssessmentReviewPage: React.FC = () => {
   // Edit modal
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editAssessment, setEditAssessment] = useState<FacilityAssessment | null>(null);
+
+  // Review modal
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [selectedSubmission, setSelectedSubmission] = useState<FacilityAssessment | null>(null);
+  const [reviewForm, setReviewForm] = useState({
+    status: '',
+    priority: '',
+    remarks: '',
+    recommendedAction: '',
+  });
 
   const MySwal = withReactContent(Swal);
 
@@ -193,7 +207,7 @@ const AssessmentReviewPage: React.FC = () => {
 
   // Stats (memoized)
   const totalAssessments = useMemo(() => assessments.length, [assessments]);
-  const totalSchools = useMemo(() => new Set(assessments.map((a) => a.schoolName)).size, [assessments]);
+  const totalSchools = useMemo(() => new Set(assessments.map((a) => a.institutionName)).size, [assessments]);
   const criticalFacilities = useMemo(() => assessments.filter((a) => a.overallCondition === "critical").length, [assessments]);
   const avgScore = useMemo(() => {
     if (assessments.length === 0) return 0;
@@ -221,10 +235,10 @@ const AssessmentReviewPage: React.FC = () => {
   const columns: ColumnDef<FacilityAssessment>[] = [
 
      {
-      accessorKey: "schoolName",
+      accessorKey: "institutionName",
       header: "School name",
       cell: ({ row }) => (
-        <div className="capitalize font-medium">{row.getValue("schoolName")}</div>
+        <div className="capitalize font-medium">{row.getValue("institutionName")}</div>
       ),
     },
     {
@@ -281,7 +295,7 @@ const AssessmentReviewPage: React.FC = () => {
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0" aria-label={`Open actions for ${assessment.schoolName}`}>
+              <Button variant="ghost" className="h-8 w-8 p-0" aria-label={`Open actions for ${assessment.institutionName}`}>
                 <span className="sr-only">Open menu</span>
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
@@ -289,7 +303,7 @@ const AssessmentReviewPage: React.FC = () => {
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => handleEdit(assessment.id)}>
+              <DropdownMenuItem onClick={() => handleReview(assessment.id)}>
                 <Edit className="mr-2 h-4 w-4" />
                 Review assessment
               </DropdownMenuItem>
@@ -370,6 +384,36 @@ const AssessmentReviewPage: React.FC = () => {
       } catch (error) {
         toast({ title: "Error", description: "Failed to delete assessment", variant: "destructive" });
       }
+    }
+  };
+
+  // --- Actions: Review ---
+  const handleReview = (id: string) => {
+    const found = assessments.find((a) => a.id === id);
+    if (found) {
+      setSelectedSubmission(found);
+      setReviewForm({ status: '', priority: '', remarks: '', recommendedAction: '' });
+      setIsReviewModalOpen(true);
+    }
+  };
+
+  const handleReviewSubmit = async () => {
+    if (!reviewForm.status || !reviewForm.remarks || !reviewForm.recommendedAction) {
+      toast({ title: "Error", description: "Status, remarks, and recommended action are required", variant: "destructive" });
+      return;
+    }
+    try {
+      const data = {
+        review_decision: reviewForm.status as "approved" | "rejected" | "requires-clarification",
+        review_remarks: reviewForm.remarks,
+        recommended_action: reviewForm.recommendedAction,
+        priority: reviewForm.priority as "low" | "medium" | "high" | "urgent" | undefined,
+      };
+      await agentReviewMaintenanceReport(parseInt(selectedSubmission!.id), data);
+      toast({ title: "Success", description: "Review submitted successfully" });
+      setIsReviewModalOpen(false);
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to submit review", variant: "destructive" });
     }
   };
 
@@ -475,85 +519,112 @@ const AssessmentReviewPage: React.FC = () => {
         <DataTable
           columns={columns}
           data={filteredData}
-          searchKey="schoolName"
+          searchKey="institutionName"
           searchPlaceholder="Search schools or facilities..."
           enableRowSelection
           dense={false}
-          onSelectionChange={(rows: any[]) => setSelectedRows(rows)}
         />
       </section>
 
-      {/* Edit Modal */}
-      <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
-        <DialogContent>
+      {/* Review Modal */}
+      <Dialog open={isReviewModalOpen} onOpenChange={setIsReviewModalOpen}>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Edit Assessment</DialogTitle>
-            <DialogDescription>Update the assessment details and save changes.</DialogDescription>
+            <DialogTitle>Review Assessment - {selectedSubmission?.institutionName}</DialogTitle>
           </DialogHeader>
 
-          {editAssessment && (
-            <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); handleEditSave(); }}>
-              <div>
-                <label className="block text-sm font-medium">Facility Type</label>
-                <input
-                  className="w-full border rounded px-2 py-1"
-                  name="facilityType"
-                  value={editAssessment.facilityType}
-                  onChange={handleEditChange}
-                  required
-                />
+          {selectedSubmission && (
+            <div className="space-y-6">
+              {/* Assessment Summary */}
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h4 className="font-medium mb-3">Assessment Summary</h4>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="font-medium">Facility:</span> {selectedSubmission.facilityType}
+                  </div>
+                  <div>
+                    <span className="font-medium">Overall Condition:</span> {selectedSubmission.overallCondition}
+                  </div>
+                  <div>
+                    <span className="font-medium">Urgent Items:</span> {selectedSubmission.urgentItems}
+                  </div>
+                  <div>
+                    <span className="font-medium">Assessment Date:</span> {new Date(selectedSubmission.assessmentDate).toLocaleDateString()}
+                  </div>
+                </div>
+
+                {selectedSubmission.school_feedback && (
+                  <div className="mt-3">
+                    <span className="font-medium">School Admin Remarks:</span>
+                    <p className="text-sm text-gray-600 mt-1">{selectedSubmission.school_feedback}</p>
+                  </div>
+                )}
               </div>
 
-              <div>
-                <label className="block text-sm font-medium">Assessment Date</label>
-                <input
-                  className="w-full border rounded px-2 py-1"
-                  name="assessmentDate"
-                  type="date"
-                  value={editAssessment.assessmentDate}
-                  onChange={handleEditChange}
-                  required
-                />
+              {/* Review Form */}
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="review-status">Review Decision *</Label>
+                  <Select value={reviewForm.status} onValueChange={(value) => setReviewForm(prev => ({ ...prev, status: value }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select review decision" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="approved">Approve</SelectItem>
+                      <SelectItem value="rejected">Reject</SelectItem>
+                      <SelectItem value="requires-clarification">Requires Clarification</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="priority">Priority Level</Label>
+                  <Select value={reviewForm.priority} onValueChange={(value) => setReviewForm(prev => ({ ...prev, priority: value }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select priority level" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="low">Low</SelectItem>
+                      <SelectItem value="medium">Medium</SelectItem>
+                      <SelectItem value="high">High</SelectItem>
+                      <SelectItem value="urgent">Urgent</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="review-remarks">Review Remarks *</Label>
+                  <Textarea
+                    id="review-remarks"
+                    placeholder="Enter your review comments and observations..."
+                    value={reviewForm.remarks}
+                    onChange={(e) => setReviewForm(prev => ({ ...prev, remarks: e.target.value }))}
+                    rows={4}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="recommended-action">Recommended Action</Label>
+                  <Textarea
+                    id="recommended-action"
+                    placeholder="Specify recommended actions or next steps..."
+                    value={reviewForm.recommendedAction}
+                    onChange={(e) => setReviewForm(prev => ({ ...prev, recommendedAction: e.target.value }))}
+                    rows={3}
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium">Overall Condition</label>
-                <select
-                  className="w-full border rounded px-2 py-1"
-                  name="overallCondition"
-                  value={editAssessment.overallCondition}
-                  onChange={handleEditChange}
-                  required
-                >
-                  <option value="excellent">Excellent</option>
-                  <option value="good">Good</option>
-                  <option value="needs-attention">Needs Attention</option>
-                  <option value="critical">Critical</option>
-                </select>
+              {/* Modal Actions */}
+              <div className="flex justify-end gap-3 pt-4 border-t">
+                <Button variant="outline" onClick={() => setIsReviewModalOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleReviewSubmit}>
+                  Submit Review
+                </Button>
               </div>
-
-              <div>
-                <label className="block text-sm font-medium">Completion Status</label>
-                <select
-                  className="w-full border rounded px-2 py-1"
-                  name="completionStatus"
-                  value={editAssessment.completionStatus}
-                  onChange={handleEditChange}
-                  required
-                >
-                  <option value="completed">Completed</option>
-                  <option value="in-progress">In Progress</option>
-                  <option value="pending">Pending</option>
-                </select>
-              </div>
-
-              <DialogFooter>
-                <Button type="submit">Save</Button>
-                <DialogClose asChild>
-                  <Button type="button" variant="outline">Cancel</Button>
-                </DialogClose>
-              </DialogFooter>
-            </form>
+            </div>
           )}
         </DialogContent>
       </Dialog>

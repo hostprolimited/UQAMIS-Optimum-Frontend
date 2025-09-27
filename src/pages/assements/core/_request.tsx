@@ -81,7 +81,7 @@ export const getMaintenanceReportById = async (id: number): Promise<APIResponse<
 };
 
 // agent review maintainance report by id
-export const agentReviewMaintenanceReport = async (id: number, data: { review_decision: 'approve' | 'reject' |  'require_clarification' | 'pending'; review_remarks: string; }): Promise<APIResponse<any>> => {
-  const response = await api.post<APIResponse<any>>(Urls.AGENT_REVIEW_MAINTENANCE_ASSESSMENT(id), data);
+export const agentReviewMaintenanceReport = async (id: number, data: { review_decision: 'approved' | 'rejected' | 'requires_clarification' | 'pending'; review_remarks: string; recommended_action: string; priority?: 'low' | 'medium' | 'high' | 'urgent'; }): Promise<APIResponse<any>> => {
+  const response = await api.put<APIResponse<any>>(Urls.AGENT_REVIEW_MAINTENANCE_ASSESSMENT(id), data);
   return response.data;
 };

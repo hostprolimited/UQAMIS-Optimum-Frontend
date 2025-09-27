@@ -60,4 +60,7 @@ export const Urls = {
   DELETE_ROLE_URL: (id: number) => `/remove-role/${id}`,
   
 
+  // Dashboard Endpoints
+  DASHBOARD_URL: '/dashboard/overview',
+
 }
