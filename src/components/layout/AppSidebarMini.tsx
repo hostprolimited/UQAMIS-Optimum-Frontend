@@ -145,7 +145,7 @@ const navigationItems = [
     page: 'assessment_review'
   },
   {
-    title: 'School Form', 
+    title: 'School Metrics', 
     url: '/school-metrics',
     icon: GraduationCap,
     page: 'school_form'

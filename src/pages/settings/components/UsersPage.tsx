@@ -339,10 +339,10 @@ const Users = () => {
                   <option value="school_admin">School Admin</option>
                   {/* Only show agent option if current user is NOT agent */}
                   {currentUser?.role !== 'agent' && (
-                    <option value="agent">County Admin</option>
+                    <option value="agent">Agent</option>
                   )}
                   {currentUser?.role !== 'agent' && (
-                    <option value="agent">Admin</option>
+                    <option value="ministry_admin">Ministry Admin</option>
                   )}
                 </select>
               </div>

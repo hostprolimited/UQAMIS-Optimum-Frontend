@@ -77,7 +77,7 @@ interface FacilityAssessment {
   totalItems: number;
   overallCondition: "excellent" | "good" | "needs-attention" | "critical";
   completionStatus: "completed" | "in-progress" | "pending";
-  status?: string;
+  status: 'pending' | 'reviewed' | 'approved' | 'rejected';
   agent_feedback?: string;
   totalScorePercentage?: number;
   created_at?: string;
@@ -97,7 +97,7 @@ const mapMaintenanceReport = (report: any, facilityIdToName: Record<string, stri
   totalItems: report.total_items ?? 0,
   overallCondition: report.overall_condition ?? "good",
   completionStatus: report.completion_status ?? "pending",
-  status: report.status,
+  status: report.status ?? "pending",
   agent_feedback: report.agent_feedback,
   totalScorePercentage: report.total_score_percentage,
   created_at: report.created_at,
@@ -316,11 +316,11 @@ const AssessmentListPage: React.FC = () => {
       },
     },
     {
-      accessorKey: "completionStatus",
+      accessorKey: "status",
       header: "Status",
       cell: ({ row }) => {
-        const s = row.getValue("completionStatus") as FacilityAssessment["completionStatus"];
-        return getCompletionStatusBadge(s);
+        const s = row.getValue("status") as FacilityAssessment["status"];
+        return <div className="font-medium max-w-[250px] truncate" title={String(s)}>{s}</div>;
       },
     },
     {

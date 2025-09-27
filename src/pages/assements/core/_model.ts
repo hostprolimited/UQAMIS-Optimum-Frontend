@@ -38,6 +38,7 @@ export interface MaintenanceReport {
   school_feedback: string;
   recommended_actions?: string;
   priority_level?: 'low' | 'medium' | 'high';
+  status: 'pending' | 'reviewed' | 'approved' | 'rejected';
   total_score_percentage: number;
   overall_condition: 'excellent' | 'good' | 'needs-attention' | 'critical';
   completion_status: 'completed' | 'in-progress' | 'pending';
