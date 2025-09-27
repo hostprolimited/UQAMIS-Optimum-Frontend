@@ -378,7 +378,7 @@ const Overview = () => {
       )}
 
       {/* Recent Activity */}
-      <Card>
+      {/* <Card>
         <CardHeader>
           <CardTitle>Recent Activity</CardTitle>
           <CardDescription>Latest assessment updates and system events</CardDescription>
@@ -432,7 +432,7 @@ const Overview = () => {
             ))}
           </div>
         </CardContent>
-      </Card>
+      </Card> */}
     </div>
   );
 };
