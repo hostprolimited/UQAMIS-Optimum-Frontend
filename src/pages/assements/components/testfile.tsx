@@ -1,637 +1,440 @@
-// import React, { useEffect, useMemo, useState } from "react";
-// import Swal from "sweetalert2";
-// import withReactContent from "sweetalert2-react-content";
-// import { useNavigate } from "react-router-dom";
-// import { ColumnDef } from "@tanstack/react-table";
-// import {
-//   MoreHorizontal,
-//   Edit,
-//   Trash2,
-//   Plus,
-//   Download,
-//   FileText,
-//   FileSpreadsheet,
-//   FileImage,
-//   Building2,
-//   AlertTriangle,
-//   BarChart3,
-//   CheckCircle,
-//   Filter,
-// } from "lucide-react";
+// import React, { useState, useEffect } from 'react';
+// import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
+// import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+// import { Badge } from '@/components/ui/badge';
+// import { useRole } from '@/contexts/RoleContext';
+// import { getDashboardData } from '../core/_request';
+// import { getSchoolMetrics } from '../../assements/core/_request';
+// import { DashboardData } from '../core/_models';
+// import { SchoolMetric } from '../../assements/core/_model';
+// import countiesData from '@/constants/data.json';
 
-// import { Button } from "@/components/ui/button";
-// import { Badge } from "@/components/ui/badge";
-// import {
-//   Dialog,
-//   DialogTrigger,
-//   DialogContent,
-//   DialogHeader,
-//   DialogFooter,
-//   DialogTitle,
-//   DialogDescription,
-//   DialogClose,
-// } from "@/components/ui/dialog";
-// import {
-//   DropdownMenu,
-//   DropdownMenuContent,
-//   DropdownMenuItem,
-//   DropdownMenuLabel,
-//   DropdownMenuSeparator,
-//   DropdownMenuTrigger,
-// } from "@/components/ui/dropdown-menu";
-// import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-// import { Label } from "@/components/ui/label";
-// import { Textarea } from "@/components/ui/textarea";
-// import { DataTable } from "@/components/ui/data-table";
-// import { useToast } from "@/hooks/use-toast";
+// // Kenya county code to name mapping from data.json
+// const countiesTable = countiesData.find((item: any) => item.type === 'table' && item.name === 'counties');
+// const counties = countiesTable?.data || [];
+// const countyCodeToName: Record<string, string> = counties.reduce((acc: Record<string, string>, county: any) => {
+//   acc[county.county_id] = county.county_name;
+//   return acc;
+// }, {});
+// import { School, Users, FileText, TrendingUp, CheckCircle, AlertTriangle, XCircle, BarChart3 } from 'lucide-react';
 
-// import { getMaintenanceReports, getFacilities, agentReviewMaintenanceReport } from "../core/_request";
-// import { Facility } from "../core/_model";
+// // Mock data for different levels
+// const countyData = [
+//   { name: 'Nairobi', schools: 245, assessments: 180, approved: 125, pending: 35, rejected: 20 },
+//   { name: 'Mombasa', schools: 178, assessments: 134, approved: 98, pending: 28, rejected: 8 },
+//   { name: 'Kisumu', schools: 156, assessments: 112, approved: 89, pending: 15, rejected: 8 },
+//   { name: 'Nakuru', schools: 189, assessments: 145, approved: 102, pending: 31, rejected: 12 },
+// ];
 
-// // --- Types ---
-// interface AssessmentDetail {
-//   part_of_building: string;
-//   assessment_status: string;
-//   score?: number;
-// }
+// const schoolAssessmentData = [
+//   { month: 'Jan', completed: 45, pending: 12, score: 85 },
+//   { month: 'Feb', completed: 52, pending: 8, score: 87 },
+//   { month: 'Mar', completed: 38, pending: 15, score: 82 },
+//   { month: 'Apr', completed: 61, pending: 6, score: 89 },
+//   { month: 'May', completed: 49, pending: 11, score: 86 },
+//   { month: 'Jun', completed: 55, pending: 9, score: 88 },
+// ];
 
-// interface FacilityAssessment {
-//   id: string;
-//   // schoolName: string;
-//   institutionName
-//   facilityType: string;
-//   assessmentDate: string; // ISO date string
-//   urgentItems: number;
-//   attentionItems: number;
-//   goodItems: number;
-//   totalItems: number;
-//   overallCondition: "excellent" | "good" | "needs-attention" | "critical";
-//   completionStatus: "completed" | "in-progress" | "pending";
-//   status?: string;
-//   agent_feedback?: string;
-//   school_feedback?: string;
-//   totalScorePercentage?: number;
-//   created_at?: string;
-//   details?: AssessmentDetail[];
-// }
+// const statusData = [
+//   { name: 'Approved', value: 314, color: 'hsl(var(--success))' },
+//   { name: 'Pending Review', value: 89, color: 'hsl(var(--warning))' },
+//   { name: 'Needs Improvement', value: 48, color: 'hsl(var(--destructive))' },
+//   { name: 'Not Assessed', value: 67, color: 'hsl(var(--muted-foreground))' },
+// ];
 
-// // Mapping helper (adapts API response to our UI model)
-// const mapMaintenanceReport = (report: any, facilityIdToName: Record<string, string>): FacilityAssessment => ({
-//   id: report.id?.toString() ?? "",
-//   // schoolName: report.school_name ?? report.school ?? getCurrentInstitutionName(),
-//   facilityType:
-//     facilityIdToName[report.facility_id?.toString()] || report.facility_type || report.facility_id?.toString() || "",
-//   assessmentDate: report.assessment_date ?? report.date ?? "",
-//   urgentItems: report.urgent_items ?? 0,
-//   attentionItems: report.attention_items ?? 0,
-//   goodItems: report.good_items ?? 0,
-//   totalItems: report.total_items ?? 0,
-//   overallCondition: report.overall_condition ?? "good",
-//   completionStatus: report.completion_status ?? "pending",
-//   status: report.status,
-//   agent_feedback: report.agent_feedback,
-//   institutionName: report.institutionName || report.school_name || getCurrentInstitutionName(),
-//   school_feedback: report.school_feedback,
-//   totalScorePercentage: report.total_score_percentage,
-//   created_at: report.created_at,
-//   details: report.details ?? [],
-// });
+// const Overview = () => {
+//   const { currentUser } = useRole();
+//   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+//   const [schoolMetricsData, setSchoolMetricsData] = useState<SchoolMetric[] | null>(null);
 
-// // Get current logged-in institution name from localStorage
-// const getCurrentInstitutionName = () => {
-//   const inst = localStorage.getItem("current_institution");
-//   if (inst) {
-//     try {
-//       const parsed = JSON.parse(inst);
-//       return parsed?.institution_name || "School";
-//     } catch (e) {
-//       // ignore
-//     }
-//   }
-//   return "School";
-// };
-
-// // --- Component ---
-// const AssessmentReviewPage: React.FC = () => {
-//   const navigate = useNavigate();
-//   const { toast } = useToast();
-
-//   const [assessments, setAssessments] = useState<FacilityAssessment[]>([]);
-//   const [filteredData, setFilteredData] = useState<FacilityAssessment[]>([]);
-//   const [facilityIdToName, setFacilityIdToName] = useState<Record<string, string>>({});
-
-//   const [selectedRows, setSelectedRows] = useState<FacilityAssessment[]>([]);
-
-//   // Filters
-//   const [facilityTypeFilter, setFacilityTypeFilter] = useState<string>("");
-//   const [conditionFilter, setConditionFilter] = useState<string>("");
-//   const [statusFilter, setStatusFilter] = useState<string>("");
-//   const [fromDate, setFromDate] = useState<string>("");
-//   const [toDate, setToDate] = useState<string>("");
-
-//   // Edit modal
-//   const [editModalOpen, setEditModalOpen] = useState(false);
-//   const [editAssessment, setEditAssessment] = useState<FacilityAssessment | null>(null);
-
-//   // Review modal
-//   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
-//   const [selectedSubmission, setSelectedSubmission] = useState<FacilityAssessment | null>(null);
-//   const [reviewForm, setReviewForm] = useState({
-//     status: '',
-//     priority: '',
-//     remarks: '',
-//     recommendedAction: '',
-//   });
-
-//   const MySwal = withReactContent(Swal);
-
-//   // Fetch facilities and assessments
 //   useEffect(() => {
-//     let mounted = true;
-//     const fetch = async () => {
+//     const fetchData = async () => {
 //       try {
-//         const facilitiesRes = await getFacilities();
-//         const facilities: Facility[] = facilitiesRes?.data || [];
-//         const idToName = facilities.reduce((acc, f) => {
-//           acc[f.id.toString()] = f.name;
-//           return acc;
-//         }, {} as Record<string, string>);
-
-//         if (!mounted) return;
-//         setFacilityIdToName(idToName);
-
-//         const resp = await getMaintenanceReports();
-//         const data = resp?.data || [];
-//         const mapped: FacilityAssessment[] = data.map((r: any) => mapMaintenanceReport(r, idToName));
-
-//         if (!mounted) return;
-//         setAssessments(mapped);
-//         setFilteredData(mapped);
+//         if (currentUser.role === 'ministry_admin' || currentUser.role === 'school_admin') {
+//           const response = await getSchoolMetrics();
+//           if (response.status === 'success') {
+//             setSchoolMetricsData(response.data);
+//           }
+//         } else if (currentUser.role === 'agent') {
+//           const response = await getDashboardData();
+//           if (response.status === 'success') {
+//             setDashboardData(response.data);
+//           }
+//         }
 //       } catch (error) {
-//         toast({ title: "Error", description: "Failed to load assessments", variant: "destructive" });
+//         console.error('Failed to fetch data', error);
 //       }
 //     };
-//     fetch();
-//     return () => {
-//       mounted = false;
-//     };
-//   }, [toast]);
+//     fetchData();
+//   }, [currentUser.role]);
 
-//   // Filtering logic
-//   useEffect(() => {
-//     let data = assessments.slice();
-
-//     if (facilityTypeFilter) {
-//       data = data.filter((d) => d.facilityType === facilityTypeFilter);
-//     }
-//     if (conditionFilter) {
-//       data = data.filter((d) => d.overallCondition === conditionFilter);
-//     }
-//     if (statusFilter) {
-//       data = data.filter((d) => d.completionStatus === statusFilter);
-//     }
-
-//     if (fromDate) {
-//       const from = new Date(fromDate);
-//       data = data.filter((d) => new Date(d.assessmentDate) >= from);
-//     }
-//     if (toDate) {
-//       const to = new Date(toDate);
-//       // include the whole day
-//       to.setHours(23, 59, 59, 999);
-//       data = data.filter((d) => new Date(d.assessmentDate) <= to);
-//     }
-
-//     setFilteredData(data);
-//   }, [assessments, facilityTypeFilter, conditionFilter, statusFilter, fromDate, toDate]);
-
-//   // Stats (memoized)
-//   const totalAssessments = useMemo(() => assessments.length, [assessments]);
-//   const totalSchools = useMemo(() => new Set(assessments.map((a) => a.schoolName)).size, [assessments]);
-//   const criticalFacilities = useMemo(() => assessments.filter((a) => a.overallCondition === "critical").length, [assessments]);
-//   const avgScore = useMemo(() => {
-//     if (assessments.length === 0) return 0;
-//     const sum = assessments.reduce((s, a) => s + (a.totalScorePercentage ?? 0), 0);
-//     return Math.round((sum / assessments.length) * 10) / 10;
-//   }, [assessments]);
-
-//   // Chart data
-//   const conditionData = useMemo(() => [
-//     { name: "Excellent", value: assessments.filter((a) => a.overallCondition === "excellent").length },
-//     { name: "Good", value: assessments.filter((a) => a.overallCondition === "good").length },
-//     { name: "Needs Attention", value: assessments.filter((a) => a.overallCondition === "needs-attention").length },
-//     { name: "Critical", value: assessments.filter((a) => a.overallCondition === "critical").length },
-//   ], [assessments]);
-
-//   const statusData = useMemo(() => [
-//     { name: "Completed", value: assessments.filter((a) => a.completionStatus === "completed").length },
-//     { name: "In Progress", value: assessments.filter((a) => a.completionStatus === "in-progress").length },
-//     { name: "Pending", value: assessments.filter((a) => a.completionStatus === "pending").length },
-//   ], [assessments]);
-
-//   const COLORS = ["#16a34a", "#3b82f6", "#facc15", "#dc2626"];
-
-//   // Table columns (keeps original richer columns for actions & details)
-//   const columns: ColumnDef<FacilityAssessment>[] = [
-
-//      {
-//       accessorKey: "institutionName",
-//       header: "School name",
-//       cell: ({ row }) => (
-//         <div className="capitalize font-medium">{row.getValue("institutionName")}</div>
-//       ),
-//     },
-//     {
-//       accessorKey: "facilityType",
-//       header: "Facility Type",
-//       cell: ({ row }) => (
-//         <div className="capitalize font-medium">{row.getValue("facilityType")}</div>
-//       ),
-//     },
-   
-//     // {
-//     //   accessorKey: "assessmentDate",
-//     //   header: "Assessment Date",
-//     //   cell: ({ row }) => {
-//     //     <div className="font-medium max-w-[250px] truncate" title={String(row.getValue("created_at"))}>{row.getValue("created_at")}</div>
-//     //   },
-//     // },
-
-//     {
-//       accessorKey: "school_feedback",
-//       header: "School Feedback",
-//       cell: ({ row }) => (
-//         <div className="font-medium max-w-[250px] truncate" title={String(row.getValue("school_feedback"))}>{row.getValue("school_feedback")}</div>
-//       ),
-//     },
-//     {
-//       accessorKey: "totalScorePercentage",
-//       header: "Score (%)",
-//       cell: ({ row }) => (
-//         <div className="text-center font-semibold">{row.getValue("totalScorePercentage") ?? '-'}</div>
-//       ),
-//     },
-//     {
-//       accessorKey: "overallCondition",
-//       header: "Condition",
-//       cell: ({ row }) => {
-//         const cond = row.getValue("overallCondition") as FacilityAssessment["overallCondition"];
-//         return getOverallConditionBadge(cond);
-//       },
-//     },
-//     {
-//       accessorKey: "completionStatus",
-//       header: "Status",
-//       cell: ({ row }) => {
-//         const s = row.getValue("completionStatus") as FacilityAssessment["completionStatus"];
-//         return getCompletionStatusBadge(s);
-//       },
-//     },
-//     {
-//       id: "actions",
-//       header: "Actions",
-//       cell: ({ row }) => {
-//         const assessment = row.original;
-//         return (
-//           <DropdownMenu>
-//             <DropdownMenuTrigger asChild>
-//               <Button variant="ghost" className="h-8 w-8 p-0" aria-label={`Open actions for ${assessment.schoolName}`}>
-//                 <span className="sr-only">Open menu</span>
-//                 <MoreHorizontal className="h-4 w-4" />
-//               </Button>
-//             </DropdownMenuTrigger>
-//             <DropdownMenuContent align="end">
-//               <DropdownMenuLabel>Actions</DropdownMenuLabel>
-//               <DropdownMenuSeparator />
-//               <DropdownMenuItem onClick={() => handleReview(assessment.id)}>
-//                 <Edit className="mr-2 h-4 w-4" />
-//                 Review assessment
-//               </DropdownMenuItem>
-//               <DropdownMenuItem onClick={() => handleDelete(assessment.id)} className="text-red-600">
-//                 <Trash2 className="mr-2 h-4 w-4" />
-//                 Delete assessment
-//               </DropdownMenuItem>
-//             </DropdownMenuContent>
-//           </DropdownMenu>
-//         );
-//       },
-//     },
-//   ];
-
-//   // --- Helpers for badges ---
-//   function getOverallConditionBadge(condition?: FacilityAssessment["overallCondition"]) {
-//     const conditionConfig: Record<string, { label: string; className: string }> = {
-//       excellent: { label: "Excellent", className: "bg-green-100 text-green-800" },
-//       good: { label: "Good", className: "bg-blue-100 text-blue-800" },
-//       "needs-attention": { label: "Needs Attention", className: "bg-yellow-100 text-yellow-800" },
-//       critical: { label: "Critical", className: "bg-red-100 text-red-800" },
-//     };
-//     if (!condition) return <Badge className="bg-gray-100 text-gray-800">-</Badge>;
-//     const config = conditionConfig[condition];
-//     return <Badge className={config.className}>{config.label}</Badge>;
-//   }
-
-//   function getCompletionStatusBadge(status?: FacilityAssessment["completionStatus"]) {
-//     const statusConfig: Record<string, { label: string; className: string }> = {
-//       completed: { label: "Completed", className: "bg-green-100 text-green-800" },
-//       "in-progress": { label: "In Progress", className: "bg-blue-100 text-blue-800" },
-//       pending: { label: "Pending", className: "bg-gray-100 text-gray-800" },
-//     };
-//     if (!status) return <Badge className="bg-gray-100 text-gray-800">-</Badge>;
-//     const config = statusConfig[status];
-//     return <Badge className={config.className}>{config.label}</Badge>;
-//   }
-
-//   // --- Actions: Edit / Delete ---
-//   const handleEdit = (id: string) => {
-//     const found = assessments.find((a) => a.id === id);
-//     if (found) {
-//       setEditAssessment(found);
-//       setEditModalOpen(true);
-//     }
-//   };
-
-//   const handleEditChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-//     if (!editAssessment) return;
-//     const { name, value } = e.target;
-//     setEditAssessment({ ...editAssessment, [name]: value } as FacilityAssessment);
-//   };
-
-//   const handleEditSave = () => {
-//     if (!editAssessment) return;
-//     setAssessments((prev) => prev.map((a) => (a.id === editAssessment.id ? editAssessment : a)));
-//     setEditModalOpen(false);
-//     toast({ title: "Success", description: "Assessment updated." });
-//   };
-
-//   const handleDelete = async (id: string) => {
-//     const result = await MySwal.fire({
-//       title: "Are you sure?",
-//       text: "This action cannot be undone. Do you want to delete this assessment?",
-//       icon: "warning",
-//       showCancelButton: true,
-//       confirmButtonColor: "#d33",
-//       cancelButtonColor: "#3085d6",
-//       confirmButtonText: "Yes, delete it!",
-//       cancelButtonText: "Cancel",
-//     });
-
-//     if (result.isConfirmed) {
-//       try {
-//         // TODO: call API to delete on server
-//         setAssessments((prev) => prev.filter((a) => a.id !== id));
-//         toast({ title: "Success", description: "Assessment deleted successfully" });
-//       } catch (error) {
-//         toast({ title: "Error", description: "Failed to delete assessment", variant: "destructive" });
+//   const getOverviewTitle = () => {
+//     switch (currentUser.role) {
+//       case 'ministry_admin':
+//         return 'National Overview';
+//       case 'agent': {
+//         // Use county_code to get county name
+//         const code = (currentUser as any).county_code || currentUser.county_code || currentUser.county_name;
+//         const countyName = countyCodeToName[String(code)] || 'Unknown';
+//         return `${countyName} County Overview`;
 //       }
+//       case 'school_admin':
+//         return `${currentUser.name} Overview`;
+//       default:
+//         return 'Overview';
 //     }
 //   };
 
-//   // --- Actions: Review ---
-//   const handleReview = (id: string) => {
-//     const found = assessments.find((a) => a.id === id);
-//     if (found) {
-//       setSelectedSubmission(found);
-//       setReviewForm({ status: '', priority: '', remarks: '', recommendedAction: '' });
-//       setIsReviewModalOpen(true);
+//   const getKPIData = () => {
+//     switch (currentUser.role) {
+//       case 'ministry_admin':
+//         if (schoolMetricsData) {
+//           const totalInstitutions = new Set(schoolMetricsData.map(m => m.institution_id)).size;
+//           const totalStudents = schoolMetricsData.reduce((sum, m) => sum + m.students_count, 0);
+//           const totalTeachers = schoolMetricsData.reduce((sum, m) => sum + m.teachers_count, 0);
+//           return [
+//             { title: 'Total Institutions', value: totalInstitutions.toString(), icon: School, trend: '+0', color: 'text-primary' },
+//             { title: 'Total Students', value: totalStudents.toString(), icon: Users, trend: '+0', color: 'text-success' },
+//             { title: 'Total Teachers', value: totalTeachers.toString(), icon: Users, trend: '+0', color: 'text-info' },
+//             { title: 'Avg Score', value: '86.5', icon: TrendingUp, trend: '+2.3', color: 'text-warning' },
+//           ];
+//         } else {
+//           return [
+//             { title: 'Total Counties', value: '47', icon: Users, trend: '+2', color: 'text-primary' },
+//             { title: 'Total Schools', value: '1,248', icon: School, trend: '+45', color: 'text-success' },
+//             { title: 'Assessments', value: '971', icon: FileText, trend: '+123', color: 'text-info' },
+//             { title: 'Avg Score', value: '86.5', icon: TrendingUp, trend: '+2.3', color: 'text-warning' },
+//           ];
+//         }
+//       case 'agent':
+//         if (dashboardData) {
+//           return [
+//             { title: 'Sub-Counties', value: dashboardData.sub_county_performance.labels.length.toString(), icon: Users, trend: '0', color: 'text-primary' },
+//             { title: 'Schools', value: dashboardData.metrics_kpis.total_schools.value.toString(), icon: School, trend: dashboardData.metrics_kpis.total_schools.vs_last_month, color: 'text-success' },
+//             { title: 'Assessments', value: dashboardData.metrics_kpis.total_actions.value.toString(), icon: FileText, trend: dashboardData.metrics_kpis.total_actions.vs_last_month, color: 'text-info' },
+//             { title: 'Avg Score', value: dashboardData.metrics_kpis.maintenance_score.value.toString(), icon: TrendingUp, trend: dashboardData.metrics_kpis.maintenance_score.vs_last_month, color: 'text-warning' },
+//           ];
+//         } else {
+//           return [
+//             { title: 'Sub-Counties', value: '8', icon: Users, trend: '0', color: 'text-primary' },
+//             { title: 'Schools', value: '245', icon: School, trend: '+3', color: 'text-success' },
+//             { title: 'Assessments', value: '180', icon: FileText, trend: '+24', color: 'text-info' },
+//             { title: 'Avg Score', value: '87.2', icon: TrendingUp, trend: '+1.8', color: 'text-warning' },
+//           ];
+//         }
+//       case 'school_admin':
+//         if (schoolMetricsData && currentUser.institution_id) {
+//           const schoolMetrics = schoolMetricsData.filter(m => m.institution_id === currentUser.institution_id);
+//           if (schoolMetrics.length > 0) {
+//             // Take the latest by created_at
+//             const latest = schoolMetrics.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+//             return [
+//               { title: 'Students', value: latest.students_count.toString(), icon: Users, trend: '+0', color: 'text-primary' },
+//               { title: 'Teachers', value: latest.teachers_count.toString(), icon: Users, trend: '+0', color: 'text-success' },
+//               { title: 'Assessments', value: '12', icon: FileText, trend: '+3', color: 'text-info' },
+//               { title: 'Score', value: '89.4', icon: TrendingUp, trend: '+3.2', color: 'text-warning' },
+//             ];
+//           }
+//         }
+//         return [
+//           { title: 'Students', value: '847', icon: Users, trend: '+12', color: 'text-primary' },
+//           { title: 'Teachers', value: '42', icon: Users, trend: '+2', color: 'text-success' },
+//           { title: 'Assessments', value: '12', icon: FileText, trend: '+3', color: 'text-info' },
+//           { title: 'Score', value: '89.4', icon: TrendingUp, trend: '+3.2', color: 'text-warning' },
+//         ];
+//       default:
+//         return [];
 //     }
 //   };
 
-//   const handleReviewSubmit = async () => {
-//     if (!reviewForm.status || !reviewForm.remarks || !reviewForm.recommendedAction) {
-//       toast({ title: "Error", description: "Status, remarks, and recommended action are required", variant: "destructive" });
-//       return;
-//     }
-//     try {
-//       const data = {
-//         review_decision: reviewForm.status,
-//         review_remarks: reviewForm.remarks,
-//         recommended_action: reviewForm.recommendedAction,
-//         priority: reviewForm.priority || undefined,
-//       };
-//       await agentReviewMaintenanceReport(parseInt(selectedSubmission!.id), data);
-//       toast({ title: "Success", description: "Review submitted successfully" });
-//       setIsReviewModalOpen(false);
-//     } catch (error) {
-//       toast({ title: "Error", description: "Failed to submit review", variant: "destructive" });
-//     }
-//   };
+//   const kpiData = getKPIData();
 
-//   // --- UI ---
+//   const performanceData = dashboardData ? dashboardData.performance_trends.labels.map((label, i) => ({
+//     month: label,
+//     completed: dashboardData.performance_trends.completion_rate[i],
+//     score: dashboardData.performance_trends.quality_score[i]
+//   })) : schoolAssessmentData;
+
+//   const subCountyData = dashboardData ? (
+//     currentUser.role === 'ministry_admin' && dashboardData.county_performance ?
+//       dashboardData.county_performance.labels.map((label, i) => {
+//         const obj: any = { name: label };
+//         dashboardData.county_performance!.data.forEach(item => {
+//           obj[item.label] = item.values[i];
+//         });
+//         return obj;
+//       }) :
+//     dashboardData.sub_county_performance ?
+//       dashboardData.sub_county_performance.labels.map((label, i) => {
+//         const obj: any = { name: label };
+//         dashboardData.sub_county_performance!.data.forEach(item => {
+//           obj[item.label] = item.values[i];
+//         });
+//         return obj;
+//       }) :
+//     countyData
+//   ) : countyData;
+
 //   return (
-//     <div className="space-y-8" role="main">
-//       {/* Header */}
-//       <header className="flex items-start justify-between gap-6">
+//     <div className="space-y-6">
+//       <div className="flex items-center justify-between">
 //         <div>
-//           <h1 className="text-3xl md:text-4xl font-bold">Assesments Reports</h1>
-//           <p className="text-muted-foreground mt-2 max-w-2xl">
-//             Monitor facility assessments across your institutions. Use the filters to focus on specific
-//             facility types, conditions or date ranges. This dashboard is designed for quick decisions and
-//             accessible interactions.
+//           <h1 className="text-2xl font-bold text-foreground">{getOverviewTitle()}</h1>
+//           <p className="text-muted-foreground">
+//             Monitor and track quality assurance metrics across your jurisdiction
 //           </p>
 //         </div>
-//         <div className="flex items-center gap-2">
-//           {/* <Button onClick={() => navigate("/assessments/add")} className="gap-2">
-//             <Plus className="h-4 w-4" />
-//             Add New Assessment
-//           </Button> */}
-//         </div>
-//       </header>
+//         {/* <div className="flex items-center space-x-2">
+//           <Badge variant="outline" className="text-sm">
+//             Last updated: 2 minutes ago
+//           </Badge>
+//         </div> */}
+//       </div>
 
-//       {/* Filters */}
-//       <section className="bg-white rounded-lg p-4 shadow border" aria-label="filters">
-//         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
-//           <div className="grid grid-cols-1 md:grid-cols-4 gap-3 flex-1">
-//             <label className="flex flex-col" aria-label="Filter by facility type">
-//               <span className="text-xs text-gray-600 mb-1">Facility type</span>
-//               <select value={facilityTypeFilter} onChange={(e) => setFacilityTypeFilter(e.target.value)} className="border rounded px-2 py-2">
-//                 <option value="">All facility types</option>
-//                 {Array.from(new Set(assessments.map((a) => a.facilityType))).map((ft) => (
-//                   <option key={ft} value={ft}>{ft}</option>
-//                 ))}
-//               </select>
-//             </label>
+//       {/* KPI Cards */}
+//       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+//         {kpiData.map((kpi, index) => (
+//           <Card key={index} className="relative overflow-hidden">
+//             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+//               <CardTitle className="text-sm font-medium text-muted-foreground">
+//                 {kpi.title}
+//               </CardTitle>
+//               <kpi.icon className={`h-4 w-4 ${kpi.color}`} />
+//             </CardHeader>
+//             <CardContent>
+//               <div className="flex items-center space-x-2">
+//                 <div className="text-2xl font-bold text-foreground">{kpi.value}</div>
+//                 <Badge 
+//                   variant="outline" 
+//                   className={`text-xs ${
+//                     kpi.trend.startsWith('+') 
+//                       ? 'text-success border-success/20 bg-success/10' 
+//                       : 'text-muted-foreground'
+//                   }`}
+//                 >
+//                   {kpi.trend !== '0' && kpi.trend}
+//                 </Badge>
+//               </div>
+//               <p className="text-xs text-muted-foreground mt-1">
+//                 {kpi.trend.startsWith('+') ? 'vs last month' : 'no change'}
+//               </p>
+//             </CardContent>
+//           </Card>
+//         ))}
+//       </div>
 
-//             <label className="flex flex-col" aria-label="Filter by condition">
-//               <span className="text-xs text-gray-600 mb-1">Condition</span>
-//               <select value={conditionFilter} onChange={(e) => setConditionFilter(e.target.value)} className="border rounded px-2 py-2">
-//                 <option value="">All conditions</option>
-//                 <option value="excellent">Excellent</option>
-//                 <option value="good">Good</option>
-//                 <option value="needs-attention">Needs Attention</option>
-//                 <option value="critical">Critical</option>
-//               </select>
-//             </label>
-
-//             <label className="flex flex-col" aria-label="Filter by status">
-//               <span className="text-xs text-gray-600 mb-1">Status</span>
-//               <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="border rounded px-2 py-2">
-//                 <option value="">All statuses</option>
-//                 <option value="completed">Completed</option>
-//                 <option value="in-progress">In Progress</option>
-//                 <option value="pending">Pending</option>
-//               </select>
-//             </label>
-
-//             <div className="grid grid-cols-2 gap-2">
-//               <label className="flex flex-col" aria-label="Filter from date">
-//                 <span className="text-xs text-gray-600 mb-1">From</span>
-//                 <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="border rounded px-2 py-2" />
-//               </label>
-//               <label className="flex flex-col" aria-label="Filter to date">
-//                 <span className="text-xs text-gray-600 mb-1">To</span>
-//                 <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="border rounded px-2 py-2" />
-//               </label>
-//             </div>
-//           </div>
-
-//           <div className="flex items-center gap-2">
-//             <Button variant="outline" onClick={() => {
-//               setFacilityTypeFilter("");
-//               setConditionFilter("");
-//               setStatusFilter("");
-//               setFromDate("");
-//               setToDate("");
-//             }} aria-label="Clear filters">
-//               Clear
-//             </Button>
-//             {/* <Button onClick={() => navigate('/assessments/add')} className="hidden md:inline-flex gap-2">
-//               <Plus className="h-4 w-4" /> New
-//             </Button> */}
-//           </div>
-//         </div>
-//       </section>
-
-//       {/* Table */}
-//       <section className="bg-white rounded-lg p-4 shadow border" aria-label="assessment records">
-//         <div className="flex items-center justify-between mb-4">
-//           <div>
-//             <h2 className="text-lg font-semibold">Assessment Records</h2>
-//             <p className="text-sm text-gray-500">Browse and manage facility maintenance assessments.</p>
-//           </div>
-//           <div className="flex items-center gap-2">
-//             <Button variant="ghost" onClick={() => { /* Could toggle dense rows or other table prefs */ }} aria-label="Table preferences">
-//               <Filter className="h-4 w-4" />
-//             </Button>
-//           </div>
-//         </div>
-
-//         <DataTable
-//           columns={columns}
-//           data={filteredData}
-//           searchKey="schoolName"
-//           searchPlaceholder="Search schools or facilities..."
-//           enableRowSelection
-//           dense={false}
-//           onSelectionChange={(rows: any[]) => setSelectedRows(rows)}
-//         />
-//       </section>
-
-//       {/* Review Modal */}
-//       <Dialog open={isReviewModalOpen} onOpenChange={setIsReviewModalOpen}>
-//         <DialogContent className="max-w-2xl">
-//           <DialogHeader>
-//             <DialogTitle>Review Assessment - {selectedSubmission?.schoolName}</DialogTitle>
-//           </DialogHeader>
-
-//           {selectedSubmission && (
-//             <div className="space-y-6">
-//               {/* Assessment Summary */}
-//               <div className="bg-gray-50 p-4 rounded-lg">
-//                 <h4 className="font-medium mb-3">Assessment Summary</h4>
-//                 <div className="grid grid-cols-2 gap-4 text-sm">
-//                   <div>
-//                     <span className="font-medium">Facility:</span> {selectedSubmission.facilityType}
-//                   </div>
-//                   <div>
-//                     <span className="font-medium">Overall Condition:</span> {selectedSubmission.overallCondition}
-//                   </div>
-//                   <div>
-//                     <span className="font-medium">Urgent Items:</span> {selectedSubmission.urgentItems}
-//                   </div>
-//                   <div>
-//                     <span className="font-medium">Assessment Date:</span> {new Date(selectedSubmission.assessmentDate).toLocaleDateString()}
+//       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+//         {/* Assessment Status Distribution */}
+//         <Card>
+//           <CardHeader>
+//             <CardTitle className="flex items-center space-x-2">
+//               <CheckCircle className="h-5 w-5 text-success" />
+//               <span>Assessment Status</span>
+//             </CardTitle>
+//             <CardDescription>
+//               Distribution of assessment outcomes
+//             </CardDescription>
+//           </CardHeader>
+//           <CardContent>
+//             <ResponsiveContainer width="100%" height={300}>
+//               <PieChart>
+//                 <Pie
+//                   data={statusData}
+//                   cx="50%"
+//                   cy="50%"
+//                   innerRadius={60}
+//                   outerRadius={100}
+//                   paddingAngle={5}
+//                   dataKey="value"
+//                 >
+//                   {statusData.map((entry, index) => (
+//                     <Cell key={`cell-${index}`} fill={entry.color} />
+//                   ))}
+//                 </Pie>
+//                 <Tooltip />
+//               </PieChart>
+//             </ResponsiveContainer>
+//             <div className="grid grid-cols-2 gap-4 mt-4">
+//               {statusData.map((item, index) => (
+//                 <div key={index} className="flex items-center space-x-2">
+//                   <div 
+//                     className="w-3 h-3 rounded-full" 
+//                     style={{ backgroundColor: item.color }}
+//                   />
+//                   <div className="flex-1">
+//                     <p className="text-sm font-medium">{item.name}</p>
+//                     <p className="text-xs text-muted-foreground">{item.value} schools</p>
 //                   </div>
 //                 </div>
+//               ))}
+//             </div>
+//           </CardContent>
+//         </Card>
 
-//                 {selectedSubmission.school_feedback && (
-//                   <div className="mt-3">
-//                     <span className="font-medium">School Admin Remarks:</span>
-//                     <p className="text-sm text-gray-600 mt-1">{selectedSubmission.school_feedback}</p>
-//                   </div>
+//         {/* Performance Trends */}
+//         <Card>
+//           <CardHeader>
+//             <CardTitle className="flex items-center space-x-2">
+//               <TrendingUp className="h-5 w-5 text-info" />
+//               <span>Performance Trends</span>
+//             </CardTitle>
+//             <CardDescription>
+//               Assessment completion and quality scores over time
+//             </CardDescription>
+//           </CardHeader>
+//           <CardContent>
+//             <ResponsiveContainer width="100%" height={300}>
+//               <LineChart data={performanceData}>
+//                 <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+//                 <XAxis 
+//                   dataKey="month" 
+//                   className="text-muted-foreground" 
+//                   fontSize={12}
+//                 />
+//                 <YAxis className="text-muted-foreground" fontSize={12} />
+//                 <Tooltip 
+//                   contentStyle={{ 
+//                     backgroundColor: 'hsl(var(--card))',
+//                     border: '1px solid hsl(var(--border))',
+//                     borderRadius: '6px'
+//                   }}
+//                 />
+//                 <Line 
+//                   type="monotone" 
+//                   dataKey="completed" 
+//                   stroke="hsl(var(--primary))" 
+//                   strokeWidth={2}
+//                   name="Completed"
+//                 />
+//                 <Line 
+//                   type="monotone" 
+//                   dataKey="score" 
+//                   stroke="hsl(var(--success))" 
+//                   strokeWidth={2}
+//                   name="Average Score"
+//                 />
+//               </LineChart>
+//             </ResponsiveContainer>
+//           </CardContent>
+//         </Card>
+//       </div>
+
+//       {/* County/Regional Performance (for Admin and County Admin) */}
+//       {(currentUser.role === 'ministry_admin' || currentUser.role === 'agent') && (
+//         <Card>
+//           <CardHeader>
+//             <CardTitle className="flex items-center space-x-2">
+//               <BarChart3 className="h-5 w-5 text-primary" />
+//               <span>
+//                 {currentUser.role === 'ministry_admin' ? 'County Performance' : 'Sub-County Performance'}
+//               </span>
+//             </CardTitle>
+//             <CardDescription>
+//               Assessment metrics across different regions
+//             </CardDescription>
+//           </CardHeader>
+//           <CardContent>
+//             <ResponsiveContainer width="100%" height={400}>
+//               <BarChart data={subCountyData}>
+//                 <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+//                 <XAxis
+//                   dataKey="name"
+//                   className="text-muted-foreground"
+//                   fontSize={12}
+//                 />
+//                 <YAxis className="text-muted-foreground" fontSize={12} />
+//                 <Tooltip
+//                   contentStyle={{
+//                     backgroundColor: 'hsl(var(--card))',
+//                     border: '1px solid hsl(var(--border))',
+//                     borderRadius: '6px'
+//                   }}
+//                 />
+//                 {dashboardData ? (
+//                   currentUser.role === 'ministry_admin' && dashboardData.county_performance ?
+//                     dashboardData.county_performance.data.map(item => (
+//                       <Bar key={item.label} dataKey={item.label} fill={item.color} name={item.label} />
+//                     )) :
+//                   dashboardData.sub_county_performance ?
+//                     dashboardData.sub_county_performance.data.map(item => (
+//                       <Bar key={item.label} dataKey={item.label} fill={item.color} name={item.label} />
+//                     )) :
+//                   <>
+//                     <Bar dataKey="approved" fill="hsl(var(--success))" name="Approved" />
+//                     <Bar dataKey="pending" fill="hsl(var(--warning))" name="Pending" />
+//                     <Bar dataKey="rejected" fill="hsl(var(--destructive))" name="Rejected" />
+//                   </>
+//                 ) : (
+//                   <>
+//                     <Bar dataKey="approved" fill="hsl(var(--success))" name="Approved" />
+//                     <Bar dataKey="pending" fill="hsl(var(--warning))" name="Pending" />
+//                     <Bar dataKey="rejected" fill="hsl(var(--destructive))" name="Rejected" />
+//                   </>
 //                 )}
+//               </BarChart>
+//             </ResponsiveContainer>
+//           </CardContent>
+//         </Card>
+//       )}
+
+//       {/* Recent Activity */}
+//       <Card>
+//         <CardHeader>
+//           <CardTitle>Recent Activity</CardTitle>
+//           <CardDescription>Latest assessment updates and system events</CardDescription>
+//         </CardHeader>
+//         <CardContent>
+//           <div className="space-y-4">
+//             {[
+//               {
+//                 icon: CheckCircle,
+//                 color: 'text-success',
+//                 title: 'Green Valley Primary School',
+//                 description: 'Assessment approved with score 92.5',
+//                 time: '2 minutes ago'
+//               },
+//               {
+//                 icon: AlertTriangle,
+//                 color: 'text-warning',
+//                 title: 'St. Mary Secondary School',
+//                 description: 'Assessment pending review - missing documentation',
+//                 time: '15 minutes ago'
+//               },
+//               {
+//                 icon: FileText,
+//                 color: 'text-info',
+//                 title: 'Hillside Academy',
+//                 description: 'New assessment submitted for review',
+//                 time: '1 hour ago'
+//               },
+//               {
+//                 icon: XCircle,
+//                 color: 'text-destructive',
+//                 title: 'Riverside Primary',
+//                 description: 'Assessment requires improvements in safety protocols',
+//                 time: '2 hours ago'
+//               }
+//             ].map((activity, index) => (
+//               <div key={index} className="flex items-start space-x-3">
+//                 <activity.icon className={`h-5 w-5 mt-0.5 ${activity.color}`} />
+//                 <div className="flex-1 min-w-0">
+//                   <p className="text-sm font-medium text-foreground">
+//                     {activity.title}
+//                   </p>
+//                   <p className="text-sm text-muted-foreground">
+//                     {activity.description}
+//                   </p>
+//                   <p className="text-xs text-muted-foreground mt-1">
+//                     {activity.time}
+//                   </p>
+//                 </div>
 //               </div>
-
-//               {/* Review Form */}
-//               <div className="space-y-4">
-//                 <div>
-//                   <Label htmlFor="review-status">Review Decision *</Label>
-//                   <Select value={reviewForm.status} onValueChange={(value) => setReviewForm(prev => ({ ...prev, status: value }))}>
-//                     <SelectTrigger>
-//                       <SelectValue placeholder="Select review decision" />
-//                     </SelectTrigger>
-//                     <SelectContent>
-//                       <SelectItem value="approved">Approve</SelectItem>
-//                       <SelectItem value="rejected">Reject</SelectItem>
-//                       <SelectItem value="requires-clarification">Requires Clarification</SelectItem>
-//                     </SelectContent>
-//                   </Select>
-//                 </div>
-
-//                 <div>
-//                   <Label htmlFor="priority">Priority Level</Label>
-//                   <Select value={reviewForm.priority} onValueChange={(value) => setReviewForm(prev => ({ ...prev, priority: value }))}>
-//                     <SelectTrigger>
-//                       <SelectValue placeholder="Select priority level" />
-//                     </SelectTrigger>
-//                     <SelectContent>
-//                       <SelectItem value="low">Low</SelectItem>
-//                       <SelectItem value="medium">Medium</SelectItem>
-//                       <SelectItem value="high">High</SelectItem>
-//                       <SelectItem value="urgent">Urgent</SelectItem>
-//                     </SelectContent>
-//                   </Select>
-//                 </div>
-
-//                 <div>
-//                   <Label htmlFor="review-remarks">Review Remarks *</Label>
-//                   <Textarea
-//                     id="review-remarks"
-//                     placeholder="Enter your review comments and observations..."
-//                     value={reviewForm.remarks}
-//                     onChange={(e) => setReviewForm(prev => ({ ...prev, remarks: e.target.value }))}
-//                     rows={4}
-//                   />
-//                 </div>
-
-//                 <div>
-//                   <Label htmlFor="recommended-action">Recommended Action</Label>
-//                   <Textarea
-//                     id="recommended-action"
-//                     placeholder="Specify recommended actions or next steps..."
-//                     value={reviewForm.recommendedAction}
-//                     onChange={(e) => setReviewForm(prev => ({ ...prev, recommendedAction: e.target.value }))}
-//                     rows={3}
-//                   />
-//                 </div>
-//               </div>
-
-//               {/* Modal Actions */}
-//               <div className="flex justify-end gap-3 pt-4 border-t">
-//                 <Button variant="outline" onClick={() => setIsReviewModalOpen(false)}>
-//                   Cancel
-//                 </Button>
-//                 <Button onClick={handleReviewSubmit}>
-//                   Submit Review
-//                 </Button>
-//               </div>
-//             </div>
-//           )}
-//         </DialogContent>
-//       </Dialog>
-
+//             ))}
+//           </div>
+//         </CardContent>
+//       </Card>
 //     </div>
 //   );
 // };
 
-// export default AssessmentReviewPage;
+// export default Overview;

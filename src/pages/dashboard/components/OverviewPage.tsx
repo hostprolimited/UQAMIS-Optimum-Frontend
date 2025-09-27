@@ -1,59 +1,21 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useRole } from '@/contexts/RoleContext';
+import { getDashboardData } from '../core/_request';
+import { getSchoolMetrics } from '../../assements/core/_request';
+import { DashboardData } from '../core/_models';
+import { SchoolMetric } from '../../assements/core/_model';
+import countiesData from '@/constants/data.json';
 
-// Kenya county code to name mapping
-const countyCodeToName: Record<string, string> = {
-  '1': 'Mombasa',
-  '2': 'Kwale',
-  '3': 'Kilifi',
-  '4': 'Tana River',
-  '5': 'Lamu',
-  '6': 'Taita Taveta',
-  '7': 'Garissa',
-  '8': 'Wajir',
-  '9': 'Mandera',
-  '10': 'Marsabit',
-  '11': 'Isiolo',
-  '12': 'Meru',
-  '13': 'Tharaka-Nithi',
-  '14': 'Embu',
-  '15': 'Kitui',
-  '16': 'Machakos',
-  '17': 'Makueni',
-  '18': 'Nyandarua',
-  '19': 'Nyeri',
-  '20': 'Kirinyaga',
-  '21': 'Murang’a',
-  '22': 'Kiambu',
-  '23': 'Turkana',
-  '24': 'West Pokot',
-  '25': 'Samburu',
-  '26': 'Trans Nzoia',
-  '27': 'Uasin Gishu',
-  '28': 'Elgeyo Marakwet',
-  '29': 'Nandi',
-  '30': 'Baringo',
-  '31': 'Laikipia',
-  '32': 'Nakuru',
-  '33': 'Narok',
-  '34': 'Kajiado',
-  '35': 'Kericho',
-  '36': 'Bomet',
-  '37': 'Kakamega',
-  '38': 'Vihiga',
-  '39': 'Bungoma',
-  '40': 'Busia',
-  '41': 'Siaya',
-  '42': 'Kisumu',
-  '43': 'Homa Bay',
-  '44': 'Migori',
-  '45': 'Kisii',
-  '46': 'Nyamira',
-  '47': 'Nairobi',
-};
+// Kenya county code to name mapping from data.json
+const countiesTable = countiesData.find((item: any) => item.type === 'table' && item.name === 'counties');
+const counties = countiesTable?.data || [];
+const countyCodeToName: Record<string, string> = counties.reduce((acc: Record<string, string>, county: any) => {
+  acc[county.county_id] = county.county_name;
+  return acc;
+}, {});
 import { School, Users, FileText, TrendingUp, CheckCircle, AlertTriangle, XCircle, BarChart3 } from 'lucide-react';
 
 // Mock data for different levels
@@ -82,6 +44,29 @@ const statusData = [
 
 const Overview = () => {
   const { currentUser } = useRole();
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [schoolMetricsData, setSchoolMetricsData] = useState<SchoolMetric[] | null>(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        if (currentUser.role === 'ministry_admin' || currentUser.role === 'school_admin') {
+          const response = await getSchoolMetrics();
+          if (response.status === 'success') {
+            setSchoolMetricsData(response.data);
+          }
+        } else if (currentUser.role === 'agent') {
+          const response = await getDashboardData();
+          if (response.status === 'success') {
+            setDashboardData(response.data);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch data', error);
+      }
+    };
+    fetchData();
+  }, [currentUser.role]);
 
   const getOverviewTitle = () => {
     switch (currentUser.role) {
@@ -103,20 +88,54 @@ const Overview = () => {
   const getKPIData = () => {
     switch (currentUser.role) {
       case 'ministry_admin':
-        return [
-          { title: 'Total Counties', value: '47', icon: Users, trend: '+2', color: 'text-primary' },
-          { title: 'Total Schools', value: '1,248', icon: School, trend: '+45', color: 'text-success' },
-          { title: 'Assessments', value: '971', icon: FileText, trend: '+123', color: 'text-info' },
-          { title: 'Avg Score', value: '86.5', icon: TrendingUp, trend: '+2.3', color: 'text-warning' },
-        ];
+        if (schoolMetricsData) {
+          const totalInstitutions = new Set(schoolMetricsData.map(m => m.institution_id)).size;
+          const totalStudents = schoolMetricsData.reduce((sum, m) => sum + m.students_count, 0);
+          const totalTeachers = schoolMetricsData.reduce((sum, m) => sum + m.teachers_count, 0);
+          return [
+            { title: 'Total Institutions', value: totalInstitutions.toString(), icon: School, trend: '+0', color: 'text-primary' },
+            { title: 'Total Students', value: totalStudents.toString(), icon: Users, trend: '+0', color: 'text-success' },
+            { title: 'Total Teachers', value: totalTeachers.toString(), icon: Users, trend: '+0', color: 'text-info' },
+            { title: 'Avg Score', value: '86.5', icon: TrendingUp, trend: '+2.3', color: 'text-warning' },
+          ];
+        } else {
+          return [
+            { title: 'Total Counties', value: '47', icon: Users, trend: '+2', color: 'text-primary' },
+            { title: 'Total Schools', value: '1,248', icon: School, trend: '+45', color: 'text-success' },
+            { title: 'Assessments', value: '971', icon: FileText, trend: '+123', color: 'text-info' },
+            { title: 'Avg Score', value: '86.5', icon: TrendingUp, trend: '+2.3', color: 'text-warning' },
+          ];
+        }
       case 'agent':
-        return [
-          { title: 'Sub-Counties', value: '8', icon: Users, trend: '0', color: 'text-primary' },
-          { title: 'Schools', value: '245', icon: School, trend: '+3', color: 'text-success' },
-          { title: 'Assessments', value: '180', icon: FileText, trend: '+24', color: 'text-info' },
-          { title: 'Avg Score', value: '87.2', icon: TrendingUp, trend: '+1.8', color: 'text-warning' },
-        ];
+        if (dashboardData) {
+          return [
+            { title: 'Sub-Counties', value: dashboardData.sub_county_performance.labels.length.toString(), icon: Users, trend: '0', color: 'text-primary' },
+            { title: 'Schools', value: dashboardData.metrics_kpis.total_schools.value.toString(), icon: School, trend: dashboardData.metrics_kpis.total_schools.vs_last_month, color: 'text-success' },
+            { title: 'Assessments', value: dashboardData.metrics_kpis.total_actions.value.toString(), icon: FileText, trend: dashboardData.metrics_kpis.total_actions.vs_last_month, color: 'text-info' },
+            { title: 'Avg Score', value: dashboardData.metrics_kpis.maintenance_score.value.toString(), icon: TrendingUp, trend: dashboardData.metrics_kpis.maintenance_score.vs_last_month, color: 'text-warning' },
+          ];
+        } else {
+          return [
+            { title: 'Sub-Counties', value: '8', icon: Users, trend: '0', color: 'text-primary' },
+            { title: 'Schools', value: '245', icon: School, trend: '+3', color: 'text-success' },
+            { title: 'Assessments', value: '180', icon: FileText, trend: '+24', color: 'text-info' },
+            { title: 'Avg Score', value: '87.2', icon: TrendingUp, trend: '+1.8', color: 'text-warning' },
+          ];
+        }
       case 'school_admin':
+        if (schoolMetricsData && currentUser.institution_id) {
+          const schoolMetrics = schoolMetricsData.filter(m => m.institution_id === currentUser.institution_id);
+          if (schoolMetrics.length > 0) {
+            // Take the latest by created_at
+            const latest = schoolMetrics.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+            return [
+              { title: 'Students', value: latest.students_count.toString(), icon: Users, trend: '+0', color: 'text-primary' },
+              { title: 'Teachers', value: latest.teachers_count.toString(), icon: Users, trend: '+0', color: 'text-success' },
+              { title: 'Assessments', value: '12', icon: FileText, trend: '+3', color: 'text-info' },
+              { title: 'Score', value: '89.4', icon: TrendingUp, trend: '+3.2', color: 'text-warning' },
+            ];
+          }
+        }
         return [
           { title: 'Students', value: '847', icon: Users, trend: '+12', color: 'text-primary' },
           { title: 'Teachers', value: '42', icon: Users, trend: '+2', color: 'text-success' },
@@ -129,6 +148,32 @@ const Overview = () => {
   };
 
   const kpiData = getKPIData();
+
+  const performanceData = dashboardData ? dashboardData.performance_trends.labels.map((label, i) => ({
+    month: label,
+    completed: dashboardData.performance_trends.completion_rate[i],
+    score: dashboardData.performance_trends.quality_score[i]
+  })) : schoolAssessmentData;
+
+  const subCountyData = dashboardData ? (
+    currentUser.role === 'ministry_admin' && dashboardData.county_performance ?
+      dashboardData.county_performance.labels.map((label, i) => {
+        const obj: any = { name: label };
+        dashboardData.county_performance!.data.forEach(item => {
+          obj[item.label] = item.values[i];
+        });
+        return obj;
+      }) :
+    dashboardData.sub_county_performance ?
+      dashboardData.sub_county_performance.labels.map((label, i) => {
+        const obj: any = { name: label };
+        dashboardData.sub_county_performance!.data.forEach(item => {
+          obj[item.label] = item.values[i];
+        });
+        return obj;
+      }) :
+    countyData
+  ) : countyData;
 
   return (
     <div className="space-y-6">
@@ -239,7 +284,7 @@ const Overview = () => {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={schoolAssessmentData}>
+              <LineChart data={performanceData}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
                 <XAxis 
                   dataKey="month" 
@@ -290,24 +335,42 @@ const Overview = () => {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={400}>
-              <BarChart data={countyData}>
+              <BarChart data={subCountyData}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                <XAxis 
-                  dataKey="name" 
-                  className="text-muted-foreground" 
+                <XAxis
+                  dataKey="name"
+                  className="text-muted-foreground"
                   fontSize={12}
                 />
                 <YAxis className="text-muted-foreground" fontSize={12} />
-                <Tooltip 
-                  contentStyle={{ 
+                <Tooltip
+                  contentStyle={{
                     backgroundColor: 'hsl(var(--card))',
                     border: '1px solid hsl(var(--border))',
                     borderRadius: '6px'
                   }}
                 />
-                <Bar dataKey="approved" fill="hsl(var(--success))" name="Approved" />
-                <Bar dataKey="pending" fill="hsl(var(--warning))" name="Pending" />
-                <Bar dataKey="rejected" fill="hsl(var(--destructive))" name="Rejected" />
+                {dashboardData ? (
+                  currentUser.role === 'ministry_admin' && dashboardData.county_performance ?
+                    dashboardData.county_performance.data.map(item => (
+                      <Bar key={item.label} dataKey={item.label} fill={item.color} name={item.label} />
+                    )) :
+                  dashboardData.sub_county_performance ?
+                    dashboardData.sub_county_performance.data.map(item => (
+                      <Bar key={item.label} dataKey={item.label} fill={item.color} name={item.label} />
+                    )) :
+                  <>
+                    <Bar dataKey="approved" fill="hsl(var(--success))" name="Approved" />
+                    <Bar dataKey="pending" fill="hsl(var(--warning))" name="Pending" />
+                    <Bar dataKey="rejected" fill="hsl(var(--destructive))" name="Rejected" />
+                  </>
+                ) : (
+                  <>
+                    <Bar dataKey="approved" fill="hsl(var(--success))" name="Approved" />
+                    <Bar dataKey="pending" fill="hsl(var(--warning))" name="Pending" />
+                    <Bar dataKey="rejected" fill="hsl(var(--destructive))" name="Rejected" />
+                  </>
+                )}
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
