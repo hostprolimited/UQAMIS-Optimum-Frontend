@@ -36,6 +36,13 @@ export const Urls = {
   MAINTENANCE_ASSESSMENT: '/maintenance/create',
   AGENT_REVIEW_MAINTENANCE_ASSESSMENT: (id: number) => `/maintenance/review/${id}`,
 
+  //safety Endpoints
+  CREATE_SAFETY_REPORT_URL: '/safety/create',
+  GET_SAFETY_REPORT_URL: '/safety/list',
+  GET_SAFETY_REPORT_BY_ID_URL: (id: number) => `/safety/${id}`,
+  UPDATE_SAFETY_REPORT_URL: (id: number) => `/safety/${id}`,
+  DELETE_SAFETY_REPORT_URL: (id: number) => `/safety/${id}`,
+
   // User Management Endpoints
   CREATE_USERS_URL: '/users/create',
   GET_USERS_URL: '/users/list',

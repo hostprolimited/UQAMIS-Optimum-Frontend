@@ -18,9 +18,10 @@ import Overview from "./pages/dashboard/components/OverviewPage";
 import Onboard from "./pages/onboarding/components/OnboardPage";
 import OnboardedSchoolList from "./pages/onboarding/components/OnboardedSchoolList";
 import RoleBasedAssessmentPage from "./pages/assements/components/RoleBasedAssessmentsPage";
-import AssessmentAdd from "./pages/assements/components/MantainanceAssessmentAddPage";
+import AssessmentAdd from "./pages/assements/components/AssessmentAddPage";
 import Reports from "./pages/dashboard/components/ReportsPage";
 import Users from "./pages/settings/components/UsersPage";
+import SafetyReportPage from "./pages/assements/components/SafetyReportPage";
 import SchoolFormListPage from "./pages/assements/components/SchoolMetricsListPage";
 import SchoolFormAddPage from "./pages/assements/components/SchoolMetricsAddPage";
 import AssessmentReviewPage from "./pages/assements/components/AssessmentReviewPage";
@@ -72,11 +73,17 @@ const App = () => (
                       <RoleBasedAssessmentPage />
                     </ProtectedRoute>
                   } />
+                  <Route path="/safety/assessment/report" element={
+                    <ProtectedRoute allowedRoles={["school_admin"]}>
+                      <SafetyReportPage />
+                    </ProtectedRoute>
+                  } />
                   <Route path="/school-metrics" element={
                     <ProtectedRoute allowedRoles={["school_admin"]}>
                       <SchoolFormListPage />
                     </ProtectedRoute>
                   } />
+                  
                   <Route path="/school-metrics/add" element={
                     <ProtectedRoute allowedRoles={["school_admin"]}>
                       <SchoolFormAddPage />

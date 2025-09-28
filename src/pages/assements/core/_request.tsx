@@ -1,7 +1,7 @@
 
 import api from "@/utils/api";
 import { Urls } from "@/constants/urls";
-import { APIResponse, Facility, MaintenanceAssessmentInput, MaintenanceReport, SchoolMetric } from "./_model";
+import { APIResponse, Facility, MaintenanceAssessmentInput, MaintenanceReport, SchoolMetric, SafetyAssessmentInput, SafetyReport } from "./_model";
 
 // Fetch all facilities
 export const getFacilities = async (): Promise<APIResponse<Facility[]>> => {
@@ -22,6 +22,8 @@ export const createMaintenanceAssessment = async (data: MaintenanceAssessmentInp
   });
   formData.append('school_feedback', data.school_feedback);
   formData.append('agent_feedback', data.agent_feedback);
+
+  formData.append('class', JSON.stringify(data.class || []));
   
   if (data.files && data.files.length > 0) {
     data.files.forEach((file: File) => {
@@ -48,6 +50,45 @@ export const getMaintenanceReports = async (): Promise<APIResponse<MaintenanceRe
 };
 
 
+// create Safety assessment
+export const createSafetyAssessment = async (data: SafetyAssessmentInput): Promise<APIResponse<any>> => {
+  const formData = new FormData();
+  formData.append('institution_id', data.institution_id.toString());
+  formData.append('facility_id', data.facility_id.toString());
+  formData.append('status', data.status);
+  // Append each detail as details[i][field]
+  data.details.forEach((detail, i) => {
+    formData.append(`details[${i}][part_of_building]`, detail.part_of_building);
+    formData.append(`details[${i}][assessment_status]`, detail.assessment_status);
+  });
+  formData.append('school_feedback', data.school_feedback);
+  formData.append('agent_feedback', data.agent_feedback);
+
+  formData.append('class', JSON.stringify(data.class || []));
+
+  if (data.files && data.files.length > 0) {
+    data.files.forEach((file: File) => {
+      formData.append('files[]', file);
+    });
+  }
+
+  const response = await api.post<APIResponse<any>>(
+    Urls.CREATE_SAFETY_REPORT_URL,
+    formData,
+    {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    }
+  );
+  return response.data;
+};
+
+// Fetch all safety reports
+export const getSafetyReports = async (): Promise<APIResponse<SafetyReport[]>> => {
+  const response = await api.get<APIResponse<SafetyReport[]>>(Urls.GET_SAFETY_REPORT_URL);
+  return response.data;
+};
 
 // add school metrics
 export const createSchoolMetrics = async (data: { institution_id: number; students_count: number; teachers_count: number; term: string; year: string; class: string; streams: string[]; }): Promise<APIResponse<any>> => {

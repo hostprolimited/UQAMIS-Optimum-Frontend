@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { ArrowLeft, Plus, Upload, X, FileText } from 'lucide-react';
+import { ArrowLeft, Plus, Upload, X, FileText, Users } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -31,7 +31,7 @@ import {
 } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 
-import { getFacilities, createMaintenanceAssessment } from "../core/_request";
+import { getFacilities, createMaintenanceAssessment, createSafetyAssessment } from "../core/_request";
 import { Facility } from "../core/_model";
 import ClassSafetyForm from './SafetyFormPage';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -206,12 +206,11 @@ const FACILITY_PARTS = {
 const facilityAssessmentSchema = z.object({
   institution_id: z.number(),
   facility_id: z.number(),
+  class: z.string().min(1, 'Class is required'),
   status: z.enum(['pending', 'in_progress', 'completed']).default('pending'),
   details: z.array(z.object({
     part_of_building: z.string(),
-    assessment_status: z.enum(['Urgent Attention', 'Attention', 'Good'], {
-      required_error: 'Please select a condition'
-    })
+    assessment_status: z.enum(['Urgent Attention', 'Attention Required', 'Good']).optional()
   })),
   school_feedback: z.string().min(1, 'School feedback is required'),
   agent_feedback: z.string().optional(),
@@ -230,7 +229,8 @@ const getFacilityParts = (facilityType: string): string[] => {
   const standardType = FACILITY_TYPE_MAPPINGS[normalizedInput] || normalizedInput;
   const parts = FACILITY_PARTS[standardType as keyof typeof FACILITY_PARTS];
   if (!parts) {
-    
+    console.warn(`No parts defined for facility type: ${facilityType} (mapped to: ${standardType})`);
+    return [];
   }
   return parts || [];
 };
@@ -245,6 +245,24 @@ const AssessmentAddPage: React.FC = () => {
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [facilities, setFacilities] = useState<Facility[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Safety data
+  const initialSafetyData = [
+    { id: 1, part: "Door opens outside", attentionRequired: false, good: false },
+    { id: 2, part: "Windows open outside", attentionRequired: false, good: false },
+    { id: 3, part: "Windows have no grills", attentionRequired: false, good: false },
+    { id: 4, part: "Spacing between desks adequate", attentionRequired: false, good: false },
+    { id: 5, part: "At least 5 students in class are trained to evacuate the rest in case of emergency", attentionRequired: false, good: false },
+    { id: 6, part: "The class have undertaken an evacuation drill in case of emergency", attentionRequired: false, good: false },
+    { id: 7, part: "At least five students in class have basic first aid skills", attentionRequired: false, good: false },
+    { id: 8, part: "The floor provides appropriate grip", attentionRequired: false, good: false },
+    { id: 9, part: "The space immediately outside the classroom provides easy movement in case of emergency", attentionRequired: false, good: false },
+    { id: 10, part: "There is a clear display of action expected in case of emergency", attentionRequired: false, good: false },
+    { id: 11, part: "There is a clear display of assembly point in case of emergency", attentionRequired: false, good: false },
+    { id: 12, part: "There is a fire extinguisher within close proximity from the classroom", attentionRequired: false, good: false },
+    { id: 13, part: "At least five students are trained on how to handle the available fire extinguisher", attentionRequired: false, good: false },
+  ];
+  const [safetyData, setSafetyData] = useState(initialSafetyData);
 
   // Fetch facilities from API
   useEffect(() => {
@@ -270,6 +288,7 @@ const AssessmentAddPage: React.FC = () => {
     defaultValues: {
       institution_id: 1,
       facility_id: 0,
+      class: '',
       status: 'pending',
       details: [],
       school_feedback: '',
@@ -288,10 +307,11 @@ const AssessmentAddPage: React.FC = () => {
       facilityForm.reset({
         institution_id: selectedFacility.institution_id || 1,
         facility_id: selectedFacility.id,
+        class: '',
         status: 'pending',
         details: parts.map(name => ({
           part_of_building: name,
-          assessment_status: 'Good'
+          assessment_status: undefined
         })),
         school_feedback: '',
         agent_feedback: '',
@@ -337,7 +357,7 @@ const AssessmentAddPage: React.FC = () => {
     // Initialize form with default values for each part
       facilityForm.reset({ 
         facility_id: facility.id,
-        details: facilityParts.map(name => ({ part_of_building: name, assessment_status: 'Good' })),
+        details: facilityParts.map(name => ({ part_of_building: name, assessment_status: undefined })),
         files: []
       });    setUploadedFiles([]);
     setIsModalOpen(true);
@@ -347,30 +367,82 @@ const AssessmentAddPage: React.FC = () => {
     try {
       if (!selectedFacility) return;
 
-      // Create the assessment input object matching MaintenanceAssessmentInput type
-      const assessmentInput = {
-        institution_id: selectedFacility.institution_id || 1,
-        institution_name: 'Institution', // Add required institution_name
-        facility_id: data.facility_id,
-        status: 'pending' as 'pending',
-        details: data.details.map(detail => ({
-          part_of_building: detail.part_of_building,
-          assessment_status: detail.assessment_status
-        })),
-        school_feedback: data.school_feedback,
-        agent_feedback: data.agent_feedback,
-        files: uploadedFiles,
-        grade: data.grade,
-        streams: data.streams,
-      };
+      let maintenanceSubmitted = false;
+      let safetySubmitted = false;
 
-      const response = await createMaintenanceAssessment(assessmentInput);
+      // Check if maintenance has changes
+      const hasMaintenanceChanges = data.details.some(detail => detail.assessment_status !== 'Good');
 
-      if (response && response.status === 'error') {
+      // Check if safety has changes
+      const hasSafetyChanges = safetyData.some(item => item.attentionRequired || item.good);
+
+      if (hasMaintenanceChanges) {
+        // Create the assessment input object matching MaintenanceAssessmentInput type
+        const assessmentInput = {
+          institution_id: selectedFacility.institution_id || 1,
+          institution_name: 'Institution', // Add required institution_name
+          facility_id: data.facility_id,
+          class: data.class ? [data.class] : [],
+          status: 'pending' as 'pending',
+          details: data.details.map(detail => ({
+            part_of_building: detail.part_of_building,
+            assessment_status: detail.assessment_status || 'Good'
+          })),
+          school_feedback: data.school_feedback,
+          agent_feedback: data.agent_feedback,
+          files: uploadedFiles,
+          grade: data.grade,
+          streams: data.streams,
+        };
+
+        const response = await createMaintenanceAssessment(assessmentInput);
+
+        if (response && response.status === 'error') {
+          toast({
+            title: 'Maintenance Submission Error',
+            description: response.message || 'Failed to submit maintenance assessment',
+            variant: 'destructive',
+          });
+          return;
+        }
+        maintenanceSubmitted = true;
+      }
+
+      if (hasSafetyChanges) {
+        // Create safety assessment input
+        const safetyInput = {
+          institution_id: selectedFacility.institution_id || 1,
+          institution_name: 'Institution',
+          facility_id: data.facility_id,
+          class: data.class ? [data.class] : [],
+          status: 'pending' as 'pending',
+          details: safetyData.filter(item => item.attentionRequired).map(item => ({
+            part_of_building: item.part,
+            assessment_status: 'Attention Required' as 'Attention Required'
+          })),
+          school_feedback: data.school_feedback,
+          agent_feedback: data.agent_feedback,
+          files: uploadedFiles,
+        };
+
+        const safetyResponse = await createSafetyAssessment(safetyInput);
+
+        if (safetyResponse && safetyResponse.status === 'error') {
+          toast({
+            title: 'Safety Submission Error',
+            description: safetyResponse.message || 'Failed to submit safety assessment',
+            variant: 'destructive',
+          });
+          return;
+        }
+        safetySubmitted = true;
+      }
+
+      if (!maintenanceSubmitted && !safetySubmitted) {
         toast({
-          title: 'Submission Error',
-          description: response.message || 'Failed to submit assessment',
-          variant: 'destructive',
+          title: 'No Changes',
+          description: 'No assessments were submitted as no changes were made.',
+          variant: 'default',
         });
         return;
       }
@@ -386,9 +458,13 @@ const AssessmentAddPage: React.FC = () => {
 
       setAssessments(prev => [newAssessment, ...prev]);
 
+      const submittedTypes = [];
+      if (maintenanceSubmitted) submittedTypes.push('Maintenance');
+      if (safetySubmitted) submittedTypes.push('Safety');
+
       toast({
         title: 'Assessment Submitted',
-        description: `${selectedFacility.name} assessment submitted successfully!`,
+        description: `${submittedTypes.join(' and ')} assessment${submittedTypes.length > 1 ? 's' : ''} for ${selectedFacility.name} submitted successfully!`,
         variant: 'default',
       });
 
@@ -396,6 +472,7 @@ const AssessmentAddPage: React.FC = () => {
       setUploadedFiles([]);
       facilityForm.reset();
       setSelectedFacility(null);
+      setSafetyData(initialSafetyData);
     } catch (error: any) {
       // Try to extract backend error message
       let message = 'Failed to submit assessment';
@@ -567,12 +644,12 @@ const StreamSelect: React.FC<StreamSelectProps> = ({ onChange, value }) => {
                                           <input
                                             type="radio"
                                             value={condition}
-                                            checked={field.value === (condition === 'urgent' ? 'Urgent Attention' : condition === 'attention' ? 'Attention' : 'Good')}
+                                            checked={field.value === (condition === 'urgent' ? 'Urgent Attention' : condition === 'attention' ? 'Attention Required' : 'Good')}
                                             onChange={() => {
                                               const updatedDetails = [...facilityForm.getValues().details];
                                               updatedDetails[index] = {
                                                 part_of_building: part,
-                                                assessment_status: condition === 'urgent' ? 'Urgent Attention' : condition === 'attention' ? 'Attention' : 'Good'
+                                                assessment_status: condition === 'urgent' ? 'Urgent Attention' : condition === 'attention' ? 'Attention Required' : 'Good'
                                               };
                                               facilityForm.setValue('details', updatedDetails);
                                             }}
@@ -592,56 +669,33 @@ const StreamSelect: React.FC<StreamSelectProps> = ({ onChange, value }) => {
                     </div>
                   </TabsContent>
                   <TabsContent value="safety">
-                    <ClassSafetyForm />
+                    <ClassSafetyForm safetyData={safetyData} onSafetyDataChange={setSafetyData} />
                   </TabsContent>
                   {/* Grade and Stream Selects */}
                   {selectedFacility?.name.toLowerCase().includes('class') && (
                     <div className="flex gap-4">
+                      {/* classes */}
                       <FormField
                         control={facilityForm.control}
-                        name="grade"
+                        name="class"
                         render={({ field }) => (
-                          <FormItem className="flex-1">
-                            <FormLabel>Grade</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select a grade" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="Grade 1">Grade 1</SelectItem>
-                                <SelectItem value="Grade 2">Grade 2</SelectItem>
-                                <SelectItem value="Grade 3">Grade 3</SelectItem>
-                                <SelectItem value="Grade 4">Grade 4</SelectItem>
-                                <SelectItem value="Grade 5">Grade 5</SelectItem>
-                                <SelectItem value="Grade 6">Grade 6</SelectItem>
-                                <SelectItem value="Grade 7">Grade 7</SelectItem>
-                                <SelectItem value="Grade 8">Grade 8</SelectItem>
-                                <SelectItem value="Form 1">Form 1</SelectItem>
-                                <SelectItem value="Form 2">Form 2</SelectItem>
-                                <SelectItem value="Form 3">Form 3</SelectItem>
-                                <SelectItem value="Form 4">Form 4</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={facilityForm.control}
-                        name="streams"
-                        render={({ field }) => (
-                          <FormItem className="flex-1">
-                            <FormLabel>Streams</FormLabel>
-                            <StreamSelect
-                              value={field.value || []}
+                          <FormItem>
+                         <FormLabel className="flex items-center space-x-2 w-full">
+                           <Users className="h-8 w-12 center" />
+                            <span>Enter Class</span>
+                            </FormLabel>
+                          <FormControl>
+                            <Input
+                          placeholder="e.g., Form 1 East"
+                            value={field.value ?? ''}
                               onChange={field.onChange}
+                              className="w-full"
+                               />
+                             </FormControl>
+                           <FormMessage />
+                              </FormItem>
+                                )}
                             />
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
                     </div>
                   )}
                   {/* File Upload Section */}

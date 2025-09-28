@@ -217,7 +217,7 @@ const SchoolFormAddPage = () => {
                 />
 
                 {/* Class */}
-                <FormField
+                {/* <FormField
                   control={form.control}
                   name="class"
                   render={({ field }) => (
@@ -253,7 +253,7 @@ const SchoolFormAddPage = () => {
                 />
 
                 {/* Streams */}
-                <FormField
+                {/* <FormField
                   control={form.control}
                   name="streams"
                   render={({ field }) => (
@@ -272,7 +272,7 @@ const SchoolFormAddPage = () => {
                       <FormMessage />
                     </FormItem>
                   )}
-                />
+                /> */}
               </div>
 
               <div className="flex justify-end">

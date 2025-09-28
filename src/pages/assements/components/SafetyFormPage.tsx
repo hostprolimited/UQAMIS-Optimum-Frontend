@@ -23,12 +23,16 @@ const initialData: SafetyItem[] = [
   { id: 13, part: "At least five students are trained on how to handle the available fire extinguisher", attentionRequired: false, good: false },
 ];
 
-const ClassSafetyForm: React.FC = () => {
-  const [data, setData] = useState<SafetyItem[]>(initialData);
+interface ClassSafetyFormProps {
+  safetyData: SafetyItem[];
+  onSafetyDataChange: (data: SafetyItem[]) => void;
+}
+
+const ClassSafetyForm: React.FC<ClassSafetyFormProps> = ({ safetyData, onSafetyDataChange }) => {
 
   const toggleField = (id: number, field: "attentionRequired" | "good") => {
-    setData(prev =>
-      prev.map(item =>
+    onSafetyDataChange(
+      safetyData.map(item =>
         item.id === id
           ? {
               ...item,
@@ -41,7 +45,7 @@ const ClassSafetyForm: React.FC = () => {
   };
 
   const handleSubmit = () => {
-    console.log("Form submitted:", data);
+    console.log("Form submitted:", safetyData);
     alert("Class Safety Report Submitted ");
   };
 
@@ -60,7 +64,7 @@ const ClassSafetyForm: React.FC = () => {
           </tr>
         </thead>
         <tbody>
-          {data.map(item => (
+          {safetyData.map(item => (
             <tr key={item.id} className="hover:bg-gray-50 transition">
               <td className="border p-2 text-center">{item.id}</td>
               <td className="border p-2">{item.part}</td>

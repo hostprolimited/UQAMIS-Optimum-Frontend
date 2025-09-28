@@ -129,7 +129,7 @@ const navigationItems = [
     title: 'Assessments',
     children: [
       { title: 'Facility Assessment', url: '/assessments/add', icon: ClipboardCheck },
-      { title: 'Safety  Report', url: '/assessment/safety', icon: ClipboardCheck },
+      { title: 'Safety  Report', url: '/safety/assessment/report', icon: ClipboardCheck },
       { title: 'Maintenance Report', url: '/maintenance/assessment', icon: FileText },
     ],
     icon: ClipboardCheck,

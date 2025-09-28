@@ -56,7 +56,7 @@ import {
   Cell,
 } from "recharts";
 
-import { getMaintenanceReports, getFacilities } from "../core/_request";
+import { getSafetyReports, getFacilities } from "../core/_request";
 import { Facility } from "../core/_model";
 
 // --- Types ---
@@ -70,6 +70,7 @@ interface FacilityAssessment {
   id: string;
   schoolName: string;
   facilityType: string;
+  class: string[];
   assessmentDate: string; // ISO date string
   urgentItems: number;
   attentionItems: number;
@@ -85,9 +86,10 @@ interface FacilityAssessment {
 }
 
 // Mapping helper (adapts API response to our UI model)
-const mapMaintenanceReport = (report: any, facilityIdToName: Record<string, string>): FacilityAssessment => ({
+const mapSafetyReport = (report: any, facilityIdToName: Record<string, string>): FacilityAssessment => ({
   id: report.id?.toString() ?? "",
   schoolName: report.school_name ?? report.school ?? getCurrentInstitutionName(),
+  class: report.class ? JSON.parse(report.class) : [],
   facilityType:
     facilityIdToName[report.facility_id?.toString()] || report.facility_type || report.facility_id?.toString() || "",
   assessmentDate: report.assessment_date ?? report.date ?? "",
@@ -118,59 +120,16 @@ const getCurrentInstitutionName = () => {
   return "School";
 };
 
-// --- Sample fallback data for dev (keeps UI useful when API fails) ---
-const sampleFacilityAssessments: FacilityAssessment[] = [
-  {
-    id: "1",
-    schoolName: "Mzumbe Primary School",
-    facilityType: "Classroom",
-    assessmentDate: "2025-09-10",
-    urgentItems: 2,
-    attentionItems: 3,
-    goodItems: 7,
-    totalItems: 12,
-    overallCondition: "good",
-    completionStatus: "completed",
-    totalScorePercentage: 78,
-  },
-  {
-    id: "2",
-    schoolName: "Kivukoni Secondary School",
-    facilityType: "ICT Lab",
-    assessmentDate: "2025-09-12",
-    urgentItems: 0,
-    attentionItems: 2,
-    goodItems: 8,
-    totalItems: 10,
-    overallCondition: "good",
-    completionStatus: "completed",
-    totalScorePercentage: 85,
-  },
-  {
-    id: "3",
-    schoolName: "Dar es Salaam Primary",
-    facilityType: "Toilets",
-    assessmentDate: "2025-09-08",
-    urgentItems: 4,
-    attentionItems: 3,
-    goodItems: 3,
-    totalItems: 10,
-    overallCondition: "critical",
-    completionStatus: "completed",
-    totalScorePercentage: 42,
-  },
-];
+
 
 // --- Component ---
-const AssessmentListPage: React.FC = () => {
+const SafetyReportPage: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
   const [assessments, setAssessments] = useState<FacilityAssessment[]>([]);
   const [filteredData, setFilteredData] = useState<FacilityAssessment[]>([]);
   const [facilityIdToName, setFacilityIdToName] = useState<Record<string, string>>({});
-
-  const [selectedRows, setSelectedRows] = useState<FacilityAssessment[]>([]);
 
   // Filters
   const [facilityTypeFilter, setFacilityTypeFilter] = useState<string>("");
@@ -200,19 +159,19 @@ const AssessmentListPage: React.FC = () => {
         if (!mounted) return;
         setFacilityIdToName(idToName);
 
-        const resp = await getMaintenanceReports();
+        const resp = await getSafetyReports();
         const data = resp?.data || [];
-        const mapped: FacilityAssessment[] = data.map((r: any) => mapMaintenanceReport(r, idToName));
+        const mapped: FacilityAssessment[] = data.map((r: any) => mapSafetyReport(r, idToName));
 
         if (!mounted) return;
         setAssessments(mapped);
         setFilteredData(mapped);
       } catch (error) {
-        toast({ title: "Error", description: "Failed to load assessments", variant: "destructive" });
-        if (process.env.NODE_ENV === "development") {
-          setAssessments(sampleFacilityAssessments);
-          setFilteredData(sampleFacilityAssessments);
-        }
+        toast({ title: "Error", description: "Failed to load safety assessments", variant: "destructive" });
+        // if (process.env.NODE_ENV === "development") {
+        //   setAssessments(sampleFacilityAssessments);
+        //   setFilteredData(sampleFacilityAssessments);
+        // }
       }
     };
     fetch();
@@ -277,7 +236,7 @@ const AssessmentListPage: React.FC = () => {
 
   // Table columns (keeps original richer columns for actions & details)
   const columns: ColumnDef<FacilityAssessment>[] = [
-    
+
     {
       accessorKey: "facilityType",
       header: "Facility Type",
@@ -285,13 +244,15 @@ const AssessmentListPage: React.FC = () => {
         <div className="capitalize font-medium">{row.getValue("facilityType")}</div>
       ),
     },
-    // {
-    //   accessorKey: "assessmentDate",
-    //   header: "Assessment Date",
-    //   cell: ({ row }) => {
-    //     <div className="font-medium max-w-[250px] truncate" title={String(row.getValue("created_at"))}>{row.getValue("created_at")}</div>
-    //   },
-    // },
+    {
+      accessorKey: "class",
+      header: "Class",
+      cell: ({ row }) => {
+        const classArray = row.getValue("class") as string[];
+        const displayText = classArray.length > 0 ? classArray.join(", ") : "N/A";
+        return <div className="font-medium max-w-[250px] truncate" title={displayText}>{displayText}</div>;
+      },
+    },
 
     {
       accessorKey: "agent_feedback",
@@ -397,13 +358,13 @@ const AssessmentListPage: React.FC = () => {
     if (!editAssessment) return;
     setAssessments((prev) => prev.map((a) => (a.id === editAssessment.id ? editAssessment : a)));
     setEditModalOpen(false);
-    toast({ title: "Success", description: "Assessment updated." });
+    toast({ title: "Success", description: "Safety assessment updated." });
   };
 
   const handleDelete = async (id: string) => {
     const result = await MySwal.fire({
       title: "Are you sure?",
-      text: "This action cannot be undone. Do you want to delete this assessment?",
+      text: "This action cannot be undone. Do you want to delete this safety assessment?",
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#d33",
@@ -416,9 +377,9 @@ const AssessmentListPage: React.FC = () => {
       try {
         // TODO: call API to delete on server
         setAssessments((prev) => prev.filter((a) => a.id !== id));
-        toast({ title: "Success", description: "Assessment deleted successfully" });
+        toast({ title: "Success", description: "Safety assessment deleted successfully" });
       } catch (error) {
-        toast({ title: "Error", description: "Failed to delete assessment", variant: "destructive" });
+        toast({ title: "Error", description: "Failed to delete safety assessment", variant: "destructive" });
       }
     }
   };
@@ -429,9 +390,9 @@ const AssessmentListPage: React.FC = () => {
       {/* Header */}
       <header className="flex items-start justify-between gap-6">
         <div>
-          <h1 className="text-3xl md:text-4xl font-bold">Assesments Reports</h1>
+          <h1 className="text-3xl md:text-4xl font-bold">Safety Reports</h1>
           <p className="text-muted-foreground mt-2 max-w-2xl">
-            Monitor facility assessments across your institutions. Use the filters to focus on specific
+            Monitor facility safety assessments across your institutions. Use the filters to focus on specific
             facility types, conditions or date ranges. This dashboard is designed for quick decisions and
             accessible interactions.
           </p>
@@ -445,36 +406,36 @@ const AssessmentListPage: React.FC = () => {
       </header>
 
       {/* Stats */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4" aria-label="Assessment statistics">
+      <section className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4" aria-label="Safety assessment statistics">
         <article className="bg-white rounded-lg p-4 shadow border" aria-labelledby="stat-total">
-          <h3 id="stat-total" className="text-sm font-medium text-gray-500">Total Assessments</h3>
+          <h3 id="stat-total" className="text-sm font-medium text-gray-500">Total Safety Assessments</h3>
           <p className="text-2xl md:text-3xl font-bold mt-2">{totalAssessments}</p>
-          <p className="text-xs text-gray-500 mt-1">Assessments recorded in the selected date range (all by default)</p>
+          <p className="text-xs text-gray-500 mt-1">Safety assessments recorded in the selected date range (all by default)</p>
         </article>
 
         <article className="bg-white rounded-lg p-4 shadow border" aria-labelledby="stat-critical">
           <h3 id="stat-critical" className="text-sm font-medium text-gray-500">Critical Facilities</h3>
           <p className="text-2xl md:text-3xl font-bold mt-2 text-red-600">{criticalFacilities}</p>
-          <p className="text-xs text-gray-500 mt-1">Facilities marked as &quot;Critical&quot; — require urgent attention</p>
+          <p className="text-xs text-gray-500 mt-1">Facilities marked as "Critical" — require urgent safety attention</p>
         </article>
 
         <article className="bg-white rounded-lg p-4 shadow border" aria-labelledby="stat-avg">
-          <h3 id="stat-avg" className="text-sm font-medium text-gray-500">Average Score</h3>
+          <h3 id="stat-avg" className="text-sm font-medium text-gray-500">Average Safety Score</h3>
           <p className="text-2xl md:text-3xl font-bold mt-2">{avgScore}%</p>
-          <p className="text-xs text-gray-500 mt-1">Average of available assessment scores</p>
+          <p className="text-xs text-gray-500 mt-1">Average of available safety assessment scores</p>
         </article>
       </section>
 
       {/* Charts */}
-      <section className="grid grid-cols-1 lg:grid-cols-2 gap-6" aria-label="Assessment charts">
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-6" aria-label="Safety assessment charts">
         <div className="bg-white rounded-lg p-5 shadow border" aria-hidden={false}>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-semibold">Facilities by Condition</h2>
-            <span className="text-sm text-gray-500">Quick view of facility condition counts</span>
+            <h2 className="text-lg font-semibold">Facilities by Safety Condition</h2>
+            <span className="text-sm text-gray-500">Quick view of facility safety condition counts</span>
           </div>
           <div style={{ width: "100%", height: 300 }}>
             <ResponsiveContainer>
-              <BarChart data={conditionData} aria-label="Bar chart: facilities by condition">
+              <BarChart data={conditionData} aria-label="Bar chart: facilities by safety condition">
                 <XAxis dataKey="name" />
                 <YAxis />
                 <Tooltip />
@@ -487,12 +448,12 @@ const AssessmentListPage: React.FC = () => {
 
         <div className="bg-white rounded-lg p-5 shadow border">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-semibold">Assessment Status Distribution</h2>
-            <span className="text-sm text-gray-500">Proportion of completed / in-progress / pending</span>
+            <h2 className="text-lg font-semibold">Safety Assessment Status Distribution</h2>
+            <span className="text-sm text-gray-500">Proportion of completed / in-progress / pending safety assessments</span>
           </div>
           <div style={{ width: "100%", height: 300 }}>
             <ResponsiveContainer>
-              <PieChart aria-label="Pie chart: assessment status distribution">
+              <PieChart aria-label="Pie chart: safety assessment status distribution">
                 <Pie data={statusData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={90} label>
                   {statusData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -521,7 +482,7 @@ const AssessmentListPage: React.FC = () => {
             </label>
 
             <label className="flex flex-col" aria-label="Filter by condition">
-              <span className="text-xs text-gray-600 mb-1">Condition</span>
+              <span className="text-xs text-gray-600 mb-1">Safety Condition</span>
               <select value={conditionFilter} onChange={(e) => setConditionFilter(e.target.value)} className="border rounded px-2 py-2">
                 <option value="">All conditions</option>
                 <option value="excellent">Excellent</option>
@@ -571,11 +532,11 @@ const AssessmentListPage: React.FC = () => {
       </section>
 
       {/* Table */}
-      <section className="bg-white rounded-lg p-4 shadow border" aria-label="assessment records">
+      <section className="bg-white rounded-lg p-4 shadow border" aria-label="safety assessment records">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-lg font-semibold">Assessment Records</h2>
-            <p className="text-sm text-gray-500">Browse and manage facility maintenance assessments.</p>
+            <h2 className="text-lg font-semibold">Safety Assessment Records</h2>
+            <p className="text-sm text-gray-500">Browse and manage facility safety assessments.</p>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="ghost" onClick={() => { /* Could toggle dense rows or other table prefs */ }} aria-label="Table preferences">
@@ -589,9 +550,7 @@ const AssessmentListPage: React.FC = () => {
           data={filteredData}
           searchKey="schoolName"
           searchPlaceholder="Search schools or facilities..."
-          enableRowSelection
           dense={false}
-          onSelectionChange={(rows: any[]) => setSelectedRows(rows)}
         />
       </section>
 
@@ -599,8 +558,8 @@ const AssessmentListPage: React.FC = () => {
       <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit Assessment</DialogTitle>
-            <DialogDescription>Update the assessment details and save changes.</DialogDescription>
+            <DialogTitle>Edit Safety Assessment</DialogTitle>
+            <DialogDescription>Update the safety assessment details and save changes.</DialogDescription>
           </DialogHeader>
 
           {editAssessment && (
@@ -629,7 +588,7 @@ const AssessmentListPage: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium">Overall Condition</label>
+                <label className="block text-sm font-medium">Overall Safety Condition</label>
                 <select
                   className="w-full border rounded px-2 py-1"
                   name="overallCondition"
@@ -674,4 +633,4 @@ const AssessmentListPage: React.FC = () => {
   );
 };
 
-export default AssessmentListPage;
+export default SafetyReportPage;

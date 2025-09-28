@@ -13,11 +13,12 @@ export interface Facility {
 export interface MaintenanceAssessmentInput {
   institution_id: number;
   facility_id: number;
+  class: string[];
   institution_name: string;
   status: 'pending' | 'in_progress' | 'completed';
   details: {
     part_of_building: string;
-    assessment_status: 'Urgent Attention' | 'Attention' | 'Good';
+    assessment_status: 'Urgent Attention' | 'Attention Required' | 'Good';
   }[];
   school_feedback: string;
   agent_feedback: string;
@@ -30,6 +31,46 @@ export interface MaintenanceReport {
   facility_type: string;
   institution_name: string;
   assessment_date: string;
+  class: string[];
+  urgent_items: number;
+  attention_items: number;
+  good_items: number;
+  total_items: number;
+  agent_feedback: string;
+  school_feedback: string;
+  recommended_actions?: string;
+  priority_level?: 'low' | 'medium' | 'high';
+  status: 'pending' | 'reviewed' | 'approved' | 'rejected';
+  total_score_percentage: number;
+  overall_condition: 'excellent' | 'good' | 'needs-attention' | 'critical';
+  completion_status: 'completed' | 'in-progress' | 'pending';
+  files?: string[];
+  created_at: string;
+}
+
+
+export interface SafetyAssessmentInput {
+  institution_id: number;
+  facility_id: number;
+  class: string[];
+  institution_name: string;
+  status: 'pending' | 'in_progress' | 'completed';
+  details: {
+    part_of_building: string;
+    assessment_status: 'Urgent Attention' | 'Attention Required' | 'Good';
+  }[];
+  school_feedback: string;
+  agent_feedback: string;
+  files?: File[];
+}
+
+export interface SafetyReport {
+  id: number;
+  school_name: string;
+  facility_type: string;
+  institution_name: string;
+  assessment_date: string;
+  class: string[];
   urgent_items: number;
   attention_items: number;
   good_items: number;
