@@ -76,7 +76,7 @@ interface FacilityAssessment {
   attentionItems: number;
   goodItems: number;
   totalItems: number;
-  overallCondition: "excellent" | "good" | "needs-attention" | "critical";
+  averageCondition: "good" | "attention" | "urgent_attention";
   completionStatus: "completed" | "in-progress" | "pending";
   status: 'pending' | 'reviewed' | 'approved' | 'rejected';
   agent_feedback?: string;
@@ -97,7 +97,7 @@ const mapSafetyReport = (report: any, facilityIdToName: Record<string, string>):
   attentionItems: report.attention_items ?? 0,
   goodItems: report.good_items ?? 0,
   totalItems: report.total_items ?? 0,
-  overallCondition: report.overall_condition ?? "good",
+  averageCondition: report.average_condition ?? "good",
   completionStatus: report.completion_status ?? "pending",
   status: report.status ?? "pending",
   agent_feedback: report.agent_feedback,
@@ -188,7 +188,7 @@ const SafetyReportPage: React.FC = () => {
       data = data.filter((d) => d.facilityType === facilityTypeFilter);
     }
     if (conditionFilter) {
-      data = data.filter((d) => d.overallCondition === conditionFilter);
+      data = data.filter((d) => d.averageCondition === conditionFilter);
     }
     if (statusFilter) {
       data = data.filter((d) => d.completionStatus === statusFilter);
@@ -211,7 +211,7 @@ const SafetyReportPage: React.FC = () => {
   // Stats (memoized)
   const totalAssessments = useMemo(() => assessments.length, [assessments]);
   const totalSchools = useMemo(() => new Set(assessments.map((a) => a.schoolName)).size, [assessments]);
-  const criticalFacilities = useMemo(() => assessments.filter((a) => a.overallCondition === "critical").length, [assessments]);
+  const criticalFacilities = useMemo(() => assessments.filter((a) => a.averageCondition === "urgent_attention").length, [assessments]);
   const avgScore = useMemo(() => {
     if (assessments.length === 0) return 0;
     const sum = assessments.reduce((s, a) => s + (a.totalScorePercentage ?? 0), 0);
@@ -220,10 +220,9 @@ const SafetyReportPage: React.FC = () => {
 
   // Chart data
   const conditionData = useMemo(() => [
-    { name: "Excellent", value: assessments.filter((a) => a.overallCondition === "excellent").length },
-    { name: "Good", value: assessments.filter((a) => a.overallCondition === "good").length },
-    { name: "Needs Attention", value: assessments.filter((a) => a.overallCondition === "needs-attention").length },
-    { name: "Critical", value: assessments.filter((a) => a.overallCondition === "critical").length },
+    { name: "Good", value: assessments.filter((a) => a.averageCondition === "good").length },
+    { name: "Needs Attention", value: assessments.filter((a) => a.averageCondition === "attention").length },
+    { name: "Critical", value: assessments.filter((a) => a.averageCondition === "urgent_attention").length },
   ], [assessments]);
 
   const statusData = useMemo(() => [
@@ -269,11 +268,11 @@ const SafetyReportPage: React.FC = () => {
       ),
     },
     {
-      accessorKey: "overallCondition",
+      accessorKey: "averageCondition",
       header: "Condition",
       cell: ({ row }) => {
-        const cond = row.getValue("overallCondition") as FacilityAssessment["overallCondition"];
-        return getOverallConditionBadge(cond);
+        const cond = row.getValue("averageCondition") as FacilityAssessment["averageCondition"];
+        return getaverageConditionBadge(cond);
       },
     },
     {
@@ -316,15 +315,16 @@ const SafetyReportPage: React.FC = () => {
   ];
 
   // --- Helpers for badges ---
-  function getOverallConditionBadge(condition?: FacilityAssessment["overallCondition"]) {
+  function getaverageConditionBadge(condition?: FacilityAssessment["averageCondition"]) {
     const conditionConfig: Record<string, { label: string; className: string }> = {
       excellent: { label: "Excellent", className: "bg-green-100 text-green-800" },
       good: { label: "Good", className: "bg-blue-100 text-blue-800" },
-      "needs-attention": { label: "Needs Attention", className: "bg-yellow-100 text-yellow-800" },
-      critical: { label: "Critical", className: "bg-red-100 text-red-800" },
+      attention: { label: "Needs Attention", className: "bg-yellow-100 text-yellow-800" },
+      urgent_attention: { label: "Critical", className: "bg-red-100 text-red-800" },
     };
     if (!condition) return <Badge className="bg-gray-100 text-gray-800">-</Badge>;
     const config = conditionConfig[condition];
+    if (!config) return <Badge className="bg-gray-100 text-gray-800">Unknown</Badge>;
     return <Badge className={config.className}>{config.label}</Badge>;
   }
 
@@ -485,10 +485,9 @@ const SafetyReportPage: React.FC = () => {
               <span className="text-xs text-gray-600 mb-1">Safety Condition</span>
               <select value={conditionFilter} onChange={(e) => setConditionFilter(e.target.value)} className="border rounded px-2 py-2">
                 <option value="">All conditions</option>
-                <option value="excellent">Excellent</option>
                 <option value="good">Good</option>
-                <option value="needs-attention">Needs Attention</option>
-                <option value="critical">Critical</option>
+                <option value="attention">Needs Attention</option>
+                <option value="urgent_attention">Critical</option>
               </select>
             </label>
 
@@ -588,18 +587,17 @@ const SafetyReportPage: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium">Overall Safety Condition</label>
+                <label className="block text-sm font-medium">average Safety Condition</label>
                 <select
                   className="w-full border rounded px-2 py-1"
-                  name="overallCondition"
-                  value={editAssessment.overallCondition}
+                  name="averageCondition"
+                  value={editAssessment.averageCondition}
                   onChange={handleEditChange}
                   required
                 >
-                  <option value="excellent">Excellent</option>
                   <option value="good">Good</option>
-                  <option value="needs-attention">Needs Attention</option>
-                  <option value="critical">Critical</option>
+                  <option value="attention">Needs Attention</option>
+                  <option value="urgent_attention">Critical</option>
                 </select>
               </div>
 

@@ -202,6 +202,163 @@ const FACILITY_PARTS = {
 
 };
 
+// Facility safety parts configuration
+const FACILITY_SAFETY_PARTS = {
+  classroom: [
+    "Door opens outside",
+    "Windows open outside",
+    "Windows have no grills",
+    "Spacing between desks adequate",
+    "At least 5 students in class are trained to evacuate the rest in case of emergency",
+    "The class have undertaken an evacuation drill in case of emergency",
+    "At least five students in class have basic first aid skills",
+    "The floor provides appropriate grip",
+    "The space immediately outside the classroom provides easy movement in case of emergency",
+    "There is a clear display of action expected in case of emergency",
+    "There is a clear display of assembly point in case of emergency",
+    "There is a fire extinguisher within close proximity from the classroom",
+    "At least five students are trained on how to handle the available fire extinguisher",
+  ],
+  library: [
+    "Door opens outside",
+    "Windows open outside",
+    "Windows have grills",
+    "Spacing between tables adequate",
+    "At least 5 students in every class are trained to evacuate the rest in case of emergency",
+    "Students from every class have undertaken an evacuation drill in case of emergency",
+    "Basic first aid kit is available.",
+    "At least five students in class have basic first aid skills",
+    "The floor provides appropriate grip",
+    "The space immediately outside the library provides easy movement in case of emergency",
+    "There is a clear display of action expected in case of emergency",
+    "There is a clear display of assembly point in case of emergency",
+    "There is a fire extinguisher within close proximity from the Library.",
+    "At least five students are trained on how to handle the available fire extinguisher",
+  ],
+  laboratory: [
+    "Door opens outside",
+    "Windows open outside",
+    "Windows have no grills",
+    "Spacing between desks adequate",
+    "At least 5 students in class are trained to evacuate the rest in case of emergency",
+    "The class have undertaken an evacuation drill in case of emergency",
+    "At least five students in class have basic first aid skills",
+    "The floor provides appropriate grip",
+    "The space immediately outside the classroom provides easy movement in case of emergency",
+    "There is a clear display of action expected in case of emergency",
+    "There is a clear display of assembly point in case of emergency",
+    "There is a fire extinguisher, sand bucket and fire blanket within close proximity from the classroom",
+    "At least five students are trained on how to handle the available fire extinguisher",
+    "There is a reliable source of tap water",
+    "There is a fully fitted first aid kit",
+  ],
+  dormitory: [
+    "Door opens outside",
+    "Windows open outside",
+    "Windows have no grills",
+    "Spacing between beds adequate",
+    "At least 10 students in the dorm are trained to evacuate the rest in case of emergency",
+    "The dorm members have undertaken an evacuation drill in case of emergency",
+    "At least 10 students in the dorm have basic first aid skills",
+    "The floor provides appropriate grip",
+    "The space immediately outside the dormitory provides easy movement in case of emergency",
+    "There is a clear display of action expected in case of emergency",
+    "There is a clear display of assembly point in case of emergency",
+    "There is a fire extinguisher within close proximity from the dormitory",
+    "At least 10 students in the dorm are trained on how to handle the available fire extinguisher",
+  ],
+  toilet: [
+    "Door opens outside",
+    "Windows open outside",
+    "Windows have no grills",
+    "Spacing between desks adequate",
+    "At least 5 students in class are trained to evacuate the rest in case of emergency",
+    "The class have undertaken an evacuation drill in case of emergency",
+    "At least five students in class have basic first aid skills",
+    "The floor provides appropriate grip",
+    "The space immediately outside the classroom provides easy movement in case of emergency",
+    "There is a clear display of action expected in case of emergency",
+    "There is a clear display of assembly point in case of emergency",
+    "There is a fire extinguisher within close proximity from the classroom",
+    "At least five students are trained on how to handle the available fire extinguisher",
+  ],
+  office: [
+    "Door opens outside",
+    "Windows open outside",
+    "Windows have no grills",
+    "Spacing between desks adequate",
+    "At least 5 students in class are trained to evacuate the rest in case of emergency",
+    "The class have undertaken an evacuation drill in case of emergency",
+    "At least five students in class have basic first aid skills",
+    "The floor provides appropriate grip",
+    "The space immediately outside the classroom provides easy movement in case of emergency",
+    "There is a clear display of action expected in case of emergency",
+    "There is a clear display of assembly point in case of emergency",
+    "There is a fire extinguisher within close proximity from the classroom",
+    "At least five students are trained on how to handle the available fire extinguisher",
+  ],
+  dining_hall: [
+    "Door opens outside",
+    "Windows open outside",
+    "Windows have no grills",
+    "Spacing between tables adequate",
+    "At least 5 students in every class are trained to evacuate the rest in case of emergency",
+    "The class have undertaken an evacuation drill in case of emergency",
+    "At least five students in every class have basic first aid skills",
+    "The floor provides appropriate grip",
+    "The space immediately outside the dining hall provides easy movement in case of emergency",
+    "There is a clear display of action expected in case of emergency",
+    "There is a clear display of assembly point in case of emergency",
+    "There is a fire extinguisher within close proximity from the dining hall.",
+    "At least five students are trained on how to handle the available fire extinguisher",
+  ],
+  compound: [
+    "Door opens outside",
+    "Windows open outside",
+    "Windows have no grills",
+    "Spacing between desks adequate",
+    "At least 5 students in class are trained to evacuate the rest in case of emergency",
+    "The class have undertaken an evacuation drill in case of emergency",
+    "At least five students in class have basic first aid skills",
+    "The floor provides appropriate grip",
+    "The space immediately outside the classroom provides easy movement in case of emergency",
+    "There is a clear display of action expected in case of emergency",
+    "There is a clear display of assembly point in case of emergency",
+    "There is a fire extinguisher within close proximity from the classroom",
+    "At least five students are trained on how to handle the available fire extinguisher",
+  ],
+  ICTLab: [
+    "Door opens outside",
+    "Windows open outside",
+    "Windows have no grills",
+    "Spacing between desks adequate",
+    "At least 5 students in class are trained to evacuate the rest in case of emergency",
+    "The class have undertaken an evacuation drill in case of emergency",
+    "At least five students in class have basic first aid skills",
+    "The floor provides appropriate grip",
+    "The space immediately outside the classroom provides easy movement in case of emergency",
+    "There is a clear display of action expected in case of emergency",
+    "There is a clear display of assembly point in case of emergency",
+    "There is a fire extinguisher within close proximity from the classroom",
+    "At least five students are trained on how to handle the available fire extinguisher",
+  ],
+  SportsFacilities: [
+    "Door opens outside",
+    "Windows open outside",
+    "Windows have no grills",
+    "Spacing between desks adequate",
+    "At least 5 students in class are trained to evacuate the rest in case of emergency",
+    "The class have undertaken an evacuation drill in case of emergency",
+    "At least five students in class have basic first aid skills",
+    "The floor provides appropriate grip",
+    "The space immediately outside the classroom provides easy movement in case of emergency",
+    "There is a clear display of action expected in case of emergency",
+    "There is a clear display of assembly point in case of emergency",
+    "There is a fire extinguisher within close proximity from the classroom",
+    "At least five students are trained on how to handle the available fire extinguisher",
+  ],
+};
+
 // Facility assessment schema
 const facilityAssessmentSchema = z.object({
   institution_id: z.number(),
@@ -210,7 +367,9 @@ const facilityAssessmentSchema = z.object({
   status: z.enum(['pending', 'in_progress', 'completed']).default('pending'),
   details: z.array(z.object({
     part_of_building: z.string(),
-    assessment_status: z.enum(['Urgent Attention', 'Attention Required', 'Good']).optional()
+    assessment_status: z.enum(['Urgent Attention', 'Attention Required', 'Good'], {
+      required_error: 'Please select a condition'
+    })
   })),
   school_feedback: z.string().min(1, 'School feedback is required'),
   agent_feedback: z.string().optional(),
@@ -235,6 +394,20 @@ const getFacilityParts = (facilityType: string): string[] => {
   return parts || [];
 };
 
+// Helper function to get facility safety parts based on facility type
+const getFacilitySafetyParts = (facilityType: string): string[] => {
+  // Clean and normalize the input facility type
+  const normalizedInput = facilityType.toLowerCase().trim();
+  // Get the standard type from our mappings
+  const standardType = FACILITY_TYPE_MAPPINGS[normalizedInput] || normalizedInput;
+  const parts = FACILITY_SAFETY_PARTS[standardType as keyof typeof FACILITY_SAFETY_PARTS];
+  if (!parts) {
+    console.warn(`No safety parts defined for facility type: ${facilityType} (mapped to: ${standardType})`);
+    return [];
+  }
+  return parts || [];
+};
+
 const AssessmentAddPage: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -247,22 +420,7 @@ const AssessmentAddPage: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Safety data
-  const initialSafetyData = [
-    { id: 1, part: "Door opens outside", attentionRequired: false, good: false },
-    { id: 2, part: "Windows open outside", attentionRequired: false, good: false },
-    { id: 3, part: "Windows have no grills", attentionRequired: false, good: false },
-    { id: 4, part: "Spacing between desks adequate", attentionRequired: false, good: false },
-    { id: 5, part: "At least 5 students in class are trained to evacuate the rest in case of emergency", attentionRequired: false, good: false },
-    { id: 6, part: "The class have undertaken an evacuation drill in case of emergency", attentionRequired: false, good: false },
-    { id: 7, part: "At least five students in class have basic first aid skills", attentionRequired: false, good: false },
-    { id: 8, part: "The floor provides appropriate grip", attentionRequired: false, good: false },
-    { id: 9, part: "The space immediately outside the classroom provides easy movement in case of emergency", attentionRequired: false, good: false },
-    { id: 10, part: "There is a clear display of action expected in case of emergency", attentionRequired: false, good: false },
-    { id: 11, part: "There is a clear display of assembly point in case of emergency", attentionRequired: false, good: false },
-    { id: 12, part: "There is a fire extinguisher within close proximity from the classroom", attentionRequired: false, good: false },
-    { id: 13, part: "At least five students are trained on how to handle the available fire extinguisher", attentionRequired: false, good: false },
-  ];
-  const [safetyData, setSafetyData] = useState(initialSafetyData);
+  const [safetyData, setSafetyData] = useState<any[]>([]);
 
   // Fetch facilities from API
   useEffect(() => {
@@ -304,14 +462,23 @@ const AssessmentAddPage: React.FC = () => {
     if (selectedFacility) {
       const parts = getFacilityParts(selectedFacility.name);
       setFacilityParts(parts);
+      const safetyParts = getFacilitySafetyParts(selectedFacility.name);
+      const initialSafetyData = safetyParts.map((part, index) => ({
+        id: index + 1,
+        part: part,
+        attentionRequired: false,
+        good: false,
+      }));
+      setSafetyData(initialSafetyData);
+      const isClassFacility = selectedFacility.name.toLowerCase().includes('class');
       facilityForm.reset({
         institution_id: selectedFacility.institution_id || 1,
         facility_id: selectedFacility.id,
-        class: '',
+        class: isClassFacility ? '' : selectedFacility.name,
         status: 'pending',
         details: parts.map(name => ({
           part_of_building: name,
-          assessment_status: undefined
+          assessment_status: 'Good'
         })),
         school_feedback: '',
         agent_feedback: '',
@@ -357,7 +524,7 @@ const AssessmentAddPage: React.FC = () => {
     // Initialize form with default values for each part
       facilityForm.reset({ 
         facility_id: facility.id,
-        details: facilityParts.map(name => ({ part_of_building: name, assessment_status: undefined })),
+        details: facilityParts.map(name => ({ part_of_building: name, assessment_status: 'Good' })),
         files: []
       });    setUploadedFiles([]);
     setIsModalOpen(true);
@@ -386,7 +553,7 @@ const AssessmentAddPage: React.FC = () => {
           status: 'pending' as 'pending',
           details: data.details.map(detail => ({
             part_of_building: detail.part_of_building,
-            assessment_status: detail.assessment_status || 'Good'
+            assessment_status: detail.assessment_status
           })),
           school_feedback: data.school_feedback,
           agent_feedback: data.agent_feedback,
@@ -472,7 +639,7 @@ const AssessmentAddPage: React.FC = () => {
       setUploadedFiles([]);
       facilityForm.reset();
       setSelectedFacility(null);
-      setSafetyData(initialSafetyData);
+      setSafetyData([]);
     } catch (error: any) {
       // Try to extract backend error message
       let message = 'Failed to submit assessment';
@@ -783,25 +950,6 @@ const StreamSelect: React.FC<StreamSelectProps> = ({ onChange, value }) => {
                         </FormItem>
                       )}
                     />
-
-                    {/* Agent Feedback Section */}
-                    {/* <FormField
-                      control={facilityForm.control}
-                      name="agent_feedback"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-base font-semibold">Agent Feedback</FormLabel>
-                          <FormControl>
-                            <Textarea
-                              {...field}
-                              placeholder="Enter your assessment notes, observations, and recommendations..."
-                              className="min-h-[120px] resize-none"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    /> */}
                   </div>
 
                   <div className="flex gap-2 pt-4">

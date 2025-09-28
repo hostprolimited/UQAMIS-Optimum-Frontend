@@ -42,7 +42,7 @@ export interface MaintenanceReport {
   priority_level?: 'low' | 'medium' | 'high';
   status: 'pending' | 'reviewed' | 'approved' | 'rejected';
   total_score_percentage: number;
-  overall_condition: 'excellent' | 'good' | 'needs-attention' | 'critical';
+  average_condition: 'excellent' | 'good' | 'needs-attention' | 'critical';
   completion_status: 'completed' | 'in-progress' | 'pending';
   files?: string[];
   created_at: string;
@@ -81,7 +81,7 @@ export interface SafetyReport {
   priority_level?: 'low' | 'medium' | 'high';
   status: 'pending' | 'reviewed' | 'approved' | 'rejected';
   total_score_percentage: number;
-  overall_condition: 'excellent' | 'good' | 'needs-attention' | 'critical';
+  average_condition: 'excellent' | 'good' | 'needs-attention' | 'critical';
   completion_status: 'completed' | 'in-progress' | 'pending';
   files?: string[];
   created_at: string;
