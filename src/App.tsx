@@ -25,6 +25,9 @@ import SafetyReportPage from "./pages/assements/components/SafetyReportPage";
 import SchoolFormListPage from "./pages/assements/components/SchoolMetricsListPage";
 import SchoolFormAddPage from "./pages/assements/components/SchoolMetricsAddPage";
 import AssessmentReviewPage from "./pages/assements/components/AssessmentReviewPage";
+import SafetyReviewPage from "./pages/assements/components/SafetyReviewPage";
+
+import AssessmentViewPage from "./pages/assements/components/AssesmentViewPage";
 import RolesPermissions from "./pages/settings/components/RolesPermissionsPage";
 
 import LoginPage from "./pages/auth/components/loginPage";
@@ -104,6 +107,16 @@ const App = () => (
                   <Route path="/assessments/review" element={
                     <ProtectedRoute allowedRoles={["agent", "ministry_admin"]}>
                       <AssessmentReviewPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/safety/review" element={
+                    <ProtectedRoute allowedRoles={["agent", "ministry_admin"]}>
+                      <SafetyReviewPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/assessments/view/:id" element ={
+                    <ProtectedRoute allowedRoles={["agent", "ministry_admin"]}>
+                      < AssessmentViewPage/>
                     </ProtectedRoute>
                   } />
                   <Route path="/reports" element={

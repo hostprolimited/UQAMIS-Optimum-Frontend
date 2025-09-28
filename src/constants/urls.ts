@@ -42,6 +42,7 @@ export const Urls = {
   GET_SAFETY_REPORT_BY_ID_URL: (id: number) => `/safety/${id}`,
   UPDATE_SAFETY_REPORT_URL: (id: number) => `/safety/${id}`,
   DELETE_SAFETY_REPORT_URL: (id: number) => `/safety/${id}`,
+  AGENT_REVIEW_SAFETY_ASSESSMENT: (id: number) => `/safety/review/${id}`,
 
   // User Management Endpoints
   CREATE_USERS_URL: '/users/create',

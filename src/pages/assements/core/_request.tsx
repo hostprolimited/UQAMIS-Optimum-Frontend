@@ -85,10 +85,10 @@ export const createSafetyAssessment = async (data: SafetyAssessmentInput): Promi
 };
 
 // Fetch all safety reports
-export const getSafetyReports = async (): Promise<APIResponse<SafetyReport[]>> => {
-  const response = await api.get<APIResponse<SafetyReport[]>>(Urls.GET_SAFETY_REPORT_URL);
-  return response.data;
-};
+// export const getSafetyReports = async (): Promise<APIResponse<SafetyReport[]>> => {
+//   const response = await api.get<APIResponse<SafetyReport[]>>(Urls.GET_SAFETY_REPORT_URL);
+//   return response.data;
+// };
 
 // add school metrics
 export const createSchoolMetrics = async (data: { institution_id: number; students_count: number; teachers_count: number; term: string; year: string; class: string; streams: string[]; }): Promise<APIResponse<any>> => {
@@ -121,8 +121,20 @@ export const getMaintenanceReportById = async (id: number): Promise<APIResponse<
   return response.data;
 };
 
-// agent review maintainance report by id
+// agent review maintainance report 
 export const agentReviewMaintenanceReport = async (id: number, data: { review_decision: 'approved' | 'rejected' | 'requires_clarification' | 'pending'; review_remarks: string; recommended_action: string; priority?: 'low' | 'medium' | 'high' | 'urgent'; }): Promise<APIResponse<any>> => {
   const response = await api.put<APIResponse<any>>(Urls.AGENT_REVIEW_MAINTENANCE_ASSESSMENT(id), data);
+  return response.data;
+};
+
+// get safety reports
+export const getSafetyReports = async (): Promise<APIResponse<SafetyReport[]>> => {
+  const response = await api.get<APIResponse<SafetyReport[]>>(Urls.GET_SAFETY_REPORT_URL);
+  return response.data;
+};
+
+// agent review safety report
+export const agentReviewSafetyReport = async (id: number, data: { review_decision: 'approved' | 'rejected' | 'requires_clarification' | 'pending'; review_remarks: string; recommended_action: string; priority?: 'low' | 'medium' | 'high' | 'urgent'; }): Promise<APIResponse<any>> => {
+  const response = await api.put<APIResponse<any>>(Urls.AGENT_REVIEW_SAFETY_ASSESSMENT(id), data);
   return response.data;
 };

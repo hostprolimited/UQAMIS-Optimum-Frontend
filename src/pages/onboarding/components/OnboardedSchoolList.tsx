@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { getInstitutions } from '../core/_requests';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Edit, Trash2, Plus, Download } from 'lucide-react';
+import { Edit, Trash2, Plus, Download, Eye } from 'lucide-react';
 import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
 import api from '@/utils/api';
@@ -206,6 +206,9 @@ const OnboardedSchoolList: React.FC = () => {
                   <TableCell>{inst.status}</TableCell>
                   <TableCell>
                     <div className="flex space-x-2">
+                      <Button variant="ghost" size="sm" onClick={() => navigate(`/assessments/view/${inst.id}`)} title="View Assessment">
+                        <Eye className="h-4 w-4" />
+                      </Button>
                       <Button variant="ghost" size="sm" onClick={() => {/* TODO: update logic */}}>
                         <Edit className="h-4 w-4" />
                       </Button>

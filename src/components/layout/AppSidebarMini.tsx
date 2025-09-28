@@ -137,10 +137,16 @@ const navigationItems = [
   },
 
   {
-    title: 'Assessment Review', 
+    title: 'Maintainance Review', 
     url: 'assessments/review', 
     icon: ClipboardCheck, 
-    page: 'assessment_review'
+    page: 'maintenance_review'
+  },
+  {
+    title: 'Safety Review', 
+    url: 'safety/review', 
+    icon: ClipboardCheck, 
+    page: 'safety_review'
   },
   {
     title: 'School Metrics', 
