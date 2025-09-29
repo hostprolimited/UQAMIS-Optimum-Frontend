@@ -19,14 +19,15 @@ import Onboard from "./pages/onboarding/components/OnboardPage";
 import OnboardedSchoolList from "./pages/onboarding/components/OnboardedSchoolList";
 import RoleBasedAssessmentPage from "./pages/assements/components/RoleBasedAssessmentsPage";
 import AssessmentAdd from "./pages/assements/components/AssessmentAddPage";
-import Reports from "./pages/dashboard/components/ReportsPage";
+import Reports from "./pages/reports/components/FacilityReportsPage";
 import Users from "./pages/settings/components/UsersPage";
 import SafetyReportPage from "./pages/assements/components/SafetyReportPage";
 import SchoolFormListPage from "./pages/assements/components/SchoolMetricsListPage";
 import SchoolFormAddPage from "./pages/assements/components/SchoolMetricsAddPage";
-import AssessmentReviewPage from "./pages/assements/components/AssessmentReviewPage";
+import AssessmentReviewPage from "./pages/assements/components/MaintainanceReviewPage";
+import MaintenanceAssessmentReportPage from "./pages/reports/components/MaintenanceReportsPage";
+import SafetyReportsPage from "./pages/reports/components/SafetyReports";
 import SafetyReviewPage from "./pages/assements/components/SafetyReviewPage";
-
 import AssessmentViewPage from "./pages/assements/components/AssesmentViewPage";
 import RolesPermissions from "./pages/settings/components/RolesPermissionsPage";
 
@@ -116,7 +117,17 @@ const App = () => (
                   } />
                   <Route path="/assessments/view/:id" element ={
                     <ProtectedRoute allowedRoles={["agent", "ministry_admin"]}>
-                      < AssessmentViewPage/>
+                      <AssessmentViewPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/maintenance/reports" element={
+                    <ProtectedRoute allowedRoles={["agent", "ministry_admin"]}>
+                      <MaintenanceAssessmentReportPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/safety/reports" element={
+                    <ProtectedRoute allowedRoles={["agent", "ministry_admin"]}>
+                      <SafetyReportsPage />
                     </ProtectedRoute>
                   } />
                   <Route path="/reports" element={

@@ -423,7 +423,7 @@ const AssessmentReviewPage: React.FC = () => {
       {/* Header */}
       <header className="flex items-start justify-between gap-6">
         <div>
-          <h1 className="text-3xl md:text-4xl font-bold">Assesments Records</h1>
+          <h1 className="text-3xl md:text-4xl font-bold">Maintainance Assesments Records</h1>
           <p className="text-muted-foreground mt-2 max-w-2xl">
             Monitor facility assessments across institutions within the county. Use the filters to focus on specific
             facility types, conditions or date ranges. This dashboard is designed for quick decisions and
@@ -506,7 +506,7 @@ const AssessmentReviewPage: React.FC = () => {
       <section className="bg-white rounded-lg p-4 shadow border" aria-label="assessment records">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-lg font-semibold">Assessment Records</h2>
+            <h2 className="text-lg font-semibold">Schools Maintainance Assessment Records</h2>
             <p className="text-sm text-gray-500">Browse and manage facility maintenance assessments.</p>
           </div>
           <div className="flex items-center gap-2">

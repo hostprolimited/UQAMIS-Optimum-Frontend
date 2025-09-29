@@ -56,10 +56,11 @@ export const RoleProvider: React.FC<RoleProviderProps> = ({ children }) => {
         return [
           'overview',
           'reports',
-          'maintenance_review',
-          'safety_review',
+          // 'maintenance_review',
+          // 'safety_review',
           'onboard',
           'system_safety',
+          'review',
           'backup',
           'user_management'
         ].includes(page)
@@ -68,8 +69,9 @@ export const RoleProvider: React.FC<RoleProviderProps> = ({ children }) => {
         return [
           'overview',
           'reports',
-          'maintenance_review',
-          'safety_review',
+          'review',
+          // 'maintenance_review',
+          // 'safety_review',
           'onboard',
           'user_management'
         ].includes(page);

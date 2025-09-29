@@ -58,8 +58,8 @@ import {
   Cell,
 } from "recharts";
 
-import { getSafetyReports, getFacilities, agentReviewSafetyReport } from "../core/_request";
-import { Facility } from "../core/_model";
+import { getSafetyReports, getFacilities, agentReviewSafetyReport } from "../../assements/core/_request";
+import { Facility } from "../../assements/core/_model";
 
 // --- Types ---
 interface AssessmentDetail {
@@ -124,7 +124,7 @@ const getCurrentInstitutionName = () => {
 };
 
 // --- Component ---
-const SafetyReviewPage: React.FC = () => {
+const SafetyReportsPage: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -230,7 +230,7 @@ const SafetyReviewPage: React.FC = () => {
   // Chart data
   const conditionData = useMemo(() => [
     { name: "Good", value: assessments.filter((a) => a.averageCondition === "good").length },
-    { name: "Needs Attention", value: assessments.filter((a) => a.averageCondition === "attention").length },
+    // { name: "Needs Attention", value: assessments.filter((a) => a.averageCondition === "attention").length },
     { name: "Critical", value: assessments.filter((a) => a.averageCondition === "urgent_attention").length },
   ], [assessments]);
 
@@ -417,17 +417,75 @@ const SafetyReviewPage: React.FC = () => {
     }
   };
 
+  const exportCSV = (rows: FacilityAssessment[]) => {
+    if (!rows || rows.length === 0) {
+      toast({ title: "No data", description: "No rows to export", variant: "destructive" });
+      return;
+    }
+    const header = [
+      "ID",
+      "School",
+      "Facility Type",
+      "Assessment Date",
+      "Urgent Items",
+      "Attention Items",
+      "Good Items",
+      "Total Items",
+      "Overall Condition",
+      "Completion Status",
+      "Score (%)",
+      "School Feedback",
+    ];
+    const csv = [
+      header.join(","),
+      ...rows.map((r) =>
+        [
+          r.id,
+          `"${(r.institutionName || "").replace(/"/g, '""')}"`,
+          `"${(r.facilityType || "").replace(/"/g, '""')}"`,
+          r.assessmentDate,
+          r.urgentItems,
+          r.attentionItems,
+          r.goodItems,
+          r.totalItems,
+        //   r.overallCondition,
+          r.completionStatus,
+          r.totalScorePercentage ?? "",
+          `"${(r.school_feedback || "").replace(/"/g, '""')}"`,
+        ].join(",")
+      ),
+    ].join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.href = url;
+    link.setAttribute("download", `assessments_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   // --- UI ---
   return (
     <div className="space-y-8" role="main">
       {/* Header */}
       <header className="flex items-start justify-between gap-6">
         <div>
-          <h1 className="text-3xl md:text-4xl font-bold">Review Safety Assessments Records</h1>
+          <h1 className="text-3xl md:text-4xl font-bold">Safety Assessments Reports</h1>
           <p className="text-muted-foreground mt-2 max-w-2xl">
             Monitor facility safety assessments across institutions within the county. Use the filters to focus on specific facility types, conditions or date ranges. This dashboard is designed for quick decisions and
             accessible interactions.
           </p>
+        </div>
+        <div className="flex items-center gap-2">
+                  <Button variant="ghost" onClick={() => exportCSV(filteredData)} aria-label="Export filtered as CSV" className="gap-2">
+                    <FileSpreadsheet className="h-4 w-4" /> Export CSV
+                  </Button>
+                  <Button variant="outline" onClick={() => window.print()} aria-label="Print report" className="gap-2 hidden md:inline-flex">
+                    <FileText className="h-4 w-4" /> Print
+                  </Button>
         </div>
         <div className="flex items-center gap-2">
           {/* <Button onClick={() => navigate("/assessments/add")} className="gap-2">
@@ -438,7 +496,7 @@ const SafetyReviewPage: React.FC = () => {
       </header>
 
       {/* Stats */}
-      {/* <section className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4" aria-label="Safety assessment statistics">
+      <section className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4" aria-label="Safety assessment statistics">
         <article className="bg-white rounded-lg p-4 shadow border" aria-labelledby="stat-total">
           <h3 id="stat-total" className="text-sm font-medium text-gray-500">Total Safety Assessments</h3>
           <p className="text-2xl md:text-3xl font-bold mt-2">{totalAssessments}</p>
@@ -462,10 +520,10 @@ const SafetyReviewPage: React.FC = () => {
           <p className="text-2xl md:text-3xl font-bold mt-2">{avgScore}%</p>
           <p className="text-xs text-gray-500 mt-1">Average of available safety assessment scores</p>
         </article>
-      </section> */}
+      </section>
 
       {/* Charts */}
-      {/* <section className="grid grid-cols-1 lg:grid-cols-2 gap-6" aria-label="Safety assessment charts">
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-6" aria-label="Safety assessment charts">
         <div className="bg-white rounded-lg p-5 shadow border" aria-hidden={false}>
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-lg font-semibold">Facilities by Safety Condition</h2>
@@ -482,9 +540,9 @@ const SafetyReviewPage: React.FC = () => {
               </BarChart>
             </ResponsiveContainer>
           </div>
-        </div> */}
+        </div>
 
-        {/* <div className="bg-white rounded-lg p-5 shadow border">
+        <div className="bg-white rounded-lg p-5 shadow border">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-lg font-semibold">Safety Assessment Status Distribution</h2>
             <span className="text-sm text-gray-500">Proportion of completed / in-progress / pending safety assessments</span>
@@ -503,7 +561,7 @@ const SafetyReviewPage: React.FC = () => {
             </ResponsiveContainer>
           </div>
         </div>
-      </section> */}
+      </section>
 
       {/* Filters */}
       <section className="bg-white rounded-lg p-4 shadow border" aria-label="filters">
@@ -701,4 +759,4 @@ const SafetyReviewPage: React.FC = () => {
   );
 };
 
-export default SafetyReviewPage;
+export default SafetyReportsPage;

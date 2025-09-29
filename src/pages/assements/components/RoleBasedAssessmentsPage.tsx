@@ -1,7 +1,7 @@
 import React from 'react';
 import { useRole } from '@/contexts/RoleContext';
 import AssessmentListPage from './MaintainanceReportPage';
-import AssessmentReviewPage from './AssessmentReviewPage';
+import AssessmentReviewPage from './MaintainanceReviewPage';
 
 const RoleBasedAssessmentPage: React.FC = () => {
   const { currentUser } = useRole();

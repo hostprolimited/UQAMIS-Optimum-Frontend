@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
 import { ArrowLeft, FileText, Building2, AlertTriangle, CheckCircle, Clock } from "lucide-react";
+import { ColumnDef } from "@tanstack/react-table";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,9 +20,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DataTable } from "@/components/ui/data-table";
 import { useToast } from "@/hooks/use-toast";
 
-import { getMaintenanceReports, agentReviewMaintenanceReport, getFacilities } from "../core/_request";
+import { getMaintenanceReports, agentReviewMaintenanceReport, getFacilities, getSafetyReports, agentReviewSafetyReport } from "../core/_request";
 import { Facility } from "../core/_model";
 
 // --- Types ---
@@ -78,8 +80,13 @@ const AssessmentViewPage: React.FC = () => {
   const { toast } = useToast();
 
   const [assessment, setAssessment] = useState<FacilityAssessment | null>(null);
+  const [allAssessments, setAllAssessments] = useState<FacilityAssessment[]>([]);
+  const [safetyAssessments, setSafetyAssessments] = useState<FacilityAssessment[]>([]);
   const [facilityIdToName, setFacilityIdToName] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
+  const [assessmentType, setAssessmentType] = useState<'maintenance' | 'safety' | ''>('');
+  const [selectedFacility, setSelectedFacility] = useState<string>('');
+  const [selectedAssessment, setSelectedAssessment] = useState<FacilityAssessment | null>(null);
 
   // Review modal
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
@@ -109,17 +116,26 @@ const AssessmentViewPage: React.FC = () => {
 
         // Fetch assessments and find the one for this institution
         if (id) {
-          const response = await getMaintenanceReports();
-          const data = response?.data || [];
-          // Find assessments for this institution (id is institution_id)
-          const institutionAssessments = data.filter((report: any) => report.institution_id == parseInt(id));
-          if (institutionAssessments.length > 0) {
-            // Take the most recent assessment
-            const latestAssessment = institutionAssessments.sort((a: any, b: any) =>
-              new Date(b.created_at || b.assessment_date).getTime() - new Date(a.created_at || a.assessment_date).getTime()
+          // Fetch maintenance
+          const maintenanceRes = await getMaintenanceReports();
+          const maintenanceData = maintenanceRes?.data || [];
+          const institutionMaintenance = maintenanceData.filter((report: any) => report.institution_id == parseInt(id));
+          const mappedMaintenance = institutionMaintenance.map(report => mapMaintenanceReport(report, idToName));
+          setAllAssessments(mappedMaintenance);
+
+          // Fetch safety
+          const safetyRes = await getSafetyReports();
+          const safetyData = safetyRes?.data || [];
+          const institutionSafety = safetyData.filter((report: any) => report.institution_id == parseInt(id));
+          const mappedSafety = institutionSafety.map(report => mapMaintenanceReport(report, idToName));
+          setSafetyAssessments(mappedSafety);
+
+          // Take the most recent maintenance assessment for cards
+          if (mappedMaintenance.length > 0) {
+            const latestAssessment = mappedMaintenance.sort((a, b) =>
+              new Date(b.created_at || b.assessmentDate).getTime() - new Date(a.created_at || a.assessmentDate).getTime()
             )[0];
-            const mapped = mapMaintenanceReport(latestAssessment, idToName);
-            setAssessment(mapped);
+            setAssessment(latestAssessment);
           }
         }
       } catch (error) {
@@ -131,6 +147,21 @@ const AssessmentViewPage: React.FC = () => {
 
     fetchData();
   }, [id, toast]);
+
+  useEffect(() => {
+    setSelectedFacility('');
+    setSelectedAssessment(null);
+  }, [assessmentType]);
+
+  useEffect(() => {
+    if (assessmentType && selectedFacility) {
+      const assessments = assessmentType === 'maintenance' ? allAssessments : safetyAssessments;
+      const ass = assessments.find(a => a.facilityType === selectedFacility);
+      setSelectedAssessment(ass || null);
+    } else {
+      setSelectedAssessment(null);
+    }
+  }, [assessmentType, selectedFacility, allAssessments, safetyAssessments]);
 
   // Helpers for badges
   function getAverageConditionBadge(condition?: FacilityAssessment["averageCondition"]) {
@@ -177,7 +208,8 @@ const AssessmentViewPage: React.FC = () => {
         recommended_action: reviewForm.recommendedAction,
         priority: reviewForm.priority as "low" | "medium" | "high" | "urgent" | undefined,
       };
-      await agentReviewMaintenanceReport(parseInt(assessment!.id), data);
+      const reviewFunction = assessmentType === 'maintenance' ? agentReviewMaintenanceReport : agentReviewSafetyReport;
+      await reviewFunction(parseInt(selectedAssessment!.id), data);
       toast({ title: "Success", description: "Review submitted successfully" });
       setIsReviewModalOpen(false);
       // Refresh assessment data
@@ -214,6 +246,59 @@ const AssessmentViewPage: React.FC = () => {
     );
   }
 
+  const tableData = selectedAssessment ? selectedAssessment.details?.map(detail => ({
+    ...detail,
+    facilityType: selectedAssessment.facilityType,
+    school_feedback: selectedAssessment.school_feedback,
+    agent_feedback: selectedAssessment.agent_feedback,
+  })) || [] : [];
+
+  const columns: ColumnDef<typeof tableData[0]>[] = [
+    {
+      accessorKey: "part_of_building",
+      header: "Part of Building",
+    },
+    {
+      accessorKey: "facilityType",
+      header: "Facility Type",
+    },
+    {
+      accessorKey: "assessment_status",
+      header: "Condition",
+      cell: ({ row }) => {
+        const status = row.getValue("assessment_status") as string;
+        return (
+          <Badge
+            className={
+              status === 'Urgent Attention'
+                ? 'bg-red-100 text-red-800'
+                : status === 'Attention Required'
+                ? 'bg-yellow-100 text-yellow-800'
+                : 'bg-green-100 text-green-800'
+            }
+          >
+            {status}
+          </Badge>
+        );
+      },
+    },
+    {
+      accessorKey: "score",
+      header: "Score",
+      cell: ({ row }) => row.getValue("score") ?? '-',
+    },
+    {
+      accessorKey: "school_feedback",
+      header: "School Feedback",
+      cell: ({ row }) => row.getValue("school_feedback") || '-',
+    },
+    {
+      accessorKey: "agent_feedback",
+      header: "Agent Feedback",
+      cell: ({ row }) => row.getValue("agent_feedback") || '-',
+    },
+  ];
+
   return (
     <div className="container mx-auto py-6 max-w-6xl">
       {/* Header */}
@@ -230,7 +315,7 @@ const AssessmentViewPage: React.FC = () => {
 
       {/* Assessment Overview */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
-        <Card>
+        {/* <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-lg flex items-center gap-2">
               <Building2 className="h-5 w-5" />
@@ -285,96 +370,75 @@ const AssessmentViewPage: React.FC = () => {
               </div>
             </div>
           </CardContent>
+        </Card> */}
+
+      </div>
+
+      {/* Assessment Selection */}
+      <div className="mt-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Select Assessment To Review</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-end gap-4">
+              <div className="flex-1">
+                <Label htmlFor="assessment-type">Assessment Type</Label>
+                <Select value={assessmentType} onValueChange={(value: 'maintenance' | 'safety') => setAssessmentType(value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select assessment type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="maintenance">Maintenance</SelectItem>
+                    <SelectItem value="safety">Safety</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {assessmentType && (
+                <div className="flex-1">
+                  <Label htmlFor="facility-type">Facility Type</Label>
+                  <Select value={selectedFacility} onValueChange={setSelectedFacility}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select facility" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[...new Set((assessmentType === 'maintenance' ? allAssessments : safetyAssessments).map(a => a.facilityType))].map(facility => (
+                        <SelectItem key={facility} value={facility}>{facility}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              {selectedAssessment && (
+                <Button onClick={handleReview} disabled={selectedAssessment.status === 'approved' || selectedAssessment.status === 'rejected'}>
+                  {selectedAssessment.status === 'approved' || selectedAssessment.status === 'rejected' ? 'Reviewed' : 'Review'}
+                </Button>
+              )}
+            </div>
+          </CardContent>
         </Card>
-
-        {assessment.school_feedback && (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                School Feedback
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-gray-700 text-sm">{assessment.school_feedback}</p>
-            </CardContent>
-          </Card>
-        )}
-
-        {assessment.agent_feedback && (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                Agent Feedback
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-gray-700 text-sm">{assessment.agent_feedback}</p>
-            </CardContent>
-          </Card>
-        )}
       </div>
 
       {/* Assessment Details */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Maintenance Details</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full border border-gray-300 text-sm">
-              <thead className="bg-gray-100">
-                <tr>
-                  <th className="border p-2 text-left">Part of Building</th>
-                  <th className="border p-2 text-center">Condition</th>
-                  <th className="border p-2 text-center">Score</th>
-                  <th className="border p-2 text-center">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {assessment.details?.map((detail, index) => (
-                  <tr key={index} className="hover:bg-gray-50">
-                    <td className="border p-2">{detail.part_of_building}</td>
-                    <td className="border p-2 text-center">
-                      <Badge
-                        className={
-                          detail.assessment_status === 'Urgent Attention'
-                            ? 'bg-red-100 text-red-800'
-                            : detail.assessment_status === 'Attention Required'
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : 'bg-green-100 text-green-800'
-                        }
-                      >
-                        {detail.assessment_status}
-                      </Badge>
-                    </td>
-                    <td className="border p-2 text-center">{detail.score ?? '-'}</td>
-                    <td className="border p-2 text-center">
-                      <Button
-                        size="sm"
-                        onClick={handleReview}
-                        disabled={assessment.status === 'approved' || assessment.status === 'rejected'}
-                      >
-                        {assessment.status === 'approved' || assessment.status === 'rejected' ? 'Reviewed' : 'Review'}
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+      {selectedAssessment && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>{assessmentType === 'maintenance' ? 'Maintenance' : 'Safety'} Details</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <DataTable columns={columns} data={tableData} searchKey="part_of_building" />
+          </CardContent>
+        </Card>
+      )}
 
 
       {/* Review Modal */}
       <Dialog open={isReviewModalOpen} onOpenChange={setIsReviewModalOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Review Assessment - {assessment.institutionName}</DialogTitle>
+            <DialogTitle>Review {assessmentType} Assessment - {selectedAssessment?.institutionName}</DialogTitle>
             <DialogDescription>
-              Review the maintenance assessment and provide your decision.
+              Review the {assessmentType} assessment and provide your decision.
             </DialogDescription>
           </DialogHeader>
 
@@ -384,23 +448,23 @@ const AssessmentViewPage: React.FC = () => {
               <h4 className="font-medium mb-3">Assessment Summary</h4>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="font-medium">Facility:</span> {assessment.facilityType}
+                  <span className="font-medium">Facility:</span> {selectedAssessment?.facilityType}
                 </div>
                 <div>
-                  <span className="font-medium">Overall Condition:</span> {getAverageConditionBadge(assessment.averageCondition)}
+                  <span className="font-medium">Overall Condition:</span> {selectedAssessment ? getAverageConditionBadge(selectedAssessment.averageCondition) : ''}
                 </div>
                 <div>
-                  <span className="font-medium">Urgent Items:</span> {assessment.urgentItems}
+                  <span className="font-medium">Urgent Items:</span> {selectedAssessment?.urgentItems}
                 </div>
                 <div>
-                  <span className="font-medium">Score:</span> {assessment.totalScorePercentage ?? 0}%
+                  <span className="font-medium">Score:</span> {selectedAssessment?.totalScorePercentage ?? 0}%
                 </div>
               </div>
 
-              {assessment.school_feedback && (
+              {selectedAssessment?.school_feedback && (
                 <div className="mt-3">
                   <span className="font-medium">School Admin Remarks:</span>
-                  <p className="text-sm text-gray-600 mt-1">{assessment.school_feedback}</p>
+                  <p className="text-sm text-gray-600 mt-1">{selectedAssessment.school_feedback}</p>
                 </div>
               )}
             </div>

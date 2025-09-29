@@ -32,6 +32,7 @@ import {
   GraduationCap
 } from 'lucide-react';
 import { LucideIcon } from 'lucide-react';
+import { ChildProcess } from 'child_process';
 
 // Drawer width
 const drawerWidth = 280; // Increased from 240 to 280
@@ -135,19 +136,27 @@ const navigationItems = [
     icon: ClipboardCheck,
     page: 'assessment'
   },
-
-  {
-    title: 'Maintainance Review', 
-    url: 'assessments/review', 
-    icon: ClipboardCheck, 
-    page: 'maintenance_review'
-  },
-  {
-    title: 'Safety Review', 
-    url: 'safety/review', 
-    icon: ClipboardCheck, 
-    page: 'safety_review'
-  },
+  // {
+  //   title: 'Assessments Review',
+  //   children: [
+  //     { title: 'Facility Review', url: '/assessments/review', icon: ClipboardCheck },
+  //     { title: 'Safety Review', url: '/safety/review', icon: ClipboardCheck },
+  //   ],
+  //   icon: ClipboardCheck,
+  //   page: 'review'
+  // },
+  // {
+  //   title: 'Maintainance Review', 
+  //   url: 'assessments/review', 
+  //   icon: ClipboardCheck, 
+  //   page: 'maintenance_review'
+  // },
+  // {
+  //   title: 'Safety Review', 
+  //   url: 'safety/review', 
+  //   icon: ClipboardCheck, 
+  //   page: 'safety_review'
+  // },
   {
     title: 'School Metrics', 
     url: '/school-metrics',
@@ -156,6 +165,11 @@ const navigationItems = [
   },
   { 
     title: 'Reports', 
+    children: [
+      // { title: 'Facility Reports', url: '/reports', icon: FileText },
+      { title: 'Safety Reports', url: '/safety/reports', icon: FileText },
+      { title: 'Maintenance Reports', url: '/maintenance/reports', icon: FileText },
+    ],
     url: '/reports', 
     icon: FileText, 
     page: 'reports' 

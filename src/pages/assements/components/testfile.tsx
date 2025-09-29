@@ -1,835 +1,230 @@
-// import React, { useState, useRef, useEffect } from 'react';
-// import { useNavigate } from 'react-router-dom';
-// import { useForm } from 'react-hook-form';
-// import { zodResolver } from '@hookform/resolvers/zod';
-// import * as z from 'zod';
-// import { ArrowLeft, Plus, Upload, X, FileText, Users } from 'lucide-react';
-
+// import React, { useEffect, useState } from 'react';
+// import { getInstitutions } from '../core/_requests';
 // import { Button } from '@/components/ui/button';
-// import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-// import { Input } from '@/components/ui/input';
-// import { Textarea } from '@/components/ui/textarea';
-// import {
-//   Form,
-//   FormControl,
-//   FormField,
-//   FormItem,
-//   FormLabel,
-//   FormMessage,
-// } from '@/components/ui/form';
-// import {
-//   Dialog,
-//   DialogContent,
-//   DialogHeader,
-//   DialogTitle,
-// } from '@/components/ui/dialog';
-// import {
-//   Tabs,
-//   TabsContent,
-//   TabsList,
-//   TabsTrigger,
-// } from '@/components/ui/tabs';
-// import { useToast } from '@/hooks/use-toast';
+// import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+// import { Edit, Trash2, Plus, Download, Eye } from 'lucide-react';
+// import Swal from 'sweetalert2';
+// import withReactContent from 'sweetalert2-react-content';
+// import api from '@/utils/api';
+// import { useNavigate } from 'react-router-dom';
 
-// import { getFacilities, createMaintenanceAssessment, createSafetyAssessment } from "../core/_request";
-// import { Facility } from "../core/_model";
-// import ClassSafetyForm from './SafetyFormPage';
-// import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-// import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-// import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
-// import { Checkbox } from '@/components/ui/checkbox';
-// import { ChevronDown } from 'lucide-react';
+// const MySwal = withReactContent(Swal);
 
-// // Facility type mappings for consistent naming
-// const FACILITY_TYPE_MAPPINGS: { [key: string]: string } = {
-//   'class room': 'classroom',
-//   'class rooms': 'classroom',
-//   'classroom': 'classroom',
-//   'classrooms': 'classroom',
-//   'dormitory': 'dormitory',
-//   'dormitories': 'dormitory',
-//   'laboratory': 'laboratory',
-//   'laboratories': 'laboratory',
-//   'lab': 'laboratory',
-//   'labs': 'laboratory',
-//   'toilet': 'toilet',
-//   'toilets': 'toilet',
-//   'washroom': 'toilet',
-//   'washrooms': 'toilet',
-//   'library': 'library',
-//   'libraries': 'library',
-//   'office': 'office',
-//   'offices': 'office',
-//   'dining hall': 'dining_hall',
-//   'dining halls': 'dining_hall',
-//   'dining_hall': 'dining_hall',
-//   'compound': 'compound',
-//   'grounds': 'compound',
-//   'school compound': 'compound'
-// };
-
-// // Facility parts configuration
-// const FACILITY_PARTS = {
-//   classroom: [
-//     'Outside wall',
-//     'Verandah',
-//     'Roof',
-//     'Door',
-//     'Floor',
-//     'Inside wall',
-//     'Blackboard',
-//     'Ceiling'
-//   ],
-//   dormitory: [
-//     'Outside wall',
-//     'Flower beds',
-//     'Roof',
-//     'Door',
-//     'Window panes',
-//     'Window lock',
-//     'Floor',
-//     'Inside wall',
-//     'Hanging lines',
-//     'Curtains',
-//     'Ceiling'
-//   ],
-//   laboratory: [
-//     'Outside wall',
-//     'Gas taps',
-//     'Roof',
-//     'Door',
-//     'Door lock',
-//     'Window panes',
-//     'Window lock',
-//     'Floor',
-//     'Inside wall',
-//     'Water taps',
-//     'Cupboards',
-//     'Ceiling',
-//     'Black board',
-//     'Tables',
-//     'Stools'
-//   ],
-//   toilet: [
-//     'Outside wall',
-//     'Drainage',
-//     'Roof',
-//     'Door',
-//     'Door lock',
-//     'Window panes',
-//     'Window lock',
-//     'Floor',
-//     'Inside wall'
-//   ],
-//   library: [
-//     'Outside wall',
-//     'Verandah',
-//     'Roof',
-//     'Door',
-//     'Door lock',
-//     'Window panes',
-//     'Window lock',
-//     'Floor',
-//     'Inside wall',
-//     'Shelves',
-//     'Tables/Chairs',
-//     'Ceiling'
-//   ],
-//   office: [
-//     'Outside wall',
-//     'Verandah',
-//     'Roof',
-//     'Door',
-//     'Door lock',
-//     'Window panes',
-//     'Window lock',
-//     'Floor',
-//     'Inside wall',
-//     'Tables/Chairs',
-//     'Ceiling'
-//   ],
-//   dining_hall: [
-//     'Outside wall',
-//     'Flower beds',
-//     'Roof',
-//     'Door',
-//     'Door lock',
-//     'Window panes',
-//     'Window lock',
-//     'Floor',
-//     'Inside wall',
-//     'Tables',
-//     'Seats',
-//     'Ceiling'
-//   ],
-//   compound: [
-//     'Lawns',
-//     'Flowers',
-//     'Ornamentals',
-//     'Hedges',
-//     'Trees',
-//     'Fences',
-//     'Walk ways',
-//     'Pavements',
-//     'Road'
-//   ],
-//   ICTLab: [
-//     'Outside wall',
-//     'Verandah',
-//     'Roof',
-//     'Door',
-//     'Door lock',
-//     'Window panes',
-//     'Window lock',
-//     'Floor',
-//     'Inside wall',
-//     'Tables/Chairs',
-//     'Ceiling'
-//   ],
-//   SportsFacilities: [
-//     'Outside wall',
-//     'Verandah',
-//     'Roof',
-//     'Door',
-//     'Door lock',
-//     'Window panes',
-//     'Window lock',
-//     'Floor',
-//     'Inside wall',
-//     'Tables/Chairs',
-//     'Ceiling'
-//   ]
-
-// };
-
-// // Facility assessment schema
-// const facilityAssessmentSchema = z.object({
-//   institution_id: z.number(),
-//   facility_id: z.number(),
-//   class: z.string().min(1, 'Class is required'),
-//   status: z.enum(['pending', 'in_progress', 'completed']).default('pending'),
-//   details: z.array(z.object({
-//     part_of_building: z.string(),
-//     assessment_status: z.enum(['Urgent Attention', 'Attention Required', 'Good'], {
-//       required_error: 'Please select a condition'
-//     })
-//   })),
-//   school_feedback: z.string().min(1, 'School feedback is required'),
-//   agent_feedback: z.string().optional(),
-//   files: z.array(z.instanceof(File)).optional(),
-//   grade: z.string().optional(),
-//   streams: z.array(z.string()).optional(),
-// });
-
-// type FacilityAssessmentData = z.infer<typeof facilityAssessmentSchema>;
-
-// // Helper function to get facility parts based on facility type
-// const getFacilityParts = (facilityType: string): string[] => {
-//   // Clean and normalize the input facility type
-//   const normalizedInput = facilityType.toLowerCase().trim();
-//   // Get the standard type from our mappings
-//   const standardType = FACILITY_TYPE_MAPPINGS[normalizedInput] || normalizedInput;
-//   const parts = FACILITY_PARTS[standardType as keyof typeof FACILITY_PARTS];
-//   if (!parts) {
-//     console.warn(`No parts defined for facility type: ${facilityType} (mapped to: ${standardType})`);
-//     return [];
-//   }
-//   return parts || [];
-// };
-
-// const AssessmentAddPage: React.FC = () => {
-//   const navigate = useNavigate();
-//   const { toast } = useToast();
-//   const [isModalOpen, setIsModalOpen] = useState(false);
-//   const [selectedFacility, setSelectedFacility] = useState<Facility | null>(null);
-//   const [facilityParts, setFacilityParts] = useState<string[]>([]);
-//   const [assessments, setAssessments] = useState<any[]>([]);
-//   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
-//   const [facilities, setFacilities] = useState<Facility[]>([]);
-//   const fileInputRef = useRef<HTMLInputElement>(null);
-
-//   // Safety data
-//   const initialSafetyData = [
-//     { id: 1, part: "Door opens outside", attentionRequired: false, good: false },
-//     { id: 2, part: "Windows open outside", attentionRequired: false, good: false },
-//     { id: 3, part: "Windows have no grills", attentionRequired: false, good: false },
-//     { id: 4, part: "Spacing between desks adequate", attentionRequired: false, good: false },
-//     { id: 5, part: "At least 5 students in class are trained to evacuate the rest in case of emergency", attentionRequired: false, good: false },
-//     { id: 6, part: "The class have undertaken an evacuation drill in case of emergency", attentionRequired: false, good: false },
-//     { id: 7, part: "At least five students in class have basic first aid skills", attentionRequired: false, good: false },
-//     { id: 8, part: "The floor provides appropriate grip", attentionRequired: false, good: false },
-//     { id: 9, part: "The space immediately outside the classroom provides easy movement in case of emergency", attentionRequired: false, good: false },
-//     { id: 10, part: "There is a clear display of action expected in case of emergency", attentionRequired: false, good: false },
-//     { id: 11, part: "There is a clear display of assembly point in case of emergency", attentionRequired: false, good: false },
-//     { id: 12, part: "There is a fire extinguisher within close proximity from the classroom", attentionRequired: false, good: false },
-//     { id: 13, part: "At least five students are trained on how to handle the available fire extinguisher", attentionRequired: false, good: false },
-//   ];
-//   const [safetyData, setSafetyData] = useState(initialSafetyData);
-
-//   // Fetch facilities from API
-//   useEffect(() => {
-//     const fetchFacilities = async () => {
-//       try {
-//         const response = await getFacilities();
-//         setFacilities(response.data || []); // Access the data property of the APIResponse
-//       } catch (error) {
-//         toast({
-//           title: "Error",
-//           description: "Failed to load facilities.",
-//           variant: "destructive",
-//         });
-//         setFacilities([]); // Set empty array as fallback
-//       }
-//     };
-//     fetchFacilities();
-//   }, [toast]);
-
-//   // Initialize form with empty values
-//   const facilityForm = useForm<FacilityAssessmentData>({
-//     resolver: zodResolver(facilityAssessmentSchema),
-//     defaultValues: {
-//       institution_id: 1,
-//       facility_id: 0,
-//       class: '',
-//       status: 'pending',
-//       details: [],
-//       school_feedback: '',
-//       agent_feedback: '',
-//       files: [],
-//       grade: '',
-//       streams: [],
-//     }
-//   });
-  
-//   // Update form when a facility is selected
-//   useEffect(() => {
-//     if (selectedFacility) {
-//       const parts = getFacilityParts(selectedFacility.name);
-//       setFacilityParts(parts);
-//       facilityForm.reset({
-//         institution_id: selectedFacility.institution_id || 1,
-//         facility_id: selectedFacility.id,
-//         class: '',
-//         status: 'pending',
-//         details: parts.map(name => ({
-//           part_of_building: name,
-//           assessment_status: ''
-//         })),
-//         school_feedback: '',
-//         agent_feedback: '',
-//         files: [],
-//         grade: '',
-//         streams: [],
-//       });
-//     }
-//   }, [selectedFacility]);
-
-//   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-//     const files = Array.from(event.target.files || []);
-//     const newFiles = [...uploadedFiles, ...files];
-//     setUploadedFiles(newFiles);
-//     facilityForm.setValue('files', newFiles);
-//   };
-
-//   const removeFile = (index: number) => {
-//     const newFiles = uploadedFiles.filter((_, i) => i !== index);
-//     setUploadedFiles(newFiles);
-//     facilityForm.setValue('files', newFiles);
-//   };
-
-//   const handleDragOver = (event: React.DragEvent) => {
-//     event.preventDefault();
-//   };
-
-//   const handleDrop = (event: React.DragEvent) => {
-//     event.preventDefault();
-//     const files = Array.from(event.dataTransfer.files);
-//     const newFiles = [...uploadedFiles, ...files];
-//     setUploadedFiles(newFiles);
-//     facilityForm.setValue('files', newFiles);
-//   };
-
-//   const openAssessmentModal = (facility: Facility) => {
-//     setSelectedFacility(facility);
-    
-//     // Get the parts for this facility type
-//     const facilityParts = getFacilityParts(facility.name);
-//     setFacilityParts(facilityParts);
-    
-//     // Initialize form with default values for each part
-//       facilityForm.reset({ 
-//         facility_id: facility.id,
-//         details: facilityParts.map(name => ({ part_of_building: name, assessment_status: 'Good' })),
-//         files: []
-//       });    setUploadedFiles([]);
-//     setIsModalOpen(true);
-//   };
-
-//   const handleFacilityAssessmentSubmit = async (data: FacilityAssessmentData) => {
-//     try {
-//       if (!selectedFacility) return;
-
-//       let maintenanceSubmitted = false;
-//       let safetySubmitted = false;
-
-//       // Check if maintenance has changes
-//       const hasMaintenanceChanges = data.details.some(detail => detail.assessment_status !== 'Good');
-
-//       // Check if safety has changes
-//       const hasSafetyChanges = safetyData.some(item => item.attentionRequired || item.good);
-
-//       if (hasMaintenanceChanges) {
-//         // Create the assessment input object matching MaintenanceAssessmentInput type
-//         const assessmentInput = {
-//           institution_id: selectedFacility.institution_id || 1,
-//           institution_name: 'Institution', // Add required institution_name
-//           facility_id: data.facility_id,
-//           class: data.class ? [data.class] : [],
-//           status: 'pending' as 'pending',
-//           details: data.details.map(detail => ({
-//             part_of_building: detail.part_of_building,
-//             assessment_status: detail.assessment_status
-//           })),
-//           school_feedback: data.school_feedback,
-//           agent_feedback: data.agent_feedback,
-//           files: uploadedFiles,
-//           grade: data.grade,
-//           streams: data.streams,
-//         };
-
-//         const response = await createMaintenanceAssessment(assessmentInput);
-
-//         if (response && response.status === 'error') {
-//           toast({
-//             title: 'Maintenance Submission Error',
-//             description: response.message || 'Failed to submit maintenance assessment',
-//             variant: 'destructive',
-//           });
-//           return;
-//         }
-//         maintenanceSubmitted = true;
-//       }
-
-//       if (hasSafetyChanges) {
-//         // Create safety assessment input
-//         const safetyInput = {
-//           institution_id: selectedFacility.institution_id || 1,
-//           institution_name: 'Institution',
-//           facility_id: data.facility_id,
-//           class: data.class ? [data.class] : [],
-//           status: 'pending' as 'pending',
-//           details: safetyData.filter(item => item.attentionRequired).map(item => ({
-//             part_of_building: item.part,
-//             assessment_status: 'Attention Required' as 'Attention Required'
-//           })),
-//           school_feedback: data.school_feedback,
-//           agent_feedback: data.agent_feedback,
-//           files: uploadedFiles,
-//         };
-
-//         const safetyResponse = await createSafetyAssessment(safetyInput);
-
-//         if (safetyResponse && safetyResponse.status === 'error') {
-//           toast({
-//             title: 'Safety Submission Error',
-//             description: safetyResponse.message || 'Failed to submit safety assessment',
-//             variant: 'destructive',
-//           });
-//           return;
-//         }
-//         safetySubmitted = true;
-//       }
-
-//       if (!maintenanceSubmitted && !safetySubmitted) {
-//         toast({
-//           title: 'No Changes',
-//           description: 'No assessments were submitted as no changes were made.',
-//           variant: 'default',
-//         });
-//         return;
-//       }
-
-//       // Update the assessments list with the new assessment
-//       const newAssessment = {
-//         id: Date.now().toString(),
-//         facilityId: data.facility_id,
-//         facilityType: selectedFacility.name,
-//         assessmentDate: new Date().toISOString(),
-//         details: data.details,
-//       };
-
-//       setAssessments(prev => [newAssessment, ...prev]);
-
-//       const submittedTypes = [];
-//       if (maintenanceSubmitted) submittedTypes.push('Maintenance');
-//       if (safetySubmitted) submittedTypes.push('Safety');
-
-//       toast({
-//         title: 'Assessment Submitted',
-//         description: `${submittedTypes.join(' and ')} assessment${submittedTypes.length > 1 ? 's' : ''} for ${selectedFacility.name} submitted successfully!`,
-//         variant: 'default',
-//       });
-
-//       setIsModalOpen(false);
-//       setUploadedFiles([]);
-//       facilityForm.reset();
-//       setSelectedFacility(null);
-//       setSafetyData(initialSafetyData);
-//     } catch (error: any) {
-//       // Try to extract backend error message
-//       let message = 'Failed to submit assessment';
-//       if (error?.response?.data?.message) {
-//         message = error.response.data.message;
-//       } else if (error?.message) {
-//         message = error.message;
-//       }
-//       toast({
-//         title: 'Submission Error',
-//         description: message,
-//         variant: 'destructive',
-//       });
-//     }
-//   };
-
-// const streamNames = [
-//   'Blue',
-//   'Green',
-//   'Yellow',
-//   'East',
-//   'West',
-//   'North',
-//   'South',
-// ];
-
-// interface StreamSelectProps {
-//   onChange: (selected: string[]) => void;
-//   value: string[];
+// interface Institution {
+//   id: number;
+//   name: string;
+//   county: string;
+//   subcounty: string;
+//   ward?: string;
+//   address?: string;
+//   phone_number?: string;
+//   email?: string;
+//   status?: string;
+//   type?: string;
+//   gender_based?: string;
+//   boarding_type?: string;
+//   total_students?: number;
+//   created_at?: string;
+//   updated_at?: string;
 // }
 
-// const StreamSelect: React.FC<StreamSelectProps> = ({ onChange, value }) => {
-//   const [open, setOpen] = useState(false);
+// const OnboardedSchoolList: React.FC = () => {
+//   const [institutions, setInstitutions] = useState<Institution[]>([]);
+//   const [loading, setLoading] = useState(true);
+//   const [sortKey, setSortKey] = useState<keyof Institution>('name');
+//   const [sortAsc, setSortAsc] = useState(true);
+//   const [selected, setSelected] = useState<number[]>([]);
+//   const [search, setSearch] = useState('');
+//   const [countyFilter, setCountyFilter] = useState('');
+//   const navigate = useNavigate();
 
-//   const handleSelect = (stream: string) => {
-//     const newValue = value.includes(stream) ? value.filter(s => s !== stream) : [...value, stream];
-//     onChange(newValue);
-//   };
-
-//   return (
-//     <Popover open={open} onOpenChange={setOpen}>
-//       <PopoverTrigger asChild>
-//         <Button variant="outline" className="w-full justify-between">
-//           {value.length > 0 ? `${value.length} stream${value.length > 1 ? 's' : ''} selected` : "Select streams"}
-//           <ChevronDown className="ml-2 h-4 w-4" />
-//         </Button>
-//       </PopoverTrigger>
-//       <PopoverContent className="w-full p-0">
-//         <Command>
-//           <CommandInput placeholder="Search streams..." />
-//           <CommandEmpty>No streams found.</CommandEmpty>
-//           <CommandGroup className="max-h-64 overflow-y-auto">
-//             {streamNames.map((name) => (
-//               <CommandItem key={name} onSelect={() => handleSelect(name)}>
-//                 <Checkbox
-//                   checked={value.includes(name)}
-//                   onCheckedChange={() => handleSelect(name)}
-//                   className="mr-2"
-//                 />
-//                 {name}
-//               </CommandItem>
-//             ))}
-//           </CommandGroup>
-//         </Command>
-//       </PopoverContent>
-//     </Popover>
-//   );
+//   const fetchInstitutions = async () => {
+//   setLoading(true);
+//   try {
+//     const data = await getInstitutions();
+//     // If your API returns { institutions: [...] }
+//     setInstitutions(Array.isArray(data.institutions) ? data.institutions : []);
+//   } catch (e) {
+//     setInstitutions([]);
+//   } finally {
+//     setLoading(false);
+//   }
 // };
 
-//   const getAssessmentCount = (facilityId: string) => {
-//     return assessments.filter(assessment => assessment.facilityId === facilityId).length;
+//   useEffect(() => {
+//     fetchInstitutions();
+//   }, []);
+
+//   const handleSort = (key: keyof Institution) => {
+//     if (sortKey === key) {
+//       setSortAsc(!sortAsc);
+//     } else {
+//       setSortKey(key);
+//       setSortAsc(true);
+//     }
 //   };
 
+//   const filteredInstitutions = institutions.filter(inst => {
+//     const matchesSearch =
+//       inst.name.toLowerCase().includes(search.toLowerCase()) ||
+//       inst.county.toLowerCase().includes(search.toLowerCase()) ||
+//       (inst.subcounty?.toLowerCase().includes(search.toLowerCase()) ?? false);
+//     const matchesCounty = countyFilter ? inst.county === countyFilter : true;
+//     return matchesSearch && matchesCounty;
+//   });
+
+//   const sortedInstitutions = [...filteredInstitutions].sort((a, b) => {
+//     const aValue = a[sortKey] || '';
+//     const bValue = b[sortKey] || '';
+//     if (aValue < bValue) return sortAsc ? -1 : 1;
+//     if (aValue > bValue) return sortAsc ? 1 : -1;
+//     return 0;
+//   });
+
+//   const handleSelect = (id: number) => {
+//     setSelected((prev) => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+//   };
+
+//   const handleDelete = async (id: number) => {
+//     const result = await MySwal.fire({
+//       title: 'Are you sure?',
+//       text: 'This will permanently delete the institution!',
+//       icon: 'warning',
+//       showCancelButton: true,
+//       confirmButtonText: 'Yes, delete it!',
+//       cancelButtonText: 'Cancel',
+//     });
+//     if (result.isConfirmed) {
+//       try {
+//         await api.delete(`/institutions/${id}`);
+//         setInstitutions(institutions.filter(inst => inst.id !== id));
+//         MySwal.fire('Deleted!', 'Institution has been deleted.', 'success');
+//       } catch (e) {
+//         MySwal.fire('Error', 'Failed to delete institution.', 'error');
+//       }
+//     }
+//   };
+
+//   // Dummy export handlers (replace with real export logic as needed)
+//   const handleExport = (type: 'pdf' | 'excel' | 'docs') => {
+//     MySwal.fire('Export', `Exporting as ${type.toUpperCase()} (not implemented)`, 'info');
+//   };
+
+//   // Get unique counties for filter dropdown
+//   const countyOptions = Array.from(new Set(institutions.map(i => i.county))).filter(Boolean);
+
 //   return (
-//     <div className="container mx-auto py-6">
-//       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-//         <div className="flex-1 min-w-0">
-//           <h1 className="text-3xl font-bold truncate">Facility Assessment</h1>
-//           <p className="text-muted-foreground mt-1">Select a facility type to begin assessment</p>
+//     <div className="space-y-6">
+//       {/* Content Header */}
+//       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
+//         <div>
+//           <h1 className="text-2xl font-bold text-foreground mb-1">Institutions</h1>
+//           <p className="text-muted-foreground text-sm">Browse, filter, and manage all onboarded schools and institutions.</p>
 //         </div>
-//         <Button
-//           variant="outline"
-//           onClick={() => navigate('/maintenance/assessment')}
-//           className="flex-shrink-0 w-full sm:w-auto mt-2 sm:mt-0"
+//         <div className="flex gap-2 items-center">
+//           <Button className="bg-primary text-primary-foreground flex items-center" onClick={() => navigate('/onboard')}>
+//             <Plus className="h-4 w-4 mr-1" /> Onboard School
+//           </Button>
+//           <div className="relative">
+//             <Button variant="outline" className="flex items-center" id="export-dropdown">
+//               <Download className="h-4 w-4 mr-1" /> Export
+//             </Button>
+//             <div className="absolute right-0 mt-2 w-32 bg-white border rounded shadow z-10 hidden group-hover:block" style={{ minWidth: 120 }}>
+//               <button className="block w-full text-left px-4 py-2 hover:bg-muted" onClick={() => handleExport('pdf')}>PDF</button>
+//               <button className="block w-full text-left px-4 py-2 hover:bg-muted" onClick={() => handleExport('excel')}>Excel</button>
+//               <button className="block w-full text-left px-4 py-2 hover:bg-muted" onClick={() => handleExport('docs')}>Docs</button>
+//             </div>
+//           </div>
+//         </div>
+//       </div>
+
+//       {/* Filters */}
+//       <div className="flex flex-col md:flex-row gap-3 mb-4 items-center">
+//         <input
+//           type="text"
+//           placeholder="Search by name, county, or subcounty..."
+//           value={search}
+//           onChange={e => setSearch(e.target.value)}
+//           className="border rounded px-3 py-2 w-full md:w-64"
+//         />
+//         <select
+//           value={countyFilter}
+//           onChange={e => setCountyFilter(e.target.value)}
+//           className="border rounded px-3 py-2 w-full md:w-48"
 //         >
-//           <ArrowLeft className="mr-2 h-4 w-4" />
-//           Back to Reports
-//         </Button>
+//           <option value="">All Counties</option>
+//           {countyOptions.map((county) => {
+//             return <option key={county} value={county}>{county}</option>;
+//           })}
+//         </select>
 //       </div>
 
-//   {/* Facility Cards Grid */}
-//   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-10">
-//         {facilities.map((facility) => {
-//           const assessmentCount = getAssessmentCount(facility.id.toString());
-//           return (
-//             <Card key={facility.id} className={`${facility.color ?? "bg-white hover:bg-gray-50 border-gray-200"} cursor-pointer transition-all hover:shadow-lg border-2`}>
-//               <CardHeader className="pb-3">
-//                 <CardTitle className="text-xl font-semibold text-gray-800">{facility.name}</CardTitle>
-//                 <p className="text-sm text-gray-600 leading-relaxed">{facility.description}</p>
-//                 <div className="flex items-center justify-between pt-2">
-//                   <span className="text-xs text-gray-500">{facility.statistics}</span>
-//                   {assessmentCount > 0 && (
-//                     <div className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
-//                       {assessmentCount} completed
+//       <div className="overflow-x-auto rounded-lg shadow bg-white">
+//         <Table>
+//           <TableHeader>
+//             <TableRow>
+//               <TableHead>
+//                 <input
+//                   type="checkbox"
+//                   checked={selected.length === sortedInstitutions.length && sortedInstitutions.length > 0}
+//                   onChange={e => setSelected(e.target.checked ? sortedInstitutions.map(i => i.id) : [])}
+//                 />
+//               </TableHead>
+//               <TableHead onClick={() => handleSort('name')} className="cursor-pointer">Name {sortKey === 'name' && (sortAsc ? '▲' : '▼')}</TableHead>
+//               <TableHead onClick={() => handleSort('county')} className="cursor-pointer">County {sortKey === 'county' && (sortAsc ? '▲' : '▼')}</TableHead>
+//               <TableHead onClick={() => handleSort('subcounty')} className="cursor-pointer">Subcounty {sortKey === 'subcounty' && (sortAsc ? '▲' : '▼')}</TableHead>
+//               <TableHead>Type</TableHead>
+//               <TableHead>Gender</TableHead>
+//               <TableHead>Status</TableHead>
+//               <TableHead>Actions</TableHead>
+//             </TableRow>
+//           </TableHeader>
+//           <TableBody>
+//             {loading ? (
+//               <TableRow>
+//                 <TableCell colSpan={8} className="text-center">Loading...</TableCell>
+//               </TableRow>
+//             ) : sortedInstitutions.length === 0 ? (
+//               <TableRow>
+//                 <TableCell colSpan={8} className="text-center">No institutions found.</TableCell>
+//               </TableRow>
+//             ) : (
+//               sortedInstitutions.map(inst => (
+//                 <TableRow key={inst.id} className={selected.includes(inst.id) ? 'bg-muted/30' : ''}>
+//                   <TableCell>
+//                     <input
+//                       type="checkbox"
+//                       checked={selected.includes(inst.id)}
+//                       onChange={() => handleSelect(inst.id)}
+//                     />
+//                   </TableCell>
+//                   <TableCell>{inst.name}</TableCell>
+//                   <TableCell>{inst.county}</TableCell>
+//                   <TableCell>{inst.subcounty}</TableCell>
+//                   <TableCell>{inst.type}</TableCell>
+//                   <TableCell>{inst.gender_based}</TableCell>
+//                   <TableCell>{inst.status}</TableCell>
+//                   <TableCell>
+//                     <div className="flex space-x-2">
+//                       <Button variant="ghost" size="sm" onClick={() => navigate(`/assessments/view/${inst.id}`)} title="View Assessment">
+//                         <Eye className="h-4 w-4" />
+//                       </Button>
+//                       <Button variant="ghost" size="sm" onClick={() => {/* TODO: update logic */}}>
+//                         <Edit className="h-4 w-4" />
+//                       </Button>
+//                       <Button variant="ghost" size="sm" onClick={() => handleDelete(inst.id)}>
+//                         <Trash2 className="h-4 w-4 text-destructive" />
+//                       </Button>
 //                     </div>
-//                   )}
-//                 </div>
-//               </CardHeader>
-//               <CardContent className="pt-0">
-//                 <Button 
-//                   onClick={() => openAssessmentModal(facility)}
-//                   className="w-full bg-[#010162] hover:bg-[#010162]/90 text-white"
-//                   variant="default"
-//                 >
-//                   <Plus className="mr-2 h-4 w-4" />
-//                   Add New Assessment
-//                 </Button>
-//               </CardContent>
-//             </Card>
-//           );
-//         })}
+//                   </TableCell>
+//                 </TableRow>
+//               ))
+//             )}
+//           </TableBody>
+//         </Table>
 //       </div>
-
-      
-
-//       {/* Assessment Modal */}
-//       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-//         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-//           <DialogHeader>
-//             <DialogTitle>
-//               {selectedFacility?.name} Assessment
-//             </DialogTitle>
-//           </DialogHeader>
-          
-//           {selectedFacility && (
-//             <Form {...facilityForm}>
-//               <form onSubmit={facilityForm.handleSubmit(handleFacilityAssessmentSubmit)}>
-//                 <Tabs defaultValue="maintenance" className="space-y-4">
-//                   <TabsList>
-//                     <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
-//                     <TabsTrigger value="safety">Safety</TabsTrigger>
-//                   </TabsList>
-//                   <TabsContent value="maintenance">
-//                     <div className="max-w-5xl mx-auto bg-white shadow-lg rounded-xl p-6 mt-10">
-//                       <h2 className="text-xl font-semibold text-center mb-6 text-gray-700">MAINTENANCE REPORT</h2>
-//                       <table className="min-w-full border border-gray-300 text-sm">
-//                         <thead className="bg-gray-100">
-//                           <tr>
-//                             <th className="border px-4 py-2 text-left">S/No</th>
-//                             <th className="border px-4 py-2 text-left">Part of Building</th>
-//                             <th className="border px-4 py-2 text-center">Urgent Attention</th>
-//                             <th className="border px-4 py-2 text-center">Attention</th>
-//                             <th className="border px-4 py-2 text-center">Good</th>
-//                           </tr>
-//                         </thead>
-//                         <tbody>
-//                           {facilityParts.map((part, index) => (
-//                             <tr key={index}>
-//                               <td className="border px-4 py-2">{index + 1}</td>
-//                               <td className="border px-4 py-2">{part}</td>
-//                               {['urgent', 'attention', 'good'].map((condition) => (
-//                                 <td key={condition} className="border px-4 py-2 text-center">
-//                                   <FormField
-//                                     control={facilityForm.control}
-//                                     name={`details.${index}.assessment_status`}
-//                                     render={({ field }) => (
-//                                       <FormItem className="flex justify-center">
-//                                         <FormControl>
-//                                           <input
-//                                             type="radio"
-//                                             value={condition}
-//                                             checked={field.value === (condition === 'urgent' ? 'Urgent Attention' : condition === 'attention' ? 'Attention Required' : 'Good')}
-//                                             onChange={() => {
-//                                               const updatedDetails = [...facilityForm.getValues().details];
-//                                               updatedDetails[index] = {
-//                                                 part_of_building: part,
-//                                                 assessment_status: condition === 'urgent' ? 'Urgent Attention' : condition === 'attention' ? 'Attention Required' : 'Good'
-//                                               };
-//                                               facilityForm.setValue('details', updatedDetails);
-//                                             }}
-//                                             className={`h-4 w-4 ${condition === 'urgent' && field.value === 'Urgent Attention' ? 'text-red-600' : ''}`}
-//                                             style={condition === 'urgent' && field.value === 'Urgent Attention' ? { accentColor: '#dc2626' } : {}}
-//                                           />
-//                                         </FormControl>
-//                                       </FormItem>
-//                                     )}
-//                                   />
-//                                 </td>
-//                               ))}
-//                             </tr>
-//                           ))}
-//                         </tbody>
-//                       </table>
-//                     </div>
-//                   </TabsContent>
-//                   <TabsContent value="safety">
-//                     <ClassSafetyForm safetyData={safetyData} onSafetyDataChange={setSafetyData} />
-//                   </TabsContent>
-//                   {/* Grade and Stream Selects */}
-//                   {selectedFacility?.name.toLowerCase().includes('class') && (
-//                     <div className="flex gap-4">
-//                       {/* classes */}
-//                       <FormField
-//                         control={facilityForm.control}
-//                         name="class"
-//                         render={({ field }) => (
-//                           <FormItem>
-//                          <FormLabel className="flex items-center space-x-2 w-full">
-//                            <Users className="h-8 w-12 center" />
-//                             <span>Enter Class</span>
-//                             </FormLabel>
-//                           <FormControl>
-//                             <Input
-//                           placeholder="e.g., Form 1 East"
-//                             value={field.value ?? ''}
-//                               onChange={field.onChange}
-//                               className="w-full"
-//                                />
-//                              </FormControl>
-//                            <FormMessage />
-//                               </FormItem>
-//                                 )}
-//                             />
-//                     </div>
-//                   )}
-//                   {/* File Upload Section */}
-//                   <div className="space-y-4">
-//                     <FormField
-//                       control={facilityForm.control}
-//                       name="files"
-//                       render={({ field }) => (
-//                         <FormItem>
-//                           <FormLabel className="text-base font-semibold">Upload Supporting Documents</FormLabel>
-//                           <FormControl>
-//                             <div className="space-y-4">
-//                               {/* File Upload Area */}
-//                               <div
-//                                 onDragOver={handleDragOver}
-//                                 onDrop={handleDrop}
-//                                 className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors cursor-pointer"
-//                                 onClick={() => fileInputRef.current?.click()}
-//                               >
-//                                 <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-//                                 <p className="text-lg font-medium text-gray-700">Drop files here or click to upload</p>
-//                                 <p className="text-sm text-gray-500 mt-1">Support for multiple files (PDF, DOC, JPG, PNG)</p>
-//                                 <input
-//                                   ref={fileInputRef}
-//                                   type="file"
-//                                   multiple
-//                                   accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif"
-//                                   onChange={handleFileUpload}
-//                                   className="hidden"
-//                                 />
-//                               </div>
-
-//                               {/* Uploaded Files List */}
-//                               {uploadedFiles.length > 0 && (
-//                                 <div className="space-y-2">
-//                                   <h4 className="font-medium text-gray-700">Uploaded Files ({uploadedFiles.length})</h4>
-//                                   <div className="space-y-2 max-h-32 overflow-y-auto">
-//                                     {uploadedFiles.map((file, index) => (
-//                                       <div key={index} className="flex items-center justify-between bg-gray-50 p-3 rounded-md">
-//                                         <div className="flex items-center space-x-3">
-//                                           <FileText className="h-5 w-5 text-gray-500" />
-//                                           <div>
-//                                             <p className="text-sm font-medium text-gray-700">{file.name}</p>
-//                                             <p className="text-xs text-gray-500">
-//                                               {(file.size / 1024 / 1024).toFixed(2)} MB
-//                                             </p>
-//                                           </div>
-//                                         </div>
-//                                         <Button
-//                                           type="button"
-//                                           variant="ghost"
-//                                           size="sm"
-//                                           onClick={() => removeFile(index)}
-//                                           className="text-red-500 hover:text-red-700 hover:bg-red-50"
-//                                         >
-//                                           <X className="h-4 w-4" />
-//                                         </Button>
-//                                       </div>
-//                                     ))}
-//                                   </div>
-//                                 </div>
-//                               )}
-//                             </div>
-//                           </FormControl>
-//                           <FormMessage />
-//                         </FormItem>
-//                       )}
-//                     />
-
-//                     {/* School Feedback Section */}
-//                     <FormField
-//                       control={facilityForm.control}
-//                       name="school_feedback"
-//                       render={({ field }) => (
-//                         <FormItem>
-//                           <FormLabel className="text-base font-semibold">Notes</FormLabel>
-//                           <FormControl>
-//                             <Textarea
-//                               {...field}
-//                               placeholder="Enter notes, concerns, and priorities..."
-//                               className="min-h-[120px] resize-none"
-//                             />
-//                           </FormControl>
-//                           <FormMessage />
-//                         </FormItem>
-//                       )}
-//                     />
-
-//                     {/* Agent Feedback Section */}
-//                     {/* <FormField
-//                       control={facilityForm.control}
-//                       name="agent_feedback"
-//                       render={({ field }) => (
-//                         <FormItem>
-//                           <FormLabel className="text-base font-semibold">Agent Feedback</FormLabel>
-//                           <FormControl>
-//                             <Textarea
-//                               {...field}
-//                               placeholder="Enter your assessment notes, observations, and recommendations..."
-//                               className="min-h-[120px] resize-none"
-//                             />
-//                           </FormControl>
-//                           <FormMessage />
-//                         </FormItem>
-//                       )}
-//                     /> */}
-//                   </div>
-
-//                   <div className="flex gap-2 pt-4">
-//                     <Button
-//                       type="button"
-//                       variant="outline"
-//                       onClick={() => setIsModalOpen(false)}
-//                       className="flex-1"
-//                     >
-//                       Cancel
-//                     </Button>
-//                     <Button
-//                       type="submit"
-//                       className="flex-1 bg-[#F89B0C] hover:bg-[#F89B0C]/90 text-primary-foreground"
-//                     >
-//                       Submit Assessment
-//                     </Button>
-//                   </div>
-//                 </Tabs>
-//               </form>
-//             </Form>
-//           )}
-//         </DialogContent>
-//       </Dialog>
 //     </div>
 //   );
 // };
 
-// export default AssessmentAddPage;
+// export default OnboardedSchoolList;
