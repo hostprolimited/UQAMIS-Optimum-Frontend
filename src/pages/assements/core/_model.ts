@@ -42,7 +42,7 @@ export interface MaintenanceReport {
   priority_level?: 'low' | 'medium' | 'high';
   status: 'pending' | 'reviewed' | 'approved' | 'rejected';
   total_score_percentage: number;
-  average_condition: 'excellent' | 'good' | 'needs-attention' | 'critical';
+  average_condition: 'excellent' | 'good' | 'needs attention' | 'urgent attention';
   completion_status: 'completed' | 'in-progress' | 'pending';
   files?: string[];
   created_at: string;

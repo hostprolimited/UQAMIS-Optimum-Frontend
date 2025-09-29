@@ -7,11 +7,11 @@ export interface MetricsKPIs {
   total_schools?: MetricKPI;
   total_teachers?: MetricKPI;
   total_students?: MetricKPI;
-  total_actions?: MetricKPI;
+  total_assessments?: MetricKPI;
   total_safety_assessments?: MetricKPI;
   safety_score?: MetricKPI;
   maintenance_score?: MetricKPI;
-  total_maintenance_requests?: MetricKPI;
+  total_maintenance_assessments?: MetricKPI;
   completed_maintenance?: MetricKPI;
   high_priority_maintenance?: MetricKPI;
   total_institutions?: MetricKPI;
