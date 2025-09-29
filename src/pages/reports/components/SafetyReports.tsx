@@ -78,7 +78,7 @@ interface FacilityAssessment {
   attentionItems: number;
   goodItems: number;
   totalItems: number;
-  averageCondition: "excellent" | "good" | "needs-attention" | "urgent_attention";
+  averageCondition: "excellent" | "good" | "attention" | "urgent_attention";
   completionStatus: "completed" | "in-progress" | "pending";
   status?: string;
   agent_feedback?: string;
@@ -86,28 +86,44 @@ interface FacilityAssessment {
   totalScorePercentage?: number;
   created_at?: string;
   details?: AssessmentDetail[];
+  submittedBy?: number;
+  priority?: string;
 }
 
 // Mapping helper (adapts API response to our UI model)
-const mapSafetyReport = (report: any, facilityIdToName: Record<string, string>): FacilityAssessment => ({
-  id: report.id?.toString() ?? "",
-  institutionName: report.institution_name || report.school_name || getCurrentInstitutionName(),
-  class: report.class ? JSON.parse(report.class) : [],
-  facilityType: facilityIdToName[report.facility_id?.toString()] || report.facility_type || report.facility_id?.toString() || "",
-  assessmentDate: report.assessment_date ?? report.date ?? "",
-  urgentItems: report.urgent_items ?? 0,
-  attentionItems: report.attention_items ?? 0,
-  goodItems: report.good_items ?? 0,
-  totalItems: report.total_items ?? 0,
-  averageCondition: report.average_condition ?? "good",
-  completionStatus: report.completion_status ?? "pending",
-  status: report.status,
-  agent_feedback: report.agent_feedback,
-  school_feedback: report.school_feedback,
-  totalScorePercentage: report.total_score_percentage,
-  created_at: report.created_at,
-  details: report.details ?? [],
-});
+const mapSafetyReport = (report: any, facilityIdToName: Record<string, string>): FacilityAssessment => {
+  let averageCondition: FacilityAssessment["averageCondition"] = "good";
+  if (report.average_condition) {
+    const cond = report.average_condition.toLowerCase();
+    if (cond === "attention required") averageCondition = "attention";
+    else if (cond === "urgent attention") averageCondition = "urgent_attention";
+    else if (cond === "excellent") averageCondition = "excellent";
+    else if (cond === "good") averageCondition = "good";
+    else averageCondition = "good"; // default
+  }
+
+  return {
+    id: report.id?.toString() ?? "",
+    institutionName: report.institution_name || report.school_name || getCurrentInstitutionName(),
+    class: report.class ? JSON.parse(report.class) : [],
+    facilityType: facilityIdToName[report.facility_id?.toString()] || report.facility_type || report.facility_id?.toString() || "",
+    assessmentDate: report.assessment_date ?? report.date ?? "",
+    urgentItems: report.urgent_items ?? 0,
+    attentionItems: report.attention_items ?? 0,
+    goodItems: report.good_items ?? 0,
+    totalItems: report.total_items ?? 0,
+    averageCondition,
+    completionStatus: report.completion_status ?? "pending",
+    status: report.status,
+    agent_feedback: report.agent_feedback,
+    school_feedback: report.school_feedback,
+    totalScorePercentage: report.total_score_percentage,
+    created_at: report.created_at,
+    details: report.details ?? [],
+    submittedBy: report.submitted_by,
+    priority: report.priority,
+  };
+};
 
 // Get current logged-in institution name from localStorage
 const getCurrentInstitutionName = () => {
@@ -230,7 +246,7 @@ const SafetyReportsPage: React.FC = () => {
   // Chart data
   const conditionData = useMemo(() => [
     { name: "Good", value: assessments.filter((a) => a.averageCondition === "good").length },
-    // { name: "Needs Attention", value: assessments.filter((a) => a.averageCondition === "attention").length },
+    { name: "Needs Attention", value: assessments.filter((a) => a.averageCondition === "attention").length },
     { name: "Critical", value: assessments.filter((a) => a.averageCondition === "urgent_attention").length },
   ], [assessments]);
 
@@ -265,6 +281,20 @@ const SafetyReportsPage: React.FC = () => {
       header: "School Feedback",
       cell: ({ row }) => (
         <div className="font-medium max-w-[250px] truncate" title={String(row.getValue("school_feedback"))}>{row.getValue("school_feedback")}</div>
+      ),
+    },
+    // {
+    //   accessorKey: "submittedBy",
+    //   header: "Submitted By",
+    //   cell: ({ row }) => (
+    //     <div className="text-center font-medium">{row.getValue("submittedBy") ?? '-'}</div>
+    //   ),
+    // },
+    {
+      accessorKey: "priority",
+      header: "Priority",
+      cell: ({ row }) => (
+        <div className="capitalize text-center font-medium">{row.getValue("priority") ?? '-'}</div>
       ),
     },
     {
@@ -435,6 +465,8 @@ const SafetyReportsPage: React.FC = () => {
       "Completion Status",
       "Score (%)",
       "School Feedback",
+      "Submitted By",
+      "Priority",
     ];
     const csv = [
       header.join(","),
@@ -452,6 +484,8 @@ const SafetyReportsPage: React.FC = () => {
           r.completionStatus,
           r.totalScorePercentage ?? "",
           `"${(r.school_feedback || "").replace(/"/g, '""')}"`,
+          r.submittedBy ?? "",
+          r.priority ?? "",
         ].join(",")
       ),
     ].join("\n");
