@@ -7,11 +7,33 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  phone?: string;
   role: UserRole;
   institution_id?: number;
   county_code?: string;
   county_name?: string;
   school?: string;
+  institution?: {
+    id: number;
+    name: string;
+    type: string;
+    county: string;
+    subcounty: string;
+    ward: string;
+    county_code: string;
+    address: string;
+    phone_number: string;
+    location: string;
+    email: string;
+    status: string;
+    boarding_type: string;
+    total_students: number | null;
+    total_teachers: number | null;
+    gender_based: string | null;
+    created_by: number;
+    created_at: string;
+    updated_at: string;
+  } | null;
 }
 
 interface RoleContextType {

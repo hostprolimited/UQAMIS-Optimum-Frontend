@@ -40,6 +40,7 @@ export interface DashboardData {
   metrics_kpis: MetricsKPIs;
   assessment_status_distribution: any[];
   performance_trends: PerformanceTrends;
+  title: string;
   sub_county_performance?: SubCountyPerformance;
   county_performance?: SubCountyPerformance;
 }

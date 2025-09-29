@@ -50,15 +50,16 @@ const Overview = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        if (currentUser.role === 'ministry_admin' || currentUser.role === 'school_admin') {
-          const response = await getSchoolMetrics();
-          if (response.status === 'success') {
-            setSchoolMetricsData(response.data);
-          }
-        } else if (currentUser.role === 'agent') {
+        if (currentUser.role === 'ministry_admin' || currentUser.role === 'agent' || currentUser.role === 'school_admin') {
           const response = await getDashboardData();
           if (response.status === 'success') {
             setDashboardData(response.data);
+          }
+        }
+        if (currentUser.role === 'ministry_admin') {
+          const response = await getSchoolMetrics();
+          if (response.status === 'success') {
+            setSchoolMetricsData(response.data);
           }
         }
       } catch (error) {
@@ -71,15 +72,19 @@ const Overview = () => {
   const getOverviewTitle = () => {
     switch (currentUser.role) {
       case 'ministry_admin':
-        return 'National Overview';
-      case 'agent': {
-        // Use county_code to get county name
-        const code = (currentUser as any).county_code || currentUser.county_code || currentUser.county_name;
-        const countyName = countyCodeToName[String(code)] || 'Unknown';
-        return `${countyName} County Overview`;
-      }
+      case 'agent':
       case 'school_admin':
-        return `${currentUser.name} Overview`;
+        if (dashboardData && dashboardData.title) {
+          return dashboardData.title;
+        } else {
+          if (currentUser.role === 'ministry_admin') return 'National Overview';
+          if (currentUser.role === 'agent') {
+            const code = (currentUser as any).county_code || currentUser.county_code || currentUser.county_name;
+            const countyName = countyCodeToName[String(code)] || 'Unknown';
+            return `${countyName} County Overview`;
+          }
+          if (currentUser.role === 'school_admin') return `${currentUser.name} Overview`;
+        }
       default:
         return 'Overview';
     }
@@ -88,7 +93,20 @@ const Overview = () => {
   const getKPIData = () => {
     switch (currentUser.role) {
       case 'ministry_admin':
-        if (schoolMetricsData) {
+        if (dashboardData) {
+          return [
+            { title: 'Total Institutions', value: dashboardData.metrics_kpis.total_institutions.value.toString(), icon: School, trend: dashboardData.metrics_kpis.total_institutions.vs_last_month, color: 'text-primary' },
+            { title: 'Total Students', value: dashboardData.metrics_kpis.total_students.value.toString(), icon: Users, trend: dashboardData.metrics_kpis.total_students.vs_last_month, color: 'text-success' },
+            { title: 'Total Teachers', value: dashboardData.metrics_kpis.total_teachers.value.toString(), icon: Users, trend: dashboardData.metrics_kpis.total_teachers.vs_last_month, color: 'text-info' },
+            { title: 'Total Actions', value: dashboardData.metrics_kpis.total_actions.value.toString(), icon: FileText, trend: dashboardData.metrics_kpis.total_actions.vs_last_month, color: 'text-warning' },
+            { title: 'Safety Assessments', value: dashboardData.metrics_kpis.total_safety_assessments.value.toString(), icon: CheckCircle, trend: dashboardData.metrics_kpis.total_safety_assessments.vs_last_month, color: 'text-primary' },
+            { title: 'Safety Score', value: dashboardData.metrics_kpis.safety_score.value.toString(), icon: TrendingUp, trend: dashboardData.metrics_kpis.safety_score.vs_last_month, color: 'text-success' },
+            { title: 'Maintenance Score', value: dashboardData.metrics_kpis.maintenance_score.value.toString(), icon: TrendingUp, trend: dashboardData.metrics_kpis.maintenance_score.vs_last_month, color: 'text-info' },
+            { title: 'Maintenance Requests', value: dashboardData.metrics_kpis.total_maintenance_requests.value.toString(), icon: AlertTriangle, trend: dashboardData.metrics_kpis.total_maintenance_requests.vs_last_month, color: 'text-warning' },
+            { title: 'Completed Maintenance', value: dashboardData.metrics_kpis.completed_maintenance.value.toString(), icon: CheckCircle, trend: dashboardData.metrics_kpis.completed_maintenance.vs_last_month, color: 'text-primary' },
+            { title: 'High Priority Maintenance', value: dashboardData.metrics_kpis.high_priority_maintenance.value.toString(), icon: AlertTriangle, trend: dashboardData.metrics_kpis.high_priority_maintenance.vs_last_month, color: 'text-destructive' },
+          ];
+        } else if (schoolMetricsData) {
           const totalInstitutions = new Set(schoolMetricsData.map(m => m.institution_id)).size;
           const totalStudents = schoolMetricsData.reduce((sum, m) => sum + m.students_count, 0);
           const totalTeachers = schoolMetricsData.reduce((sum, m) => sum + m.teachers_count, 0);
@@ -100,30 +118,60 @@ const Overview = () => {
           ];
         } else {
           return [
-            { title: 'Total Counties', value: '47', icon: Users, trend: '+2', color: 'text-primary' },
-            { title: 'Total Schools', value: '1,248', icon: School, trend: '+45', color: 'text-success' },
-            { title: 'Assessments', value: '971', icon: FileText, trend: '+123', color: 'text-info' },
-            { title: 'Avg Score', value: '86.5', icon: TrendingUp, trend: '+2.3', color: 'text-warning' },
+            { title: 'Total Institutions', value: '1', icon: School, trend: '+100%', color: 'text-primary' },
+            { title: 'Total Students', value: '0', icon: Users, trend: '0%', color: 'text-success' },
+            { title: 'Total Teachers', value: '0', icon: Users, trend: '0%', color: 'text-info' },
+            { title: 'Total Actions', value: '5', icon: FileText, trend: '+100%', color: 'text-warning' },
+            { title: 'Safety Assessments', value: '2', icon: CheckCircle, trend: '+100%', color: 'text-primary' },
+            { title: 'Safety Score', value: '50', icon: TrendingUp, trend: 'N/A', color: 'text-success' },
+            { title: 'Maintenance Score', value: '30.8', icon: TrendingUp, trend: 'N/A', color: 'text-info' },
+            { title: 'Maintenance Requests', value: '3', icon: AlertTriangle, trend: '+100%', color: 'text-warning' },
+            { title: 'Completed Maintenance', value: '0', icon: CheckCircle, trend: '0%', color: 'text-primary' },
+            { title: 'High Priority Maintenance', value: '0', icon: AlertTriangle, trend: '0%', color: 'text-destructive' },
           ];
         }
       case 'agent':
         if (dashboardData) {
           return [
-            { title: 'Sub-Counties', value: dashboardData.sub_county_performance.labels.length.toString(), icon: Users, trend: '0', color: 'text-primary' },
-            { title: 'Schools', value: dashboardData.metrics_kpis.total_schools.value.toString(), icon: School, trend: dashboardData.metrics_kpis.total_schools.vs_last_month, color: 'text-success' },
-            { title: 'Assessments', value: dashboardData.metrics_kpis.total_actions.value.toString(), icon: FileText, trend: dashboardData.metrics_kpis.total_actions.vs_last_month, color: 'text-info' },
-            { title: 'Avg Score', value: dashboardData.metrics_kpis.maintenance_score.value.toString(), icon: TrendingUp, trend: dashboardData.metrics_kpis.maintenance_score.vs_last_month, color: 'text-warning' },
+            { title: 'Total Schools', value: dashboardData.metrics_kpis.total_schools.value.toString(), icon: School, trend: dashboardData.metrics_kpis.total_schools.vs_last_month, color: 'text-primary' },
+            { title: 'Total Teachers', value: dashboardData.metrics_kpis.total_teachers.value.toString(), icon: Users, trend: dashboardData.metrics_kpis.total_teachers.vs_last_month, color: 'text-success' },
+            { title: 'Total Students', value: dashboardData.metrics_kpis.total_students.value.toString(), icon: Users, trend: dashboardData.metrics_kpis.total_students.vs_last_month, color: 'text-info' },
+            { title: 'Total Actions', value: dashboardData.metrics_kpis.total_actions.value.toString(), icon: FileText, trend: dashboardData.metrics_kpis.total_actions.vs_last_month, color: 'text-warning' },
+            { title: 'Safety Assessments', value: dashboardData.metrics_kpis.total_safety_assessments.value.toString(), icon: CheckCircle, trend: dashboardData.metrics_kpis.total_safety_assessments.vs_last_month, color: 'text-primary' },
+            { title: 'Safety Score', value: dashboardData.metrics_kpis.safety_score.value.toString(), icon: TrendingUp, trend: dashboardData.metrics_kpis.safety_score.vs_last_month, color: 'text-success' },
+            { title: 'Maintenance Score', value: dashboardData.metrics_kpis.maintenance_score.value.toString(), icon: TrendingUp, trend: dashboardData.metrics_kpis.maintenance_score.vs_last_month, color: 'text-info' },
+            { title: 'Maintenance Requests', value: dashboardData.metrics_kpis.total_maintenance_requests.value.toString(), icon: AlertTriangle, trend: dashboardData.metrics_kpis.total_maintenance_requests.vs_last_month, color: 'text-warning' },
+            { title: 'Completed Maintenance', value: dashboardData.metrics_kpis.completed_maintenance.value.toString(), icon: CheckCircle, trend: dashboardData.metrics_kpis.completed_maintenance.vs_last_month, color: 'text-primary' },
+            { title: 'High Priority Maintenance', value: dashboardData.metrics_kpis.high_priority_maintenance.value.toString(), icon: AlertTriangle, trend: dashboardData.metrics_kpis.high_priority_maintenance.vs_last_month, color: 'text-destructive' },
           ];
         } else {
           return [
-            { title: 'Sub-Counties', value: '8', icon: Users, trend: '0', color: 'text-primary' },
-            { title: 'Schools', value: '245', icon: School, trend: '+3', color: 'text-success' },
-            { title: 'Assessments', value: '180', icon: FileText, trend: '+24', color: 'text-info' },
-            { title: 'Avg Score', value: '87.2', icon: TrendingUp, trend: '+1.8', color: 'text-warning' },
+            { title: 'Total Schools', value: '1', icon: School, trend: '+100%', color: 'text-primary' },
+            { title: 'Total Teachers', value: '0', icon: Users, trend: '0%', color: 'text-success' },
+            { title: 'Total Students', value: '0', icon: Users, trend: '0%', color: 'text-info' },
+            { title: 'Total Actions', value: '5', icon: FileText, trend: '+100%', color: 'text-warning' },
+            { title: 'Safety Assessments', value: '2', icon: CheckCircle, trend: '+100%', color: 'text-primary' },
+            { title: 'Safety Score', value: '50', icon: TrendingUp, trend: 'N/A', color: 'text-success' },
+            { title: 'Maintenance Score', value: '30.8', icon: TrendingUp, trend: 'N/A', color: 'text-info' },
+            { title: 'Maintenance Requests', value: '3', icon: AlertTriangle, trend: '+100%', color: 'text-warning' },
+            { title: 'Completed Maintenance', value: '0', icon: CheckCircle, trend: '0%', color: 'text-primary' },
+            { title: 'High Priority Maintenance', value: '0', icon: AlertTriangle, trend: '0%', color: 'text-destructive' },
           ];
         }
       case 'school_admin':
-        if (schoolMetricsData && currentUser.institution_id) {
+        if (dashboardData) {
+          return [
+            { title: 'Students', value: dashboardData.metrics_kpis.students.value.toString(), icon: Users, trend: dashboardData.metrics_kpis.students.vs_last_month, color: 'text-primary' },
+            { title: 'Teachers', value: dashboardData.metrics_kpis.teachers.value.toString(), icon: Users, trend: dashboardData.metrics_kpis.teachers.vs_last_month, color: 'text-success' },
+            { title: 'Total Actions', value: dashboardData.metrics_kpis.total_actions.value.toString(), icon: FileText, trend: dashboardData.metrics_kpis.total_actions.vs_last_month, color: 'text-info' },
+            { title: 'Safety Assessments', value: dashboardData.metrics_kpis.total_safety_assessments.value.toString(), icon: CheckCircle, trend: dashboardData.metrics_kpis.total_safety_assessments.vs_last_month, color: 'text-warning' },
+            { title: 'Safety Score', value: dashboardData.metrics_kpis.safety_score.value.toString(), icon: TrendingUp, trend: dashboardData.metrics_kpis.safety_score.vs_last_month, color: 'text-primary' },
+            { title: 'Maintenance Score', value: dashboardData.metrics_kpis.maintenance_score.value.toString(), icon: TrendingUp, trend: dashboardData.metrics_kpis.maintenance_score.vs_last_month, color: 'text-success' },
+            { title: 'Maintenance Requests', value: dashboardData.metrics_kpis.total_maintenance_requests.value.toString(), icon: AlertTriangle, trend: dashboardData.metrics_kpis.total_maintenance_requests.vs_last_month, color: 'text-info' },
+            { title: 'Completed Maintenance', value: dashboardData.metrics_kpis.completed_maintenance.value.toString(), icon: CheckCircle, trend: dashboardData.metrics_kpis.completed_maintenance.vs_last_month, color: 'text-warning' },
+            { title: 'High Priority Maintenance', value: dashboardData.metrics_kpis.high_priority_maintenance.value.toString(), icon: AlertTriangle, trend: dashboardData.metrics_kpis.high_priority_maintenance.vs_last_month, color: 'text-destructive' },
+          ];
+        } else if (schoolMetricsData && currentUser.institution_id) {
           const schoolMetrics = schoolMetricsData.filter(m => m.institution_id === currentUser.institution_id);
           if (schoolMetrics.length > 0) {
             // Take the latest by created_at
@@ -137,10 +185,15 @@ const Overview = () => {
           }
         }
         return [
-          { title: 'Students', value: '847', icon: Users, trend: '+12', color: 'text-primary' },
-          { title: 'Teachers', value: '42', icon: Users, trend: '+2', color: 'text-success' },
-          { title: 'Assessments', value: '12', icon: FileText, trend: '+3', color: 'text-info' },
-          { title: 'Score', value: '89.4', icon: TrendingUp, trend: '+3.2', color: 'text-warning' },
+          { title: 'Students', value: '0', icon: Users, trend: '0%', color: 'text-primary' },
+          { title: 'Teachers', value: '0', icon: Users, trend: '0%', color: 'text-success' },
+          { title: 'Total Actions', value: '5', icon: FileText, trend: '+100%', color: 'text-info' },
+          { title: 'Safety Assessments', value: '2', icon: CheckCircle, trend: '+100%', color: 'text-warning' },
+          { title: 'Safety Score', value: '50', icon: TrendingUp, trend: 'N/A', color: 'text-primary' },
+          { title: 'Maintenance Score', value: '30.8', icon: TrendingUp, trend: 'N/A', color: 'text-success' },
+          { title: 'Maintenance Requests', value: '3', icon: AlertTriangle, trend: '+100%', color: 'text-info' },
+          { title: 'Completed Maintenance', value: '0', icon: CheckCircle, trend: '0%', color: 'text-warning' },
+          { title: 'High Priority Maintenance', value: '0', icon: AlertTriangle, trend: '0%', color: 'text-destructive' },
         ];
       default:
         return [];
@@ -155,25 +208,26 @@ const Overview = () => {
     score: dashboardData.performance_trends.quality_score[i]
   })) : schoolAssessmentData;
 
-  const subCountyData = dashboardData ? (
-    currentUser.role === 'ministry_admin' && dashboardData.county_performance ?
-      dashboardData.county_performance.labels.map((label, i) => {
-        const obj: any = { name: label };
-        dashboardData.county_performance!.data.forEach(item => {
-          obj[item.label] = item.values[i];
-        });
-        return obj;
-      }) :
-    dashboardData.sub_county_performance ?
-      dashboardData.sub_county_performance.labels.map((label, i) => {
-        const obj: any = { name: label };
-        dashboardData.sub_county_performance!.data.forEach(item => {
-          obj[item.label] = item.values[i];
-        });
-        return obj;
-      }) :
-    countyData
-  ) : countyData;
+  const statusData = dashboardData && dashboardData.assessment_status_distribution ? dashboardData.assessment_status_distribution.map(item => ({
+    name: item.label,
+    value: item.value,
+    color: item.color
+  })) : [
+    { name: 'Approved', value: 314, color: 'hsl(var(--success))' },
+    { name: 'Pending Review', value: 89, color: 'hsl(var(--warning))' },
+    { name: 'Needs Improvement', value: 48, color: 'hsl(var(--destructive))' },
+    { name: 'Not Assessed', value: 67, color: 'hsl(var(--muted-foreground))' },
+  ];
+
+  const subCountyData = dashboardData && dashboardData.sub_county_performance ?
+    dashboardData.sub_county_performance.labels.map((label, i) => {
+      const obj: any = { name: label };
+      dashboardData.sub_county_performance!.data.forEach(item => {
+        obj[item.label] = item.values[i];
+      });
+      return obj;
+    }) :
+    countyData;
 
   return (
     <div className="space-y-6">
@@ -263,7 +317,7 @@ const Overview = () => {
                   />
                   <div className="flex-1">
                     <p className="text-sm font-medium">{item.name}</p>
-                    <p className="text-xs text-muted-foreground">{item.value} schools</p>
+                    {/* <p className="text-xs text-muted-foreground">{item.value} assesments</p> */}
                   </div>
                 </div>
               ))}
