@@ -338,13 +338,13 @@ const AssessmentListPage: React.FC = () => {
         return <div className="font-medium max-w-[250px] truncate" title={String(s)}>{s}</div>;
       },
     },
-    {
-      accessorKey: "priority",
-      header: "Priority",
-      cell: ({ row }) => (
-        <div className="font-medium">{row.getValue("priority") || '-'}</div>
-      ),
-    },
+    // {
+    //   accessorKey: "priority",
+    //   header: "Priority",
+    //   cell: ({ row }) => (
+    //     <div className="font-medium">{row.getValue("priority") || '-'}</div>
+    //   ),
+    // },
     {
       accessorKey: "recommended_action",
       header: "Recommended Action",

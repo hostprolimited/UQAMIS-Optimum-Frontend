@@ -336,13 +336,13 @@ const SafetyReportPage: React.FC = () => {
         return getaverageConditionBadge(cond);
       },
     },
-    {
-      accessorKey: "priority",
-      header: "Priority",
-      cell: ({ row }) => (
-        <div className="font-medium max-w-[250px] truncate" title={String(row.getValue("priority"))}>{row.getValue("priority") ?? '-'}</div>
-      ),
-    },
+    // {
+    //   accessorKey: "priority",
+    //   header: "Priority",
+    //   cell: ({ row }) => (
+    //     <div className="font-medium max-w-[250px] truncate" title={String(row.getValue("priority"))}>{row.getValue("priority") ?? '-'}</div>
+    //   ),
+    // },
     {
       accessorKey: "recommended_action",
       header: "Recommended Action",
