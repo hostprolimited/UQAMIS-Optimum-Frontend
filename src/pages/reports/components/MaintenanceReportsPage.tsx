@@ -71,44 +71,53 @@ interface AssessmentDetail {
 }
 
 interface FacilityAssessment {
-  id: string;
-  institutionName: string;
-  facilityType: string;
-  assessmentDate: string; // ISO date string
-  urgentItems: number;
-  attentionItems: number;
-  goodItems: number;
-  totalItems: number;
-  overallCondition: "excellent" | "good" | "needs-attention" | "critical";
-  completionStatus: "completed" | "in-progress" | "pending";
-  status?: string;
-  agent_feedback?: string;
-  school_feedback?: string;
-  totalScorePercentage?: number;
-  created_at?: string;
-  details?: AssessmentDetail[];
-}
+   id: string;
+   institutionName: string;
+   facilityType: string;
+   assessmentDate: string; // ISO date string
+   urgentItems: number;
+   attentionItems: number;
+   goodItems: number;
+   totalItems: number;
+   overallCondition: "good" | "attention required" | "urgent attention";
+   status: 'pending' | 'reviewed' | 'approved' | 'rejected';
+   agent_feedback?: string;
+   school_feedback?: string;
+   totalScorePercentage?: number;
+   created_at?: string;
+   details?: AssessmentDetail[];
+ }
 
 // Mapping helper
-const mapMaintenanceReport = (report: any, facilityIdToName: Record<string, string>): FacilityAssessment => ({
-  id: report.id?.toString() ?? "",
-  facilityType:
-    facilityIdToName[report.facility_id?.toString()] || report.facility_type || report.facility_id?.toString() || "",
-  assessmentDate: report.assessment_date ?? report.date ?? "",
-  urgentItems: report.urgent_items ?? 0,
-  attentionItems: report.attention_items ?? 0,
-  goodItems: report.good_items ?? 0,
-  totalItems: report.total_items ?? 0,
-  overallCondition: report.overall_condition ?? "good",
-  completionStatus: report.completion_status ?? "pending",
-  status: report.status,
-  agent_feedback: report.agent_feedback,
-  institutionName: report.institution_name || report.school_name || getCurrentInstitutionName(),
-  school_feedback: report.school_feedback,
-  totalScorePercentage: report.total_score_percentage,
-  created_at: report.created_at,
-  details: report.details ?? [],
-});
+const mapMaintenanceReport = (report: any, facilityIdToName: Record<string, string>): FacilityAssessment => {
+  let overallCondition: FacilityAssessment["overallCondition"] = "good";
+  if (report.average_condition) {
+    const cond = report.average_condition.toLowerCase();
+    if (cond === "attention required") overallCondition = "attention required";
+    else if (cond === "urgent attention") overallCondition = "urgent attention";
+    else if (cond === "good") overallCondition = "good";
+    else overallCondition = "good"; // default
+  }
+
+  return {
+    id: report.id?.toString() ?? "",
+    facilityType:
+      facilityIdToName[report.facility_id?.toString()] || report.facility_type || report.facility_id?.toString() || "",
+    assessmentDate: report.assessment_date ?? report.date ?? "",
+    urgentItems: report.urgent_items ?? 0,
+    attentionItems: report.attention_items ?? 0,
+    goodItems: report.good_items ?? 0,
+    totalItems: report.total_items ?? 0,
+    overallCondition,
+    status: report.status ?? "pending",
+    agent_feedback: report.agent_feedback,
+    institutionName: report.institution_name || report.school_name || getCurrentInstitutionName(),
+    school_feedback: report.school_feedback,
+    totalScorePercentage: report.total_score_percentage,
+    created_at: report.created_at,
+    details: report.details ?? [],
+  };
+};
 
 // Get current logged-in institution name from localStorage
 const getCurrentInstitutionName = () => {
@@ -211,7 +220,7 @@ const MaintenanceAssessmentReportPage: React.FC = () => {
       data = data.filter((d) => d.overallCondition === conditionFilter);
     }
     if (statusFilter) {
-      data = data.filter((d) => d.completionStatus === statusFilter);
+      data = data.filter((d) => d.status === statusFilter);
     }
 
     if (fromDate) {
@@ -230,7 +239,7 @@ const MaintenanceAssessmentReportPage: React.FC = () => {
   // Stats (memoized)
   const totalAssessments = useMemo(() => assessments.length, [assessments]);
   const totalSchools = useMemo(() => new Set(assessments.map((a) => a.institutionName)).size, [assessments]);
-  const criticalFacilities = useMemo(() => assessments.filter((a) => a.overallCondition === "critical").length, [assessments]);
+  const criticalFacilities = useMemo(() => assessments.filter((a) => a.overallCondition === "urgent attention").length, [assessments]);
   const avgScore = useMemo(() => {
     if (assessments.length === 0) return 0;
     const sum = assessments.reduce((s, a) => s + (a.totalScorePercentage ?? 0), 0);
@@ -240,19 +249,19 @@ const MaintenanceAssessmentReportPage: React.FC = () => {
   // Chart data
   const conditionData = useMemo(
     () => [
-      { name: "Excellent", value: assessments.filter((a) => a.overallCondition === "excellent").length },
       { name: "Good", value: assessments.filter((a) => a.overallCondition === "good").length },
-      { name: "Needs Attention", value: assessments.filter((a) => a.overallCondition === "needs-attention").length },
-      { name: "Critical", value: assessments.filter((a) => a.overallCondition === "critical").length },
+      { name: "Attention Required", value: assessments.filter((a) => a.overallCondition === "attention required").length },
+      { name: "Urgent Attention", value: assessments.filter((a) => a.overallCondition === "urgent attention").length },
     ],
     [assessments]
   );
 
   const statusData = useMemo(
     () => [
-      { name: "Completed", value: assessments.filter((a) => a.completionStatus === "completed").length },
-      { name: "In Progress", value: assessments.filter((a) => a.completionStatus === "in-progress").length },
-      { name: "Pending", value: assessments.filter((a) => a.completionStatus === "pending").length },
+      { name: "Approved", value: assessments.filter((a) => a.status === "approved").length },
+      { name: "Rejected", value: assessments.filter((a) => a.status === "rejected").length },
+      { name: "Pending", value: assessments.filter((a) => a.status === "pending").length },
+      { name: "Reviewed", value: assessments.filter((a) => a.status === "reviewed").length },
     ],
     [assessments]
   );
@@ -305,77 +314,77 @@ const MaintenanceAssessmentReportPage: React.FC = () => {
       },
     },
     {
-      accessorKey: "completionStatus",
+      accessorKey: "status",
       header: "Status",
       cell: ({ row }) => {
-        const s = row.getValue("completionStatus") as FacilityAssessment["completionStatus"];
-        return getCompletionStatusBadge(s);
+        const s = row.getValue("status") as FacilityAssessment["status"];
+        return getStatusBadge(s);
       },
     },
-    {
-      id: "actions",
-      header: "Actions",
-      cell: ({ row }) => {
-        const assessment = row.original;
-        return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0" aria-label={`Open actions for ${assessment.institutionName}`}>
-                <span className="sr-only">Open menu</span>
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() => {
-                  // open review modal
-                  handleReview(assessment.id);
-                }}
-              >
-                <Edit className="mr-2 h-4 w-4" />
-                Review assessment
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => {
-                  // open drawer
-                  setDrawerItem(assessment);
-                  setDrawerOpen(true);
-                }}
-              >
-                <BarChart3 className="mr-2 h-4 w-4" />
-                View details
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleDelete(assessment.id)} className="text-red-600">
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete assessment
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        );
-      },
-    },
+    // {
+    //   id: "actions",
+    //   header: "Actions",
+    //   cell: ({ row }) => {
+    //     const assessment = row.original;
+    //     return (
+    //       <DropdownMenu>
+    //         <DropdownMenuTrigger asChild>
+    //           <Button variant="ghost" className="h-8 w-8 p-0" aria-label={`Open actions for ${assessment.institutionName}`}>
+    //             <span className="sr-only">Open menu</span>
+    //             <MoreHorizontal className="h-4 w-4" />
+    //           </Button>
+    //         </DropdownMenuTrigger>
+    //         <DropdownMenuContent align="end">
+    //           <DropdownMenuLabel>Actions</DropdownMenuLabel>
+    //           <DropdownMenuSeparator />
+    //           <DropdownMenuItem
+    //             onClick={() => {
+    //               // open review modal
+    //               handleReview(assessment.id);
+    //             }}
+    //           >
+    //             <Edit className="mr-2 h-4 w-4" />
+    //             Review assessment
+    //           </DropdownMenuItem>
+    //           <DropdownMenuItem
+    //             onClick={() => {
+    //               // open drawer
+    //               setDrawerItem(assessment);
+    //               setDrawerOpen(true);
+    //             }}
+    //           >
+    //             <BarChart3 className="mr-2 h-4 w-4" />
+    //             View details
+    //           </DropdownMenuItem>
+    //           <DropdownMenuItem onClick={() => handleDelete(assessment.id)} className="text-red-600">
+    //             <Trash2 className="mr-2 h-4 w-4" />
+    //             Delete assessment
+    //           </DropdownMenuItem>
+    //         </DropdownMenuContent>
+    //       </DropdownMenu>
+    //     );
+    //   },
+    // },
   ];
 
   // --- Helpers for badges ---
   function getOverallConditionBadge(condition?: FacilityAssessment["overallCondition"]) {
     const conditionConfig: Record<string, { label: string; className: string }> = {
-      excellent: { label: "Excellent", className: "bg-green-100 text-green-800" },
       good: { label: "Good", className: "bg-blue-100 text-blue-800" },
-      "needs-attention": { label: "Needs Attention", className: "bg-yellow-100 text-yellow-800" },
-      critical: { label: "Critical", className: "bg-red-100 text-red-800" },
+      "attention required": { label: "Attention Required", className: "bg-yellow-100 text-yellow-800" },
+      "urgent attention": { label: "Urgent Attention", className: "bg-red-100 text-red-800" },
     };
     if (!condition) return <Badge className="bg-gray-100 text-gray-800">-</Badge>;
     const config = conditionConfig[condition];
     return <Badge className={config.className}>{config.label}</Badge>;
   }
 
-  function getCompletionStatusBadge(status?: FacilityAssessment["completionStatus"]) {
+  function getStatusBadge(status?: FacilityAssessment["status"]) {
     const statusConfig: Record<string, { label: string; className: string }> = {
-      completed: { label: "Completed", className: "bg-green-100 text-green-800" },
-      "in-progress": { label: "In Progress", className: "bg-blue-100 text-blue-800" },
+      approved: { label: "Approved", className: "bg-green-100 text-green-800" },
+      rejected: { label: "Rejected", className: "bg-red-100 text-red-800" },
       pending: { label: "Pending", className: "bg-gray-100 text-gray-800" },
+      reviewed: { label: "Reviewed", className: "bg-blue-100 text-blue-800" },
     };
     if (!status) return <Badge className="bg-gray-100 text-gray-800">-</Badge>;
     const config = statusConfig[status];
@@ -473,7 +482,7 @@ const MaintenanceAssessmentReportPage: React.FC = () => {
       "Good Items",
       "Total Items",
       "Overall Condition",
-      "Completion Status",
+      "Status",
       "Score (%)",
       "School Feedback",
     ];
@@ -490,7 +499,7 @@ const MaintenanceAssessmentReportPage: React.FC = () => {
           r.goodItems,
           r.totalItems,
           r.overallCondition,
-          r.completionStatus,
+          r.status,
           r.totalScorePercentage ?? "",
           `"${(r.school_feedback || "").replace(/"/g, '""')}"`,
         ].join(",")
@@ -588,7 +597,7 @@ const MaintenanceAssessmentReportPage: React.FC = () => {
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
-                      data={conditionData}
+                      data={statusData}
                       dataKey="value"
                       nameKey="name"
                       cx="50%"
@@ -596,7 +605,7 @@ const MaintenanceAssessmentReportPage: React.FC = () => {
                       outerRadius={70}
                       label
                     >
-                      {conditionData.map((_entry, index) => (
+                      {statusData.map((_entry, index) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
@@ -606,7 +615,7 @@ const MaintenanceAssessmentReportPage: React.FC = () => {
               </div>
               <div className="mt-2 text-xs text-gray-600">
                 <div className="flex flex-col gap-1">
-                  {conditionData.map((c, i) => (
+                  {statusData.map((c, i) => (
                     <div key={c.name} className="flex items-center gap-2">
                       <span className="w-3 h-3 inline-block" style={{ background: COLORS[i] }} aria-hidden />
                       <span>{c.name} — {c.value}</span>
@@ -636,10 +645,9 @@ const MaintenanceAssessmentReportPage: React.FC = () => {
               <span className="text-xs text-gray-600 mb-1">Condition</span>
               <select value={conditionFilter} onChange={(e) => setConditionFilter(e.target.value)} className="border rounded px-2 py-2" aria-label="Filter by condition">
                 <option value="">All conditions</option>
-                <option value="excellent">Excellent</option>
                 <option value="good">Good</option>
-                <option value="needs-attention">Needs Attention</option>
-                <option value="critical">Critical</option>
+                <option value="attention required">Attention Required</option>
+                <option value="urgent attention">Urgent Attention</option>
               </select>
             </label>
 
@@ -647,9 +655,10 @@ const MaintenanceAssessmentReportPage: React.FC = () => {
               <span className="text-xs text-gray-600 mb-1">Status</span>
               <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="border rounded px-2 py-2" aria-label="Filter by status">
                 <option value="">All statuses</option>
-                <option value="completed">Completed</option>
-                <option value="in-progress">In Progress</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
                 <option value="pending">Pending</option>
+                <option value="reviewed">Reviewed</option>
               </select>
             </label>
 
@@ -674,9 +683,7 @@ const MaintenanceAssessmentReportPage: React.FC = () => {
               }} aria-label="Clear filters">
                 Clear
               </Button>
-              <Button onClick={() => exportCSV(filteredData)} aria-label="Export filtered data">
-                <Download className="h-4 w-4 mr-2" /> Export CSV
-              </Button>
+              
             </div>
           </div>
         </aside>
@@ -728,22 +735,6 @@ const MaintenanceAssessmentReportPage: React.FC = () => {
             }}
           />
         )}
-      </section>
-
-      {/* Insights / Recommendations */}
-      <section className="bg-white rounded-lg p-6 shadow border" aria-label="insights">
-        <h2 className="text-xl font-semibold mb-3">Insights & Recommendations</h2>
-        <ul className="list-disc list-inside text-gray-700 text-sm space-y-2">
-          <li>
-            Critical conditions make up <strong>{totalAssessments ? Math.round((criticalFacilities / totalAssessments) * 100) : 0}%</strong> of assessments — prioritize immediate inspections for these schools.
-          </li>
-          <li>
-            Average score across assessments is <strong>{avgScore}%</strong>. Consider targeted maintenance for facilities scoring below <strong>50%</strong>.
-          </li>
-          <li>
-            Use the filter <strong>Condition → Needs Attention</strong> to create follow-up tasks and schedule visits within 30 days.
-          </li>
-        </ul>
       </section>
 
       {/* Review Modal */}

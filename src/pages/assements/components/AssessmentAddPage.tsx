@@ -363,7 +363,7 @@ const FACILITY_SAFETY_PARTS = {
 const facilityAssessmentSchema = z.object({
   institution_id: z.number(),
   facility_id: z.number(),
-  class: z.string().min(1, 'Class is required'),
+  class: z.string().optional(),
   status: z.enum(['pending', 'in_progress', 'completed']).default('pending'),
   details: z.array(z.object({
     part_of_building: z.string(),
@@ -467,14 +467,14 @@ const AssessmentAddPage: React.FC = () => {
         id: index + 1,
         part: part,
         attentionRequired: false,
-        good: false,
+        good: true,
       }));
       setSafetyData(initialSafetyData);
       const isClassFacility = selectedFacility.name.toLowerCase().includes('class');
       facilityForm.reset({
         institution_id: selectedFacility.institution_id || 1,
         facility_id: selectedFacility.id,
-        class: isClassFacility ? '' : selectedFacility.name,
+        class: isClassFacility ? '' : undefined,
         status: 'pending',
         details: parts.map(name => ({
           part_of_building: name,
@@ -534,6 +534,8 @@ const AssessmentAddPage: React.FC = () => {
     try {
       if (!selectedFacility) return;
 
+      const isClassFacility = selectedFacility.name.toLowerCase().includes('class');
+
       let maintenanceSubmitted = false;
       let safetySubmitted = false;
 
@@ -549,7 +551,7 @@ const AssessmentAddPage: React.FC = () => {
           institution_id: selectedFacility.institution_id || 1,
           institution_name: 'Institution', // Add required institution_name
           facility_id: data.facility_id,
-          class: data.class ? [data.class] : [],
+          class: isClassFacility && data.class ? [data.class] : [],
           status: 'pending' as 'pending',
           details: data.details.map(detail => ({
             part_of_building: detail.part_of_building,
@@ -581,11 +583,11 @@ const AssessmentAddPage: React.FC = () => {
           institution_id: selectedFacility.institution_id || 1,
           institution_name: 'Institution',
           facility_id: data.facility_id,
-          class: data.class ? [data.class] : [],
+          class: isClassFacility && data.class ? [data.class] : [],
           status: 'pending' as 'pending',
-          details: safetyData.filter(item => item.attentionRequired).map(item => ({
+          details: safetyData.map(item => ({
             part_of_building: item.part,
-            assessment_status: 'Attention Required' as 'Attention Required'
+            assessment_status: item.attentionRequired ? ('Attention Required' as const) : ('Good' as const)
           })),
           school_feedback: data.school_feedback,
           agent_feedback: data.agent_feedback,

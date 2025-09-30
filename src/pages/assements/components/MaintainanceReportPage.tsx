@@ -76,13 +76,15 @@ interface FacilityAssessment {
   attentionItems: number;
   goodItems: number;
   totalItems: number;
-  averageCondition: "good" | "attention" | "urgent_attention";
+  averageCondition: "good" | "attention required" | "urgent attention";
   completionStatus: "completed" | "in-progress" | "pending";
   status: 'pending' | 'reviewed' | 'approved' | 'rejected';
   agent_feedback?: string;
   totalScorePercentage?: number;
   created_at?: string;
   details?: AssessmentDetail[];
+  priority?: string;
+  recommended_action?: string;
 }
 
 // Mapping helper (adapts API response to our UI model)
@@ -104,6 +106,8 @@ const mapMaintenanceReport = (report: any, facilityIdToName: Record<string, stri
   totalScorePercentage: report.total_score_percentage,
   created_at: report.created_at,
   details: report.details ?? [],
+  priority: report.priority,
+  recommended_action: report.recommended_action,
 });
 
 // Get current logged-in institution name from localStorage
@@ -143,6 +147,60 @@ const AssessmentListPage: React.FC = () => {
   const [editAssessment, setEditAssessment] = useState<FacilityAssessment | null>(null);
 
   const MySwal = withReactContent(Swal);
+
+  const exportCSV = (rows: FacilityAssessment[]) => {
+    if (!rows || rows.length === 0) {
+      toast({ title: "No data", description: "No rows to export", variant: "destructive" });
+      return;
+    }
+    const header = [
+      "ID",
+      "Facility Type",
+      "class",
+      "Agent Feedback",
+      "Score",
+      "Attention Items",
+      "Good Items",
+      "Total Items",
+      "Overall Condition",
+      "Completion Status",
+      "Score (%)",
+      "School Feedback",
+      "Submitted By",
+      "Priority",
+    ];
+    const csv = [
+      header.join(","),
+      ...rows.map((r) =>
+        [
+          r.id,
+          `"${(r.priority || "").replace(/"/g, '""')}"`,
+          `"${(r.facilityType || "").replace(/"/g, '""')}"`,
+          r.assessmentDate,
+          r.urgentItems,
+          r.attentionItems,
+          r.goodItems,
+          r.totalItems,
+        //   r.overallCondition,
+          r.completionStatus,
+          r.totalScorePercentage ?? "",
+          `"${(r.agent_feedback || "").replace(/"/g, '""')}"`,
+          r.recommended_action ? r.recommended_action.replace(/,/g, ' - ') : "",
+          r.priority ?? "",
+        ].join(",")
+      ),
+    ].join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.href = url;
+    link.setAttribute("download", `assessments_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   // Fetch facilities and assessments
   useEffect(() => {
@@ -187,7 +245,7 @@ const AssessmentListPage: React.FC = () => {
       data = data.filter((d) => d.averageCondition === conditionFilter);
     }
     if (statusFilter) {
-      data = data.filter((d) => d.completionStatus === statusFilter);
+      data = data.filter((d) => d.status === statusFilter);
     }
 
     if (fromDate) {
@@ -207,7 +265,7 @@ const AssessmentListPage: React.FC = () => {
   // Stats (memoized)
   const totalAssessments = useMemo(() => assessments.length, [assessments]);
   const totalSchools = useMemo(() => new Set(assessments.map((a) => a.schoolName)).size, [assessments]);
-  const criticalFacilities = useMemo(() => assessments.filter((a) => a.averageCondition === "urgent_attention").length, [assessments]);
+  const criticalFacilities = useMemo(() => assessments.filter((a) => a.averageCondition === "urgent attention").length, [assessments]);
   const avgScore = useMemo(() => {
     if (assessments.length === 0) return 0;
     const sum = assessments.reduce((s, a) => s + (a.totalScorePercentage ?? 0), 0);
@@ -217,14 +275,15 @@ const AssessmentListPage: React.FC = () => {
   // Chart data
   const conditionData = useMemo(() => [
     { name: "Good", value: assessments.filter((a) => a.averageCondition === "good").length },
-    { name: "Needs Attention", value: assessments.filter((a) => a.averageCondition === "attention").length },
-    { name: "Critical", value: assessments.filter((a) => a.averageCondition === "urgent_attention").length },
+    { name: "Attention Required", value: assessments.filter((a) => a.averageCondition === "attention required").length },
+    { name: "Urgent Attention", value: assessments.filter((a) => a.averageCondition === "urgent attention").length },
   ], [assessments]);
 
   const statusData = useMemo(() => [
-    { name: "Completed", value: assessments.filter((a) => a.completionStatus === "completed").length },
-    { name: "In Progress", value: assessments.filter((a) => a.completionStatus === "in-progress").length },
-    { name: "Pending", value: assessments.filter((a) => a.completionStatus === "pending").length },
+    { name: "Approved", value: assessments.filter((a) => a.status === "approved").length },
+    { name: "Rejected", value: assessments.filter((a) => a.status === "rejected").length },
+    { name: "Pending", value: assessments.filter((a) => a.status === "pending").length },
+    { name: "Reviewed", value: assessments.filter((a) => a.status === "reviewed").length },
   ], [assessments]);
 
   const COLORS = ["#16a34a", "#3b82f6", "#facc15", "#dc2626"];
@@ -280,34 +339,48 @@ const AssessmentListPage: React.FC = () => {
       },
     },
     {
-      id: "actions",
-      header: "Actions",
-      cell: ({ row }) => {
-        const assessment = row.original;
-        return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0" aria-label={`Open actions for ${assessment.schoolName}`}>
-                <span className="sr-only">Open menu</span>
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => handleEdit(assessment.id)}>
-                <Edit className="mr-2 h-4 w-4" />
-                Edit assessment
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleDelete(assessment.id)} className="text-red-600">
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete assessment
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        );
-      },
+      accessorKey: "priority",
+      header: "Priority",
+      cell: ({ row }) => (
+        <div className="font-medium">{row.getValue("priority") || '-'}</div>
+      ),
     },
+    {
+      accessorKey: "recommended_action",
+      header: "Recommended Action",
+      cell: ({ row }) => (
+        <div className="font-medium max-w-[250px] truncate" title={String(row.getValue("recommended_action"))}>{row.getValue("recommended_action") || '-'}</div>
+      ),
+    },
+    // {
+    //   id: "actions",
+    //   header: "Actions",
+    //   cell: ({ row }) => {
+    //     const assessment = row.original;
+    //     return (
+    //       <DropdownMenu>
+    //         <DropdownMenuTrigger asChild>
+    //           <Button variant="ghost" className="h-8 w-8 p-0" aria-label={`Open actions for ${assessment.schoolName}`}>
+    //             <span className="sr-only">Open menu</span>
+    //             <MoreHorizontal className="h-4 w-4" />
+    //           </Button>
+    //         </DropdownMenuTrigger>
+    //         <DropdownMenuContent align="end">
+    //           <DropdownMenuLabel>Actions</DropdownMenuLabel>
+    //           <DropdownMenuSeparator />
+    //           <DropdownMenuItem onClick={() => handleEdit(assessment.id)}>
+    //             <Edit className="mr-2 h-4 w-4" />
+    //             Edit assessment
+    //           </DropdownMenuItem>
+    //           <DropdownMenuItem onClick={() => handleDelete(assessment.id)} className="text-red-600">
+    //             <Trash2 className="mr-2 h-4 w-4" />
+    //             Delete assessment
+    //           </DropdownMenuItem>
+    //         </DropdownMenuContent>
+    //       </DropdownMenu>
+    //     );
+    //   },
+    // },
   ];
 
   // --- Helpers for badges ---
@@ -315,8 +388,8 @@ const AssessmentListPage: React.FC = () => {
     const conditionConfig: Record<string, { label: string; className: string }> = {
       excellent: { label: "Excellent", className: "bg-green-100 text-green-800" },
       good: { label: "Good", className: "bg-blue-100 text-blue-800" },
-      attention: { label: "Needs Attention", className: "bg-yellow-100 text-yellow-800" },
-      urgent_attention: { label: "Critical", className: "bg-red-100 text-red-800" },
+      "attention required": { label: "Needs Attention", className: "bg-yellow-100 text-yellow-800" },
+      "urgent attention": { label: "Critical", className: "bg-red-100 text-red-800" },
     };
     if (!condition) return <Badge className="bg-gray-100 text-gray-800">-</Badge>;
     const config = conditionConfig[condition];
@@ -394,6 +467,14 @@ const AssessmentListPage: React.FC = () => {
           </p>
         </div>
         <div className="flex items-center gap-2">
+                          <Button variant="ghost" onClick={() => exportCSV(filteredData)} aria-label="Export filtered as CSV" className="gap-2">
+                            <FileSpreadsheet className="h-4 w-4" /> Export CSV
+                          </Button>
+                          <Button variant="outline" onClick={() => window.print()} aria-label="Print report" className="gap-2 hidden md:inline-flex">
+                            <FileText className="h-4 w-4" /> Print
+                          </Button>
+        </div>
+        <div className="flex items-center gap-2">
           {/* <Button onClick={() => navigate("/assessments/add")} className="gap-2">
             <Plus className="h-4 w-4" />
             Add New Assessment
@@ -445,7 +526,7 @@ const AssessmentListPage: React.FC = () => {
         <div className="bg-white rounded-lg p-5 shadow border">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-lg font-semibold">Assessment Status Distribution</h2>
-            <span className="text-sm text-gray-500">Proportion of completed / in-progress / pending</span>
+            <span className="text-sm text-gray-500">Proportion of approved / rejected / pending / reviewed</span>
           </div>
           <div style={{ width: "100%", height: 300 }}>
             <ResponsiveContainer>
@@ -482,8 +563,8 @@ const AssessmentListPage: React.FC = () => {
               <select value={conditionFilter} onChange={(e) => setConditionFilter(e.target.value)} className="border rounded px-2 py-2">
                 <option value="">All conditions</option>
                 <option value="good">Good</option>
-                <option value="attention">Needs Attention</option>
-                <option value="urgent_attention">Critical</option>
+                <option value="attention required">Needs Attention</option>
+                <option value="urgent attention">Critical</option>
               </select>
             </label>
 
@@ -491,9 +572,10 @@ const AssessmentListPage: React.FC = () => {
               <span className="text-xs text-gray-600 mb-1">Status</span>
               <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="border rounded px-2 py-2">
                 <option value="">All statuses</option>
-                <option value="completed">Completed</option>
-                <option value="in-progress">In Progress</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
                 <option value="pending">Pending</option>
+                <option value="reviewed">Reviewed</option>
               </select>
             </label>
 
@@ -592,8 +674,8 @@ const AssessmentListPage: React.FC = () => {
                   required
                 >
                   <option value="good">Good</option>
-                  <option value="attention">Needs Attention</option>
-                  <option value="urgent_attention">Critical</option>
+                  <option value="attention required">Needs Attention</option>
+                  <option value="urgent attention">Critical</option>
                 </select>
               </div>
 

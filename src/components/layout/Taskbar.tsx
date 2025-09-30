@@ -105,7 +105,7 @@ export function Taskbar() {
                     <span className="text-sm font-medium">Institution</span>
                   </div>
                   <div className="flex flex-col space-y-1 text-sm">
-                    <p className="font-medium">{currentUser.institution?.name}</p>
+                    <p className="font-medium">{currentUser.institution_name}</p>
                     <p className="text-xs text-muted-foreground capitalize">{currentUser.institution?.type} School</p>
                     <p className="text-xs text-muted-foreground flex items-center gap-1">
                       <MapPin className="w-3 h-3" />

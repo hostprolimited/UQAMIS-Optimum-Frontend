@@ -418,7 +418,7 @@ const Reports = () => {
                   <TableHead>Safety</TableHead>
                   <TableHead>Administration</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
+                  {/* <TableHead>Actions</TableHead> */}
                 </TableRow>
               </TableHeader>
               <TableBody>
