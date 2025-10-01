@@ -35,6 +35,7 @@ import * as z from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { useRole } from '@/contexts/RoleContext';
 import { getTermDates, updateTermDates, deleteTermDates } from '../core/_requests';
+import { termDateData } from '../core/_models';
 import { Plus, MoreHorizontal, Calendar, Clock, Edit, Trash2, Filter, Download, FileText, FileSpreadsheet, File, Search } from 'lucide-react';
 
 // Types
@@ -252,13 +253,13 @@ const TermDateListPage = () => {
         setLoading(true);
         const response = await getTermDates();
         // Transform API data to component format
-        const transformedData: TermDate[] = response.map((item: any) => ({
+        const transformedData: TermDate[] = response.term_dates.map((item: any) => ({
           id: item.id,
-          term: item.term,
-          openingDate: item.startDate,
-          closingDate: item.endDate,
-          year: new Date(item.startDate).getFullYear(),
-          createdAt: new Date().toISOString(), // API might not have this, using current date as fallback
+          term: item.term_number.toString(),
+          openingDate: item.opening_date.split('T')[0],
+          closingDate: item.closing_date.split('T')[0],
+          year: item.year,
+          createdAt: item.created_at,
         }));
         setTermDates(transformedData);
       } catch (error: any) {
@@ -321,11 +322,12 @@ const TermDateListPage = () => {
     if (!selectedDate) return;
 
     try {
-      const apiData = {
+      const apiData: termDateData = {
         id: selectedDate.id,
-        term: data.term,
-        startDate: data.openingDate,
-        endDate: data.closingDate,
+        term_number: data.term,
+        opening_date: data.openingDate,
+        closing_date: data.closingDate,
+        year: data.year.toString(),
       };
 
       await updateTermDates(selectedDate.id, apiData);

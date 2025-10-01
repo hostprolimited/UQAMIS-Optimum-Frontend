@@ -21,6 +21,7 @@ import {
   getUsers,
   getPermissions,
   createPermission,
+  createRole,
   assignPermissionToRole,
   assignUserRole,
   getUserRole,
@@ -63,14 +64,9 @@ const PERMISSIONS: PermissionItem[] = [
   { id: "add_role", label: "Add Role", group: "Roles" },
   { id: "edit_role", label: "Edit Role", group: "Roles" },
   { id: "delete_role", label: "Delete role", group: "Roles" },
-
-  { id: "view_all_supplier", label: "View all supplier", type: "radio", group: "Supplier" },
-  { id: "add_supplier", label: "Add supplier", group: "Supplier" },
-  { id: "edit_supplier", label: "Edit supplier", group: "Supplier" },
-  { id: "delete_supplier", label: "Delete supplier", group: "Supplier" }
 ];
 
-const GROUP_ORDER = ["Others", "User", "Roles", "Supplier"];
+const GROUP_ORDER = ["Others", "User", "Roles"];
 
 // Simple icon for permission matrix
 const PermissionIcon = ({ hasPermission }: { hasPermission: boolean }) => (
@@ -383,7 +379,6 @@ const RolesPermissions = () => {
       initPermissions[p.id] = false;
     });
     setRolePermissions(initPermissions);
-    setRadioSelections({ Supplier: null });
     setNewRoleName('');
     setShowAddRoleModal(true);
   };
@@ -849,27 +844,41 @@ const RolesPermissions = () => {
               </Button>
               <Button
                 type="button"
-                onClick={() => {
-                  const selectedPermissions = Object.keys(rolePermissions).filter((k) => rolePermissions[k]);
-                  const radios = Object.entries(radioSelections).reduce((acc, [g, v]) => {
-                    if (v) acc[g] = v;
-                    return acc;
-                  }, {} as Record<string, string>);
+                onClick={async () => {
+                  if (!newRoleName.trim()) {
+                    toast({
+                      title: "Error",
+                      description: "Role name is required",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
 
-                  const payload = {
-                    roleName: newRoleName,
-                    permissions: selectedPermissions,
-                    radios
-                  };
+                  try {
+                    await createRole({ name: newRoleName });
+                    toast({
+                      title: "Success",
+                      description: "Role created successfully",
+                      variant: "default",
+                    });
 
-                  console.log("Submitting role:", payload);
-                  alert("Role saved — check console for payload (demo)");
+                    // Refresh roles
+                    const permissionsData = await getPermissions();
+                    setRoles(permissionsData.roles || []);
 
-                  // Reset and close
-                  setShowAddRoleModal(false);
-                  setNewRoleName('');
-                  setRolePermissions({});
-                  setRadioSelections({});
+                    // Reset and close
+                    setShowAddRoleModal(false);
+                    setNewRoleName('');
+                    setRolePermissions({});
+                    setRadioSelections({});
+                  } catch (error: any) {
+                    console.error('Error creating role:', error);
+                    toast({
+                      title: "Error",
+                      description: error?.response?.data?.message || error?.message || "Failed to create role",
+                      variant: "destructive",
+                    });
+                  }
                 }}
                 className="bg-indigo-600 hover:bg-indigo-700"
               >

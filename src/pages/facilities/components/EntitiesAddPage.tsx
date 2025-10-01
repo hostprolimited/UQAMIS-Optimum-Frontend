@@ -6,10 +6,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
 import { getFacilities } from '../../assements/core/_request';
 import { Facility } from '../../assements/core/_model';
+import { createSchoolEntities } from '../core/_requests';
+import { entitiesData } from '../core/_models';
 
 const FacilityAddPage = () => {
+  const { toast } = useToast();
   const [facilities, setFacilities] = useState<Facility[]>([]);
   const [selectedFacility, setSelectedFacility] = useState('');
   const [classrooms, setClassrooms] = useState([{ grade: '', stream: '', numberOfClasses: '' as number | '' }]);
@@ -90,18 +94,113 @@ const FacilityAddPage = () => {
     setOffices(updated);
   };
 
-  const handleSubmit = () => {
-    console.log({
-      selectedFacility,
-      classrooms,
-      laboratories,
-      toilets,
-      dormitories,
-      diningHalls,
-      compounds,
-      offices
-    });
-    // TODO: Implement API call to submit the data
+  const handleSubmit = async () => {
+    try {
+      // Find the selected facility ID
+      const selectedFacilityData = facilities.find(f => f.name === selectedFacility);
+      if (!selectedFacilityData) {
+        console.error('Selected facility not found');
+        return;
+      }
+
+      const facilityId = selectedFacilityData.id;
+      let entities: entitiesData['entities'] = [];
+
+      // Transform data based on facility type
+      if (selectedFacility.toLowerCase().includes('classroom')) {
+        entities = classrooms
+          .filter(classroom => classroom.grade && classroom.stream && classroom.numberOfClasses)
+          .map(classroom => ({
+            grade: classroom.grade,
+            stream: classroom.stream,
+            total: classroom.numberOfClasses as number
+          }));
+      } else if (selectedFacility.toLowerCase().includes('laboratory') || selectedFacility.toLowerCase().includes('lab')) {
+        entities = laboratories
+          .filter(lab => lab.labType && lab.numberOfLaboratories)
+          .map(lab => ({
+            name: lab.labType,
+            total: lab.numberOfLaboratories as number
+          }));
+      } else if (selectedFacility.toLowerCase().includes('toilet')) {
+        entities = toilets
+          .filter(toilet => toilet.toiletType && toilet.numberOfToilets)
+          .map(toilet => ({
+            name: toilet.toiletType,
+            total: toilet.numberOfToilets as number
+          }));
+      } else if (selectedFacility.toLowerCase().includes('dormitory') || selectedFacility.toLowerCase().includes('dorm')) {
+        entities = dormitories
+          .filter(dorm => dorm.names && dorm.numberOfDormitories)
+          .map(dorm => ({
+            name: dorm.names,
+            total: dorm.numberOfDormitories as number
+          }));
+      } else if (selectedFacility.toLowerCase().includes('dining')) {
+        entities = diningHalls
+          .filter(dining => dining.names && dining.numberOfDiningHalls)
+          .map(dining => ({
+            name: dining.names,
+            total: dining.numberOfDiningHalls as number
+          }));
+      } else if (selectedFacility.toLowerCase().includes('compound')) {
+        entities = compounds
+          .filter(compound => compound.areas && compound.numberOfCompounds)
+          .map(compound => ({
+            name: compound.areas,
+            total: compound.numberOfCompounds as number
+          }));
+      } else if (selectedFacility.toLowerCase().includes('office')) {
+        entities = offices
+          .filter(office => office.names && office.numberOfOffices)
+          .map(office => ({
+            name: office.names,
+            total: office.numberOfOffices as number
+          }));
+      }
+
+      if (entities.length === 0) {
+        console.error('No valid entities to submit');
+        return;
+      }
+
+      const payload: entitiesData = {
+        facility_id: facilityId,
+        entities: entities
+      };
+
+      console.log('Submitting payload:', payload);
+
+      const response = await createSchoolEntities(payload);
+      console.log('API Response:', response);
+
+      // Show success toast
+      toast({
+        title: 'Success',
+        description: `Entities for ${selectedFacility} have been created successfully!`,
+        variant: 'default',
+      });
+
+      // Reset form after successful submission
+      setSelectedFacility('');
+      setClassrooms([{ grade: '', stream: '', numberOfClasses: '' }]);
+      setLaboratories([{ labType: '', numberOfLaboratories: '' }]);
+      setToilets([{ toiletType: '', numberOfToilets: '' }]);
+      setDormitories([{ names: '', numberOfDormitories: '' }]);
+      setDiningHalls([{ names: '', numberOfDiningHalls: '' }]);
+      setCompounds([{ areas: '', numberOfCompounds: '' }]);
+      setOffices([{ names: '', numberOfOffices: '' }]);
+
+    } catch (error: any) {
+      console.error('Error submitting entities:', error);
+
+      // Show error toast
+      toast({
+        title: 'Error',
+        description: error?.response?.data?.message || 'Failed to create entities. Please try again.',
+        variant: 'destructive',
+      });
+    }
   };
 
   return (
@@ -199,7 +298,7 @@ const FacilityAddPage = () => {
                     </div>
                   </div>
 
-                  <div className="space-y-2">
+                  {/* <div className="space-y-2">
                     <Label className="text-sm font-medium text-gray-700">
                       Number of Classes
                     </Label>
@@ -211,7 +310,7 @@ const FacilityAddPage = () => {
                       className="w-full"
                       min="1"
                     />
-                  </div>
+                  </div> */}
                 </div>
               ))}
             </div>
@@ -375,12 +474,11 @@ const FacilityAddPage = () => {
                       <Label className="text-sm font-medium text-gray-700">
                         Dormitory Names
                       </Label>
-                      <Textarea
-                        placeholder="Enter names (one per line or separated by commas)"
+                      <Input
+                        placeholder="Enter names separated by commas"
                         value={dorm.names}
                         onChange={(e) => updateDormitory(index, 'names', e.target.value)}
                         className="w-full"
-                        rows={3}
                       />
                       <p className="text-xs text-gray-500">
                         e.g., Dorm A, Dorm B
@@ -435,12 +533,11 @@ const FacilityAddPage = () => {
                       <Label className="text-sm font-medium text-gray-700">
                         Dining Hall Names
                       </Label>
-                      <Textarea
-                        placeholder="Enter names (one per line or separated by commas)"
+                      <Input
+                        placeholder="Enter names separated by commas"
                         value={dining.names}
                         onChange={(e) => updateDiningHall(index, 'names', e.target.value)}
                         className="w-full"
-                        rows={3}
                       />
                       <p className="text-xs text-gray-500">
                         e.g., Main Dining Hall
@@ -495,12 +592,11 @@ const FacilityAddPage = () => {
                       <Label className="text-sm font-medium text-gray-700">
                         Compound Areas
                       </Label>
-                      <Textarea
-                        placeholder="Enter areas (one per line or separated by commas)"
+                      <Input
+                        placeholder="Enter areas separated by commas"
                         value={compound.areas}
                         onChange={(e) => updateCompound(index, 'areas', e.target.value)}
                         className="w-full"
-                        rows={3}
                       />
                       <p className="text-xs text-gray-500">
                         e.g., Lawns, Flowers, Trees
@@ -555,12 +651,11 @@ const FacilityAddPage = () => {
                       <Label className="text-sm font-medium text-gray-700">
                         Office Names
                       </Label>
-                      <Textarea
-                        placeholder="Enter names (one per line or separated by commas)"
+                      <Input
+                        placeholder="Enter names separated by commas"
                         value={office.names}
                         onChange={(e) => updateOffice(index, 'names', e.target.value)}
                         className="w-full"
-                        rows={3}
                       />
                       <p className="text-xs text-gray-500">
                         e.g., Principal's Office

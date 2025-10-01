@@ -45,11 +45,18 @@ export const Urls = {
   AGENT_REVIEW_SAFETY_ASSESSMENT: (id: number) => `/safety/review/${id}`,
 
   // Termly Dates Endpoints
-  CREATE_TERM_DATES_URL: '/term-dates/create',
-  GET_TERM_DATES_URL: '/term-dates/list',
-  GET_TERM_DATES_BY_ID_URL: (id: number) => `/term-dates/${id}`,
+  CREATE_TERM_DATES_URL: '/settings/term-dates/create',
+  GET_TERM_DATES_URL: '/settings/term-dates/list',
+  GET_TERM_DATES_BY_ID_URL: (id: number) => `/settings/term-dates/${id}`,
   UPDATE_TERM_DATES_URL: (id: number) => `/term-dates/${id}`,
   DELETE_TERM_DATES_URL: (id: number) => `/term-dates/${id}`,
+
+  // School Entities Endpoints
+  CREATE_SCHOOL_ENTITIES_URL: '/facilities/entities/create',
+  GET_SCHOOL_ENTITIES_URL: '/facilities/entities/list',
+  GET_SCHOOL_ENTITY_BY_ID_URL: (id: number) => `/facilities/entities/${id}`,
+  UPDATE_SCHOOL_ENTITY_URL: (id: number) => `/facilities/entities/${id}`,
+  DELETE_SCHOOL_ENTITY_URL: (id: number) => `/facilities/entities/${id}`,
 
   // User Management Endpoints
   CREATE_USERS_URL: '/users/create',
@@ -68,7 +75,7 @@ export const Urls = {
   
   // Roles Management Endpoints
   GET_ROLES_URL: '/roles/list',
-  CREATE_ROLE_URL: '/create-role',
+  CREATE_ROLE_URL: 'roles/create',
   GET_USER_ROLE: (id: number) => `/users/role/${id}`,
   ASSIGN_USER_ROLE_URL: (id: number) => `/users/assign-role/${id}`,
   UPDATE_ROLE_URL: (id: number) => `/update-role/${id}`,

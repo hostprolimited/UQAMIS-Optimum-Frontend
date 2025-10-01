@@ -21,7 +21,8 @@ import RoleBasedAssessmentPage from "./pages/assements/components/RoleBasedAsses
 import AssessmentAdd from "./pages/assements/components/AssessmentAddPage";
 import Users from "./pages/settings/components/UsersPage";
 // facility 
-import FacilityAddPage from "./pages/facilities/components/FacilityAddPage";
+import FacilityAddPage from "./pages/facilities/components/EntitiesAddPage";
+import EntitiesListPage from "./pages/facilities/components/EntitiesListPage";
 import SafetyReportPage from "./pages/assements/components/SafetyReportPage";
 import SchoolFormListPage from "./pages/assements/components/SchoolMetricsListPage";
 import SchoolFormAddPage from "./pages/assements/components/SchoolMetricsAddPage";
@@ -73,6 +74,11 @@ const App = () => (
                   <Route path ="/facilities/add" element={
                     <ProtectedRoute allowedRoles={["school_admin"]}>
                       <FacilityAddPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path ="/entities" element={
+                    <ProtectedRoute allowedRoles={["school_admin", "agent", "ministry_admin"]}>
+                      <EntitiesListPage />
                     </ProtectedRoute>
                   } />
                   <Route path="/assessment" element={

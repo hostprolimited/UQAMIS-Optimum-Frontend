@@ -1,6 +1,7 @@
 export interface termDateData {
   id: number;
-  term: string;
-  startDate: string;
-  endDate: string;
+  term_number: string;
+  opening_date: string;
+  closing_date: string;
+  year: string;
 }

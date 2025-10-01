@@ -17,11 +17,13 @@ import { useToast } from '@/hooks/use-toast';
 import { createTermDates } from '../core/_requests';
 
 const termDatesSchema = z.object({
-  term: z.enum(['1', '2', '3']),
-  openingDate: z.date(),
-  closingDate: z.date(),
+  term_number: z.enum(['1', '2', '3']),
+  opening_date: z.date(),
+  closing_date: z.date(),
   year: z.number().default(new Date().getFullYear()),
 });
+
+import { termDateData } from '../core/_models';
 
 type TermDatesData = z.infer<typeof termDatesSchema>;
 
@@ -32,20 +34,21 @@ const TermDates: React.FC = () => {
   const form = useForm<TermDatesData>({
     resolver: zodResolver(termDatesSchema),
     defaultValues: {
-      term: '1',
-      openingDate: new Date(),
-      closingDate: new Date(),
+      term_number: '1',
+      opening_date: new Date(),
+      closing_date: new Date(),
       year: new Date().getFullYear(),
     },
   });
 
   const onSubmit = async (data: TermDatesData) => {
     try {
-      const apiData = {
+      const apiData: termDateData = {
         id: 0, // Placeholder for create
-        term: data.term,
-        startDate: data.openingDate.toISOString().split('T')[0],
-        endDate: data.closingDate.toISOString().split('T')[0],
+        term_number: data.term_number,
+        opening_date: data.opening_date.toISOString().split('T')[0],
+        closing_date: data.closing_date.toISOString().split('T')[0],
+        year: data.year.toString(),
       };
 
       await createTermDates(apiData);
@@ -78,7 +81,7 @@ const TermDates: React.FC = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
-                    name="term"
+                    name="term_number"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-sm font-medium text-gray-700">Term</FormLabel>
@@ -115,7 +118,7 @@ const TermDates: React.FC = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
-                    name="openingDate"
+                    name="opening_date"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-sm font-medium text-gray-700">Opening Date</FormLabel>
@@ -133,7 +136,7 @@ const TermDates: React.FC = () => {
 
                   <FormField
                     control={form.control}
-                    name="closingDate"
+                    name="closing_date"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-sm font-medium text-gray-700">Closing Date</FormLabel>

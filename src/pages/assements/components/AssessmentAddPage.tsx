@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -8,6 +9,7 @@ import { ArrowLeft, Plus, Upload, X, FileText, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import {
   Form,
@@ -33,12 +35,13 @@ import { useToast } from '@/hooks/use-toast';
 
 import { getFacilities, createMaintenanceAssessment, createSafetyAssessment } from "../core/_request";
 import { Facility } from "../core/_model";
+import { getSchoolEntities } from '../../facilities/core/_requests';
 import ClassSafetyForm from './SafetyFormPage';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ChevronDown } from 'lucide-react';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { ChevronDown, Check } from 'lucide-react';
 
 // Facility type mappings for consistent naming
 const FACILITY_TYPE_MAPPINGS: { [key: string]: string } = {
@@ -374,8 +377,7 @@ const facilityAssessmentSchema = z.object({
   school_feedback: z.string().min(1, 'School feedback is required'),
   agent_feedback: z.string().optional(),
   files: z.array(z.instanceof(File)).optional(),
-  grade: z.string().optional(),
-  streams: z.array(z.string()).optional(),
+  classes: z.array(z.string()).optional(),
 });
 
 type FacilityAssessmentData = z.infer<typeof facilityAssessmentSchema>;
@@ -417,27 +419,69 @@ const AssessmentAddPage: React.FC = () => {
   const [assessments, setAssessments] = useState<any[]>([]);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [facilities, setFacilities] = useState<Facility[]>([]);
+  const [realClassOptions, setRealClassOptions] = useState<string[]>([]);
+  const [toiletOptions, setToiletOptions] = useState<string[]>([]);
+  const [laboratoryOptions, setLaboratoryOptions] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Safety data
   const [safetyData, setSafetyData] = useState<any[]>([]);
 
-  // Fetch facilities from API
+  // Toilet specific states
+  const [hasToiletFacility, setHasToiletFacility] = useState<boolean | null>(null);
+  const [toiletAbsenceReason, setToiletAbsenceReason] = useState('');
+  const [selectedToiletTypes, setSelectedToiletTypes] = useState<string[]>([]);
+  const [toiletQuantities, setToiletQuantities] = useState<{[key: string]: number}>({});
+
+  // Laboratory specific states
+  const [hasLaboratoryFacility, setHasLaboratoryFacility] = useState<boolean | null>(null);
+  const [laboratoryAbsenceReason, setLaboratoryAbsenceReason] = useState('');
+  const [selectedLaboratoryTypes, setSelectedLaboratoryTypes] = useState<string[]>([]);
+  const [laboratoryQuantities, setLaboratoryQuantities] = useState<{[key: string]: number}>({});
+
+  // Fetch facilities and entities data
   useEffect(() => {
-    const fetchFacilities = async () => {
+    const fetchData = async () => {
       try {
-        const response = await getFacilities();
-        setFacilities(response.data || []); // Access the data property of the APIResponse
+        // Fetch facilities
+        const facilitiesResponse = await getFacilities();
+        setFacilities(facilitiesResponse.data || []);
+
+        // Fetch entities to get real class data
+        const entitiesResponse = await getSchoolEntities();
+        const entities = entitiesResponse.data || [];
+
+        // Filter for classroom entities (facility_id: 1) and use the full names directly
+        const classroomEntities = entities.filter((entity: any) => entity.facility_id === 1);
+        const classOptions = classroomEntities.map((entity: any) => entity.name).sort();
+
+        setRealClassOptions(classOptions);
+
+        // Filter for toilet entities (facility_id: 4) and use the names
+        const toiletEntities = entities.filter((entity: any) => entity.facility_id === 4);
+        const toiletOpts = toiletEntities.map((entity: any) => entity.name).sort();
+
+        setToiletOptions(toiletOpts);
+
+        // Filter for laboratory entities (facility_id: 3) and use the names
+        const laboratoryEntities = entities.filter((entity: any) => entity.facility_id === 3);
+        const laboratoryOpts = laboratoryEntities.map((entity: any) => entity.name).sort();
+
+        setLaboratoryOptions(laboratoryOpts);
+
       } catch (error) {
         toast({
           title: "Error",
-          description: "Failed to load facilities.",
+          description: "Failed to load data.",
           variant: "destructive",
         });
-        setFacilities([]); // Set empty array as fallback
+        setFacilities([]);
+        setRealClassOptions([]);
+        setToiletOptions([]);
+        setLaboratoryOptions([]);
       }
     };
-    fetchFacilities();
+    fetchData();
   }, [toast]);
 
   // Initialize form with empty values
@@ -452,8 +496,7 @@ const AssessmentAddPage: React.FC = () => {
       school_feedback: '',
       agent_feedback: '',
       files: [],
-      grade: '',
-      streams: [],
+      classes: [],
     }
   });
   
@@ -483,8 +526,7 @@ const AssessmentAddPage: React.FC = () => {
         school_feedback: '',
         agent_feedback: '',
         files: [],
-        grade: '',
-        streams: [],
+        classes: [],
       });
     }
   }, [selectedFacility]);
@@ -522,12 +564,22 @@ const AssessmentAddPage: React.FC = () => {
     setFacilityParts(facilityParts);
     
     // Initialize form with default values for each part
-      facilityForm.reset({
-        facility_id: facility.id,
-        details: facilityParts.map(name => ({ part_of_building: name, assessment_status: undefined as any })),
-        files: []
-      });    setUploadedFiles([]);
+    facilityForm.reset({
+      facility_id: facility.id,
+      details: facilityParts.map(name => ({ part_of_building: name, assessment_status: undefined as any })),
+      files: []
+    });
+    setUploadedFiles([]);
     setIsModalOpen(true);
+    // Reset facility-specific states
+    setHasToiletFacility(null);
+    setToiletAbsenceReason('');
+    setSelectedToiletTypes([]);
+    setToiletQuantities({});
+    setHasLaboratoryFacility(null);
+    setLaboratoryAbsenceReason('');
+    setSelectedLaboratoryTypes([]);
+    setLaboratoryQuantities({});
   };
 
   const handleFacilityAssessmentSubmit = async (data: FacilityAssessmentData) => {
@@ -535,6 +587,68 @@ const AssessmentAddPage: React.FC = () => {
       if (!selectedFacility) return;
 
       const isClassFacility = selectedFacility.name.toLowerCase().includes('class');
+      const isToiletFacility = selectedFacility.name.toLowerCase().includes('toilet');
+      const isLaboratoryFacility = selectedFacility.name.toLowerCase().includes('laboratory');
+
+      // Special handling for toilet facilities when not available
+      if (isToiletFacility && hasToiletFacility === false) {
+        if (!toiletAbsenceReason.trim()) {
+          toast({
+            title: 'Validation Error',
+            description: 'Please provide a reason for the absence of toilet facilities.',
+            variant: 'destructive',
+          });
+          return;
+        }
+
+        // Submit only the absence reason for toilet facilities
+        toast({
+          title: 'Assessment Submitted',
+          description: `Toilet facility absence recorded for ${selectedFacility.name}. Reason: ${toiletAbsenceReason}`,
+          variant: 'default',
+        });
+
+        setIsModalOpen(false);
+        setUploadedFiles([]);
+        facilityForm.reset();
+        setSelectedFacility(null);
+        setSafetyData([]);
+        setHasToiletFacility(null);
+        setToiletAbsenceReason('');
+        setSelectedToiletTypes([]);
+        setToiletQuantities({});
+        return;
+      }
+
+      // Special handling for laboratory facilities when not available
+      if (isLaboratoryFacility && hasLaboratoryFacility === false) {
+        if (!laboratoryAbsenceReason.trim()) {
+          toast({
+            title: 'Validation Error',
+            description: 'Please provide a reason for the absence of laboratory facilities.',
+            variant: 'destructive',
+          });
+          return;
+        }
+
+        // Submit only the absence reason for laboratory facilities
+        toast({
+          title: 'Assessment Submitted',
+          description: `Laboratory facility absence recorded for ${selectedFacility.name}. Reason: ${laboratoryAbsenceReason}`,
+          variant: 'default',
+        });
+
+        setIsModalOpen(false);
+        setUploadedFiles([]);
+        facilityForm.reset();
+        setSelectedFacility(null);
+        setSafetyData([]);
+        setHasLaboratoryFacility(null);
+        setLaboratoryAbsenceReason('');
+        setSelectedLaboratoryTypes([]);
+        setLaboratoryQuantities({});
+        return;
+      }
 
       let maintenanceSubmitted = false;
       let safetySubmitted = false;
@@ -551,7 +665,7 @@ const AssessmentAddPage: React.FC = () => {
           institution_id: selectedFacility.institution_id || 1,
           institution_name: 'Institution', // Add required institution_name
           facility_id: data.facility_id,
-          class: isClassFacility && data.class ? [data.class] : [],
+          class: isClassFacility && data.classes ? data.classes : [],
           status: 'pending' as 'pending',
           details: data.details.map(detail => ({
             part_of_building: detail.part_of_building,
@@ -560,8 +674,6 @@ const AssessmentAddPage: React.FC = () => {
           school_feedback: data.school_feedback,
           agent_feedback: data.agent_feedback,
           files: uploadedFiles,
-          grade: data.grade,
-          streams: data.streams,
         };
 
         const response = await createMaintenanceAssessment(assessmentInput);
@@ -583,7 +695,7 @@ const AssessmentAddPage: React.FC = () => {
           institution_id: selectedFacility.institution_id || 1,
           institution_name: 'Institution',
           facility_id: data.facility_id,
-          class: isClassFacility && data.class ? [data.class] : [],
+          class: isClassFacility && data.classes ? data.classes : [],
           status: 'pending' as 'pending',
           details: safetyData.map(item => ({
             part_of_building: item.part,
@@ -642,6 +754,16 @@ const AssessmentAddPage: React.FC = () => {
       facilityForm.reset();
       setSelectedFacility(null);
       setSafetyData([]);
+      // Reset toilet-specific states
+      setHasToiletFacility(null);
+      setToiletAbsenceReason('');
+      setSelectedToiletTypes([]);
+      setToiletQuantities({});
+      // Reset laboratory-specific states
+      setHasLaboratoryFacility(null);
+      setLaboratoryAbsenceReason('');
+      setSelectedLaboratoryTypes([]);
+      setLaboratoryQuantities({});
     } catch (error: any) {
       // Try to extract backend error message
       let message = 'Failed to submit assessment';
@@ -658,53 +780,48 @@ const AssessmentAddPage: React.FC = () => {
     }
   };
 
-const streamNames = [
-  'Blue',
-  'Green',
-  'Yellow',
-  'East',
-  'West',
-  'North',
-  'South',
-];
 
-interface StreamSelectProps {
+interface ClassSelectProps {
   onChange: (selected: string[]) => void;
   value: string[];
+  classOptions: string[];
 }
 
-const StreamSelect: React.FC<StreamSelectProps> = ({ onChange, value }) => {
+const ClassSelect: React.FC<ClassSelectProps> = ({ onChange, value, classOptions }) => {
   const [open, setOpen] = useState(false);
-
-  const handleSelect = (stream: string) => {
-    const newValue = value.includes(stream) ? value.filter(s => s !== stream) : [...value, stream];
-    onChange(newValue);
-  };
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button variant="outline" className="w-full justify-between">
-          {value.length > 0 ? `${value.length} stream${value.length > 1 ? 's' : ''} selected` : "Select streams"}
-          <ChevronDown className="ml-2 h-4 w-4" />
+          {value.length > 0 ? `${value.length} selected` : "Select classes..."}
+          <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-full p-0">
         <Command>
-          <CommandInput placeholder="Search streams..." />
-          <CommandEmpty>No streams found.</CommandEmpty>
-          <CommandGroup className="max-h-64 overflow-y-auto">
-            {streamNames.map((name) => (
-              <CommandItem key={name} onSelect={() => handleSelect(name)}>
-                <Checkbox
-                  checked={value.includes(name)}
-                  onCheckedChange={() => handleSelect(name)}
-                  className="mr-2"
-                />
-                {name}
-              </CommandItem>
-            ))}
-          </CommandGroup>
+          <CommandList>
+            <CommandEmpty>No classes found.</CommandEmpty>
+            <CommandGroup>
+              {classOptions.map((option) => {
+                const isSelected = value.includes(option);
+                return (
+                  <CommandItem
+                    key={option}
+                    onSelect={() => {
+                      const newValue = isSelected
+                        ? value.filter((v) => v !== option)
+                        : [...value, option];
+                      onChange(newValue);
+                    }}
+                  >
+                    {isSelected ? <Check className="mr-2 h-4 w-4" /> : <div className="mr-2 h-4 w-4" />}
+                    {option}
+                  </CommandItem>
+                );
+              })}
+            </CommandGroup>
+          </CommandList>
         </Command>
       </PopoverContent>
     </Popover>
@@ -781,8 +898,8 @@ const StreamSelect: React.FC<StreamSelectProps> = ({ onChange, value }) => {
               <form onSubmit={facilityForm.handleSubmit(handleFacilityAssessmentSubmit)}>
                 <Tabs defaultValue="maintenance" className="space-y-4">
                   <TabsList>
-                    <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
-                    <TabsTrigger value="safety">Safety</TabsTrigger>
+                    <TabsTrigger value="maintenance" disabled={hasToiletFacility === false || hasLaboratoryFacility === false}>Maintenance</TabsTrigger>
+                    <TabsTrigger value="safety" disabled={hasToiletFacility === false || hasLaboratoryFacility === false}>Safety</TabsTrigger>
                   </TabsList>
                   <TabsContent value="maintenance">
                     <div className="max-w-5xl mx-auto bg-white shadow-lg rounded-xl p-6 mt-10">
@@ -813,6 +930,7 @@ const StreamSelect: React.FC<StreamSelectProps> = ({ onChange, value }) => {
                                           <input
                                             type="radio"
                                             value={condition}
+                                            disabled={hasToiletFacility === false || hasLaboratoryFacility === false}
                                             checked={field.value === (condition === 'urgent' ? 'Urgent Attention' : condition === 'attention' ? 'Attention Required' : 'Good')}
                                             onChange={() => {
                                               const updatedDetails = [...facilityForm.getValues().details];
@@ -826,7 +944,7 @@ const StreamSelect: React.FC<StreamSelectProps> = ({ onChange, value }) => {
                                               condition === 'urgent' && field.value === 'Urgent Attention' ? 'text-red-600' :
                                               condition === 'attention' && field.value === 'Attention Required' ? 'text-blue-600' :
                                               condition === 'good' && field.value === 'Good' ? 'text-green-600' : ''
-                                            }`}
+                                            } ${hasToiletFacility === false || hasLaboratoryFacility === false ? 'opacity-50 cursor-not-allowed' : ''}`}
                                             style={
                                               condition === 'urgent' && field.value === 'Urgent Attention' ? { accentColor: '#dc2626' } :
                                               condition === 'attention' && field.value === 'Attention Required' ? { accentColor: '#2563eb' } :
@@ -846,168 +964,383 @@ const StreamSelect: React.FC<StreamSelectProps> = ({ onChange, value }) => {
                     </div>
                   </TabsContent>
                   <TabsContent value="safety">
-                    <ClassSafetyForm safetyData={safetyData} onSafetyDataChange={setSafetyData} />
-                  </TabsContent>
-                  {/* Grade and Stream Selects */}
-                  {selectedFacility?.name.toLowerCase().includes('class') && (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      {/* Grade */}
-                      <FormField
-                        control={facilityForm.control}
-                        name="grade"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="flex items-center space-x-2 font-semibold">
-                              <Users className="h-4 w-4 text-indigo-500" />
-                              <span>Grade</span>
-                            </FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select grade" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="PP1">PP1</SelectItem>
-                                <SelectItem value="PP2">PP2</SelectItem>
-                                {Array.from({ length: 12 }, (_, i) => (
-                                  <SelectItem key={i + 1} value={`Grade ${i + 1}`}>
-                                    Grade {i + 1}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      {/* Streams */}
-                      <FormField
-                        control={facilityForm.control}
-                        name="streams"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="flex items-center space-x-2 font-semibold">
-                              <Users className="h-4 w-4 text-green-500" />
-                              <span>Streams</span>
-                            </FormLabel>
-                            <FormControl>
-                              <StreamSelect
-                                onChange={field.onChange}
-                                value={field.value || []}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                    <div className={hasToiletFacility === false || hasLaboratoryFacility === false ? 'opacity-50 pointer-events-none' : ''}>
+                      <ClassSafetyForm safetyData={safetyData} onSafetyDataChange={setSafetyData} />
                     </div>
-                  )}
-                  {/* File Upload Section */}
-                  <div className="space-y-4">
-                    <FormField
-                      control={facilityForm.control}
-                      name="files"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-base font-semibold">Upload Supporting Documents</FormLabel>
-                          <FormControl>
-                            <div className="space-y-4">
-                              {/* File Upload Area */}
-                              <div
-                                onDragOver={handleDragOver}
-                                onDrop={handleDrop}
-                                className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors cursor-pointer"
-                                onClick={() => fileInputRef.current?.click()}
-                              >
-                                <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                                <p className="text-lg font-medium text-gray-700">Drop files here or click to upload</p>
-                                <p className="text-sm text-gray-500 mt-1">Support for multiple files (PDF, DOC, JPG, PNG)</p>
-                                <input
-                                  ref={fileInputRef}
-                                  type="file"
-                                  multiple
-                                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif"
-                                  onChange={handleFileUpload}
-                                  className="hidden"
-                                />
-                              </div>
-
-                              {/* Uploaded Files List */}
-                              {uploadedFiles.length > 0 && (
-                                <div className="space-y-2">
-                                  <h4 className="font-medium text-gray-700">Uploaded Files ({uploadedFiles.length})</h4>
-                                  <div className="space-y-2 max-h-32 overflow-y-auto">
-                                    {uploadedFiles.map((file, index) => (
-                                      <div key={index} className="flex items-center justify-between bg-gray-50 p-3 rounded-md">
-                                        <div className="flex items-center space-x-3">
-                                          <FileText className="h-5 w-5 text-gray-500" />
-                                          <div>
-                                            <p className="text-sm font-medium text-gray-700">{file.name}</p>
-                                            <p className="text-xs text-gray-500">
-                                              {(file.size / 1024 / 1024).toFixed(2)} MB
-                                            </p>
-                                          </div>
-                                        </div>
-                                        <Button
-                                          type="button"
-                                          variant="ghost"
-                                          size="sm"
-                                          onClick={() => removeFile(index)}
-                                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                                        >
-                                          <X className="h-4 w-4" />
-                                        </Button>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    {/* School Feedback Section */}
-                    <FormField
-                      control={facilityForm.control}
-                      name="school_feedback"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-base font-semibold">Notes</FormLabel>
-                          <FormControl>
-                            <Textarea
-                              {...field}
-                              placeholder="Enter notes, concerns, and priorities..."
-                              className="min-h-[120px] resize-none"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <div className="flex gap-2 pt-4">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setIsModalOpen(false)}
-                      className="flex-1"
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      type="submit"
-                      className="flex-1 bg-[#F89B0C] hover:bg-[#F89B0C]/90 text-primary-foreground"
-                    >
-                      Submit Assessment
-                    </Button>
-                  </div>
+                  </TabsContent>
                 </Tabs>
+
+                {/* Show message when facility availability is not selected */}
+                {/* {hasToiletFacility === null && (
+                  <div className="text-center py-8 text-gray-500">
+                    <p>Please select whether the school has toilet facilities to continue with the assessment.</p>
+                  </div>
+                )} */}
+
+                {/* Class Selection */}
+                {selectedFacility?.name.toLowerCase().includes('class') && (
+                  <FormField
+                    control={facilityForm.control}
+                    name="classes"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center space-x-2 font-semibold">
+                          <Users className="h-4 w-4 text-indigo-500" />
+                          <span>Classes</span>
+                        </FormLabel>
+                        <FormControl>
+                          <ClassSelect
+                            onChange={field.onChange}
+                            value={field.value || []}
+                            classOptions={realClassOptions}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+
+                {/* Toilets Section */}
+                {selectedFacility?.name.toLowerCase().includes('toilet') && (
+                  <div className="space-y-6">
+                    {/* Facility Availability Check */}
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium text-gray-700">
+                          Does the school have this facility?
+                        </Label>
+                        <Select
+                          value={hasToiletFacility === null ? '' : hasToiletFacility ? 'yes' : 'no'}
+                          onValueChange={(value) => {
+                            const isAvailable = value === 'yes';
+                            setHasToiletFacility(isAvailable);
+                            if (!isAvailable) {
+                              // Clear maintenance and safety data when facility is not available
+                              setSafetyData([]);
+                              facilityForm.setValue('details', []);
+                              setToiletAbsenceReason('');
+                            }
+                          }}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select availability" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="yes">Yes</SelectItem>
+                            <SelectItem value="no">No</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Show absence reason if facility is not available */}
+                      {hasToiletFacility === false && (
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium text-gray-700">
+                            Reason for Absence
+                          </Label>
+                          <Textarea
+                            placeholder="Please provide the reason why the school does not have toilet facilities..."
+                            value={toiletAbsenceReason}
+                            onChange={(e) => setToiletAbsenceReason(e.target.value)}
+                            className="w-full min-h-[100px]"
+                          />
+                        </div>
+                      )}
+
+                      {/* Show toilet configuration if facility is available */}
+                      {hasToiletFacility === true && (
+                        <>
+                          <div className="space-y-4">
+                            {/* Toilet Type Selection */}
+                            <div className="space-y-2">
+                              <Label className="text-sm font-medium text-gray-700">
+                                Select Toilet Types Available
+                              </Label>
+                              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                {toiletOptions.map((type) => (
+                                  <div key={type} className="flex items-center space-x-2">
+                                    <Checkbox
+                                      id={type}
+                                      checked={selectedToiletTypes.includes(type)}
+                                      onCheckedChange={(checked) => {
+                                        if (checked) {
+                                          setSelectedToiletTypes(prev => [...prev, type]);
+                                          setToiletQuantities(prev => ({ ...prev, [type]: 1 }));
+                                        } else {
+                                          setSelectedToiletTypes(prev => prev.filter(t => t !== type));
+                                          setToiletQuantities(prev => {
+                                            const newQuantities = { ...prev };
+                                            delete newQuantities[type];
+                                            return newQuantities;
+                                          });
+                                        }
+                                      }}
+                                    />
+                                    <Label htmlFor={type} className="text-sm capitalize">
+                                      {type}
+                                    </Label>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Toilet Quantities */}
+                            {selectedToiletTypes.length > 0 && (
+                              <div className="space-y-4">
+                                <Label className="text-sm font-medium text-gray-700">
+                                  Number of Toilets for Each Type
+                                </Label>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  {selectedToiletTypes.map((type) => (
+                                    <div key={type} className="space-y-2">
+                                      <Label className="text-sm capitalize">{type}</Label>
+                                      <Input
+                                        type="number"
+                                        placeholder="Enter number"
+                                        value={toiletQuantities[type] || 1}
+                                        onChange={(e) => {
+                                          const value = e.target.value === '' ? 1 : Number(e.target.value);
+                                          setToiletQuantities(prev => ({ ...prev, [type]: value }));
+                                        }}
+                                        className="w-full"
+                                        min="1"
+                                      />
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Laboratories Section */}
+                {selectedFacility?.name.toLowerCase().includes('laboratory') && (
+                  <div className="space-y-6">
+                    {/* Facility Availability Check */}
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium text-gray-700">
+                          Does the school have this facility?
+                        </Label>
+                        <Select
+                          value={hasLaboratoryFacility === null ? '' : hasLaboratoryFacility ? 'yes' : 'no'}
+                          onValueChange={(value) => {
+                            const isAvailable = value === 'yes';
+                            setHasLaboratoryFacility(isAvailable);
+                            if (!isAvailable) {
+                              // Clear maintenance and safety data when facility is not available
+                              setSafetyData([]);
+                              facilityForm.setValue('details', []);
+                              setLaboratoryAbsenceReason('');
+                            }
+                          }}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select availability" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="yes">Yes</SelectItem>
+                            <SelectItem value="no">No</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Show absence reason if facility is not available */}
+                      {hasLaboratoryFacility === false && (
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium text-gray-700">
+                            Reason for Absence
+                          </Label>
+                          <Textarea
+                            placeholder="Please provide the reason why the school does not have laboratory facilities..."
+                            value={laboratoryAbsenceReason}
+                            onChange={(e) => setLaboratoryAbsenceReason(e.target.value)}
+                            className="w-full min-h-[100px]"
+                          />
+                        </div>
+                      )}
+
+                      {/* Show laboratory configuration if facility is available */}
+                      {hasLaboratoryFacility === true && (
+                        <>
+                          <div className="space-y-4">
+                            {/* Laboratory Type Selection */}
+                            <div className="space-y-2">
+                              <Label className="text-sm font-medium text-gray-700">
+                                Select Laboratory Types Available
+                              </Label>
+                              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                {laboratoryOptions.map((type) => (
+                                  <div key={type} className="flex items-center space-x-2">
+                                    <Checkbox
+                                      id={type}
+                                      checked={selectedLaboratoryTypes.includes(type)}
+                                      onCheckedChange={(checked) => {
+                                        if (checked) {
+                                          setSelectedLaboratoryTypes(prev => [...prev, type]);
+                                          setLaboratoryQuantities(prev => ({ ...prev, [type]: 1 }));
+                                        } else {
+                                          setSelectedLaboratoryTypes(prev => prev.filter(t => t !== type));
+                                          setLaboratoryQuantities(prev => {
+                                            const newQuantities = { ...prev };
+                                            delete newQuantities[type];
+                                            return newQuantities;
+                                          });
+                                        }
+                                      }}
+                                    />
+                                    <Label htmlFor={type} className="text-sm capitalize">
+                                      {type}
+                                    </Label>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Laboratory Quantities */}
+                            {selectedLaboratoryTypes.length > 0 && (
+                              <div className="space-y-4">
+                                <Label className="text-sm font-medium text-gray-700">
+                                  Number of Laboratories for Each Type
+                                </Label>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  {selectedLaboratoryTypes.map((type) => (
+                                    <div key={type} className="space-y-2">
+                                      <Label className="text-sm capitalize">{type}</Label>
+                                      <Input
+                                        type="number"
+                                        placeholder="Enter number"
+                                        value={laboratoryQuantities[type] || 1}
+                                        onChange={(e) => {
+                                          const value = e.target.value === '' ? 1 : Number(e.target.value);
+                                          setLaboratoryQuantities(prev => ({ ...prev, [type]: value }));
+                                        }}
+                                        className="w-full"
+                                        min="1"
+                                      />
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* File Upload Section */}
+                <div className={`space-y-4 ${hasToiletFacility === false || hasLaboratoryFacility === false ? 'opacity-50 pointer-events-none' : ''}`}>
+                  <FormField
+                    control={facilityForm.control}
+                    name="files"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-base font-semibold">Upload Supporting Documents</FormLabel>
+                        <FormControl>
+                          <div className="space-y-4">
+                            {/* File Upload Area */}
+                            <div
+                              onDragOver={hasToiletFacility === false || hasLaboratoryFacility === false ? undefined : handleDragOver}
+                              onDrop={hasToiletFacility === false || hasLaboratoryFacility === false ? undefined : handleDrop}
+                              className={`border-2 border-dashed border-gray-300 rounded-lg p-6 text-center transition-colors ${hasToiletFacility === false || hasLaboratoryFacility === false ? 'cursor-not-allowed' : 'hover:border-gray-400 cursor-pointer'}`}
+                              onClick={hasToiletFacility === false || hasLaboratoryFacility === false ? undefined : () => fileInputRef.current?.click()}
+                            >
+                              <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                              <p className="text-lg font-medium text-gray-700">Drop files here or click to upload</p>
+                              <p className="text-sm text-gray-500 mt-1">Support for multiple files (PDF, DOC, JPG, PNG)</p>
+                              <input
+                                ref={fileInputRef}
+                                type="file"
+                                multiple
+                                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif"
+                                onChange={handleFileUpload}
+                                disabled={hasToiletFacility === false || hasLaboratoryFacility === false}
+                                className="hidden"
+                              />
+                            </div>
+
+                            {/* Uploaded Files List */}
+                            {uploadedFiles.length > 0 && (
+                              <div className="space-y-2">
+                                <h4 className="font-medium text-gray-700">Uploaded Files ({uploadedFiles.length})</h4>
+                                <div className="space-y-2 max-h-32 overflow-y-auto">
+                                  {uploadedFiles.map((file, index) => (
+                                    <div key={index} className="flex items-center justify-between bg-gray-50 p-3 rounded-md">
+                                      <div className="flex items-center space-x-3">
+                                        <FileText className="h-5 w-5 text-gray-500" />
+                                        <div>
+                                          <p className="text-sm font-medium text-gray-700">{file.name}</p>
+                                          <p className="text-xs text-gray-500">
+                                            {(file.size / 1024 / 1024).toFixed(2)} MB
+                                          </p>
+                                        </div>
+                                      </div>
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={hasToiletFacility === false || hasLaboratoryFacility === false ? undefined : () => removeFile(index)}
+                                        disabled={hasToiletFacility === false || hasLaboratoryFacility === false}
+                                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                      >
+                                        <X className="h-4 w-4" />
+                                      </Button>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* School Feedback Section */}
+                  <FormField
+                    control={facilityForm.control}
+                    name="school_feedback"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-base font-semibold">Notes</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            {...field}
+                            disabled={hasToiletFacility === false || hasLaboratoryFacility === false}
+                            placeholder="Enter notes, concerns, and priorities..."
+                            className={`min-h-[120px] resize-none ${hasToiletFacility === false || hasLaboratoryFacility === false ? 'cursor-not-allowed' : ''}`}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="flex gap-2 pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsModalOpen(false)}
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    className="flex-1 bg-[#F89B0C] hover:bg-[#F89B0C]/90 text-primary-foreground"
+                  >
+                    Submit Assessment
+                  </Button>
+                </div>
               </form>
             </Form>
           )}

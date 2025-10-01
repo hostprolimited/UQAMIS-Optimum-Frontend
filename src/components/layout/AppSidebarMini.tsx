@@ -30,6 +30,7 @@ import {
   ChevronDown,
   User,
   Lock,
+  Building,
   GraduationCap
 } from 'lucide-react';
 import { LucideIcon } from 'lucide-react';
@@ -165,11 +166,13 @@ const navigationItems = [
   //   page: 'safety_review'
   // },
   {
+    title: 'School Entities',
+    url: '/entities',
+    icon: Building,
+    page: 'entities'
+  },
+  {
     title: 'School Metrics',
-    children: [
-      { title: 'Metrics List', url: '/school-metrics', icon: GraduationCap },
-      { title: 'Add Metrics', url: '/facilities/add', icon: GraduationCap },
-    ], 
     url: '/school-metrics',
     icon: GraduationCap,
     page: 'school_form'
