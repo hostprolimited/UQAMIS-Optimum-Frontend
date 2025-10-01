@@ -44,6 +44,13 @@ export const Urls = {
   DELETE_SAFETY_REPORT_URL: (id: number) => `/safety/${id}`,
   AGENT_REVIEW_SAFETY_ASSESSMENT: (id: number) => `/safety/review/${id}`,
 
+  // Termly Dates Endpoints
+  CREATE_TERM_DATES_URL: '/term-dates/create',
+  GET_TERM_DATES_URL: '/term-dates/list',
+  GET_TERM_DATES_BY_ID_URL: (id: number) => `/term-dates/${id}`,
+  UPDATE_TERM_DATES_URL: (id: number) => `/term-dates/${id}`,
+  DELETE_TERM_DATES_URL: (id: number) => `/term-dates/${id}`,
+
   // User Management Endpoints
   CREATE_USERS_URL: '/users/create',
   GET_USERS_URL: '/users/list',

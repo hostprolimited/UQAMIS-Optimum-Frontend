@@ -34,6 +34,43 @@ import { RolePermission } from '../core/_types';
 import { useRole } from '@/contexts/RoleContext';
 import { useToast } from "@/components/ui/use-toast";
 import { Toaster } from "@/components/ui/toaster";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel as FormLabelComponent, FormMessage } from "@/components/ui/form";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+
+// Permission items for the add role modal
+type PermissionItem = {
+  id: string;
+  label: string;
+  type?: "checkbox" | "radio";
+  group?: string;
+};
+
+const PERMISSIONS: PermissionItem[] = [
+  { id: "export_buttons", label: "View export to buttons (csv/excel/print/pdf) on tables", group: "Others" },
+
+  { id: "view_user", label: "View user", group: "User" },
+  { id: "add_user", label: "Add user", group: "User" },
+  { id: "edit_user", label: "Edit user", group: "User" },
+  { id: "delete_user", label: "Delete user", group: "User" },
+
+  { id: "view_role", label: "View role", group: "Roles" },
+  { id: "add_role", label: "Add Role", group: "Roles" },
+  { id: "edit_role", label: "Edit Role", group: "Roles" },
+  { id: "delete_role", label: "Delete role", group: "Roles" },
+
+  { id: "view_all_supplier", label: "View all supplier", type: "radio", group: "Supplier" },
+  { id: "add_supplier", label: "Add supplier", group: "Supplier" },
+  { id: "edit_supplier", label: "Edit supplier", group: "Supplier" },
+  { id: "delete_supplier", label: "Delete supplier", group: "Supplier" }
+];
+
+const GROUP_ORDER = ["Others", "User", "Roles", "Supplier"];
 
 // Simple icon for permission matrix
 const PermissionIcon = ({ hasPermission }: { hasPermission: boolean }) => (
@@ -119,12 +156,16 @@ const RolesPermissions = () => {
   const [showCreatePermissionModal, setShowCreatePermissionModal] = useState(false);
   const [showEditRoleModal, setShowEditRoleModal] = useState(false);
   const [showEditPermissionModal, setShowEditPermissionModal] = useState(false);
+  const [showAddRoleModal, setShowAddRoleModal] = useState(false);
   const [newPermissionName, setNewPermissionName] = useState('');
   const [editName, setEditName] = useState('');
   const [selectedItemId, setSelectedItemId] = useState<number | null>(null);
   const [assigning, setAssigning] = useState(false);
   const [creatingPermission, setCreatingPermission] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [newRoleName, setNewRoleName] = useState('');
+  const [rolePermissions, setRolePermissions] = useState<Record<string, boolean>>({});
+  const [radioSelections, setRadioSelections] = useState<Record<string, string | null>>({});
   const [roleStats, setRoleStats] = useState({
     totalRoles: 0,
     totalPermissions: 0,
@@ -335,6 +376,18 @@ const RolesPermissions = () => {
     }
   };
 
+  const openAddRoleModal = () => {
+    // Initialize permissions state
+    const initPermissions: Record<string, boolean> = {};
+    PERMISSIONS.forEach((p) => {
+      initPermissions[p.id] = false;
+    });
+    setRolePermissions(initPermissions);
+    setRadioSelections({ Supplier: null });
+    setNewRoleName('');
+    setShowAddRoleModal(true);
+  };
+
   const handleAssignPermissionToRole = async (permissionName: string, roleName: string) => {
     try {
       const selectedPermission = permissions.find(p => p.name === permissionName);
@@ -432,8 +485,15 @@ const RolesPermissions = () => {
         {/* User Roles Section */}
         <Card>
           <CardHeader>
-            <CardTitle>User Roles</CardTitle>
-            <CardDescription>Available roles and their descriptions</CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>User Roles</CardTitle>
+                <CardDescription>Available roles and their descriptions</CardDescription>
+              </div>
+              <Button onClick={openAddRoleModal} className="bg-primary text-primary-foreground">
+                <Plus className="h-4 w-4 mr-1" /> Add Role
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -677,6 +737,149 @@ const RolesPermissions = () => {
           </Card>
         </div>
       )}
+
+      {/* Add Role Modal */}
+      <Dialog open={showAddRoleModal} onOpenChange={setShowAddRoleModal}>
+        <DialogContent className="max-w-5xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Add Role</DialogTitle>
+            <DialogDescription>
+              Create a new role and assign permissions to it.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-6">
+            <div>
+              <Label htmlFor="roleName" className="text-sm font-medium text-gray-600">Role Name:*</Label>
+              <Input
+                id="roleName"
+                value={newRoleName}
+                onChange={(e) => setNewRoleName(e.target.value)}
+                placeholder="Role Name"
+                className="mt-2"
+              />
+            </div>
+
+            <div className="pt-6">
+              <h3 className="text-sm font-medium text-gray-500">Permissions:</h3>
+
+              <div className="mt-4 space-y-8">
+                {GROUP_ORDER.map((group) => {
+                  const groupPerms = PERMISSIONS.filter((p) => p.group === group);
+                  if (groupPerms.length === 0) return null;
+
+                  const allChecked = groupPerms.filter(p => p.type !== "radio").every(p => rolePermissions[p.id]);
+
+                  return (
+                    <section key={group} className="pb-4">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <h4 className="text-lg font-medium text-gray-600">{group}</h4>
+                        </div>
+                        <div className="flex items-center space-x-4">
+                          <label className="inline-flex items-center text-sm text-gray-500">
+                            <Checkbox
+                              checked={allChecked}
+                              onCheckedChange={(checked) => {
+                                const newPermissions = { ...rolePermissions };
+                                groupPerms.filter(p => p.type !== "radio").forEach((p) => {
+                                  newPermissions[p.id] = !!checked;
+                                });
+                                setRolePermissions(newPermissions);
+                              }}
+                              className="mr-2 h-4 w-4 rounded border-gray-300"
+                            />
+                            <span className="select-none">Select all</span>
+                          </label>
+                        </div>
+                      </div>
+
+                      <hr className="my-3 border-t border-gray-200" />
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {groupPerms.map((p) => {
+                          if (p.type === "radio") {
+                            return (
+                              <div key={p.id} className="flex items-center space-x-3">
+                                <label className="inline-flex items-center text-sm text-gray-600">
+                                  <input
+                                    type="radio"
+                                    name={`radio-${group}`}
+                                    checked={radioSelections[group] === p.id}
+                                    onChange={() => setRadioSelections(prev => ({ ...prev, [group]: p.id }))}
+                                    className="mr-3 h-4 w-4"
+                                  />
+                                  <span>{p.label}</span>
+                                </label>
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <div key={p.id} className="flex items-center space-x-3">
+                              <label className="inline-flex items-center text-sm text-gray-600">
+                                <Checkbox
+                                  checked={!!rolePermissions[p.id]}
+                                  onCheckedChange={(checked) => setRolePermissions(prev => ({ ...prev, [p.id]: !!checked }))}
+                                  className="mr-3 h-4 w-4 rounded border-gray-300"
+                                />
+                                <span>{p.label}</span>
+                              </label>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </section>
+                  );
+                })}
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setShowAddRoleModal(false);
+                  setNewRoleName('');
+                  setRolePermissions({});
+                  setRadioSelections({});
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={() => {
+                  const selectedPermissions = Object.keys(rolePermissions).filter((k) => rolePermissions[k]);
+                  const radios = Object.entries(radioSelections).reduce((acc, [g, v]) => {
+                    if (v) acc[g] = v;
+                    return acc;
+                  }, {} as Record<string, string>);
+
+                  const payload = {
+                    roleName: newRoleName,
+                    permissions: selectedPermissions,
+                    radios
+                  };
+
+                  console.log("Submitting role:", payload);
+                  alert("Role saved — check console for payload (demo)");
+
+                  // Reset and close
+                  setShowAddRoleModal(false);
+                  setNewRoleName('');
+                  setRolePermissions({});
+                  setRadioSelections({});
+                }}
+                className="bg-indigo-600 hover:bg-indigo-700"
+              >
+                Save Role
+              </Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       </div>
       <Toaster />
     </>

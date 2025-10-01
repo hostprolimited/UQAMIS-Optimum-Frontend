@@ -84,6 +84,7 @@ export const RoleProvider: React.FC<RoleProviderProps> = ({ children }) => {
           'onboard',
           'system_safety',
           'review',
+          'term_dates',
           'backup',
           'user_management'
         ].includes(page)
@@ -93,6 +94,7 @@ export const RoleProvider: React.FC<RoleProviderProps> = ({ children }) => {
           'overview',
           'reports',
           'review',
+          'term_dates',
           // 'maintenance_review',
           // 'safety_review',
           'onboard',
@@ -104,6 +106,7 @@ export const RoleProvider: React.FC<RoleProviderProps> = ({ children }) => {
           'assessment',
           // 'reports',
           'school_form',
+          'term_dates',
           'institutions_assessment'
         ].includes(page);
       default:

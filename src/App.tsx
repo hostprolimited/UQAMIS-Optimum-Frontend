@@ -19,8 +19,9 @@ import Onboard from "./pages/onboarding/components/OnboardPage";
 import OnboardedSchoolList from "./pages/onboarding/components/OnboardedSchoolList";
 import RoleBasedAssessmentPage from "./pages/assements/components/RoleBasedAssessmentsPage";
 import AssessmentAdd from "./pages/assements/components/AssessmentAddPage";
-import Reports from "./pages/reports/components/FacilityReportsPage";
 import Users from "./pages/settings/components/UsersPage";
+// facility 
+import FacilityAddPage from "./pages/facilities/components/FacilityAddPage";
 import SafetyReportPage from "./pages/assements/components/SafetyReportPage";
 import SchoolFormListPage from "./pages/assements/components/SchoolMetricsListPage";
 import SchoolFormAddPage from "./pages/assements/components/SchoolMetricsAddPage";
@@ -30,7 +31,8 @@ import SafetyReportsPage from "./pages/reports/components/SafetyReports";
 import SafetyReviewPage from "./pages/assements/components/SafetyReviewPage";
 import AssessmentViewPage from "./pages/assements/components/AssesmentViewPage";
 import RolesPermissions from "./pages/settings/components/RolesPermissionsPage";
-
+import TermDates from "./pages/termly_dates/components/TermDatesAddPage";
+import TermDateListPage from "./pages/termly_dates/components/TermDateListPage";
 import LoginPage from "./pages/auth/components/loginPage";
 import NotFound from "./pages/NotFound";
 
@@ -67,6 +69,12 @@ const App = () => (
                       <OnboardedSchoolList />
                     </ProtectedRoute>
                   } />
+
+                  <Route path ="/facilities/add" element={
+                    <ProtectedRoute allowedRoles={["school_admin"]}>
+                      <FacilityAddPage />
+                    </ProtectedRoute>
+                  } />
                   <Route path="/assessment" element={
                     <ProtectedRoute allowedRoles={["school_admin", "agent", "ministry_admin"]}>
                       <RoleBasedAssessmentPage />
@@ -93,8 +101,10 @@ const App = () => (
                       <SchoolFormAddPage />
                     </ProtectedRoute>
                   } />
-                  
 
+                  
+                  
+                  {/* Assesments Routes*/}
                   <Route path="/assessments/add" element={
                     <ProtectedRoute allowedRoles={["school_admin", "ministry_admin"]}>
                       <AssessmentAdd />
@@ -130,11 +140,17 @@ const App = () => (
                       <SafetyReportsPage />
                     </ProtectedRoute>
                   } />
-                  <Route path="/reports" element={
-                    <ProtectedRoute allowedRoles={["school_admin", "agent", "ministry_admin"]}>
-                      <Reports />
+                  <Route path="/termly-dates" element={
+                    <ProtectedRoute allowedRoles={["agent", "ministry_admin", "school_admin"]}>
+                      <TermDateListPage />
                     </ProtectedRoute>
                   } />
+                  <Route path="/termly-dates/add" element={
+                    <ProtectedRoute allowedRoles={["agent", "ministry_admin"]}>
+                      <TermDates />
+                    </ProtectedRoute>
+                  } />
+                  {/* Users routes */}
                   <Route path="/users" element={
                     <ProtectedRoute allowedRoles={["agent", "ministry_admin"]}>
                       <Users />

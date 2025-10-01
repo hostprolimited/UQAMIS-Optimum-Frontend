@@ -23,6 +23,7 @@ import {
   UserPlus, 
   ClipboardCheck, 
   FileText, 
+  Calendar,
   Users, 
   Shield, 
   Archive,
@@ -126,6 +127,12 @@ const navigationItems = [
     icon: UserPlus, 
     page: 'onboard' 
   },
+  {
+    title: 'Term Dates',
+    url: '/termly-dates',
+    icon: Calendar,
+    page: 'term_dates'
+  },
   { 
     title: 'Assessments',
     children: [
@@ -158,7 +165,11 @@ const navigationItems = [
   //   page: 'safety_review'
   // },
   {
-    title: 'School Metrics', 
+    title: 'School Metrics',
+    children: [
+      { title: 'Metrics List', url: '/school-metrics', icon: GraduationCap },
+      { title: 'Add Metrics', url: '/facilities/add', icon: GraduationCap },
+    ], 
     url: '/school-metrics',
     icon: GraduationCap,
     page: 'school_form'

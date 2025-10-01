@@ -467,7 +467,7 @@ const AssessmentAddPage: React.FC = () => {
         id: index + 1,
         part: part,
         attentionRequired: false,
-        good: true,
+        good: false,
       }));
       setSafetyData(initialSafetyData);
       const isClassFacility = selectedFacility.name.toLowerCase().includes('class');
@@ -478,7 +478,7 @@ const AssessmentAddPage: React.FC = () => {
         status: 'pending',
         details: parts.map(name => ({
           part_of_building: name,
-          assessment_status: 'Good'
+          assessment_status: undefined as any
         })),
         school_feedback: '',
         agent_feedback: '',
@@ -522,9 +522,9 @@ const AssessmentAddPage: React.FC = () => {
     setFacilityParts(facilityParts);
     
     // Initialize form with default values for each part
-      facilityForm.reset({ 
+      facilityForm.reset({
         facility_id: facility.id,
-        details: facilityParts.map(name => ({ part_of_building: name, assessment_status: 'Good' })),
+        details: facilityParts.map(name => ({ part_of_building: name, assessment_status: undefined as any })),
         files: []
       });    setUploadedFiles([]);
     setIsModalOpen(true);
@@ -555,7 +555,7 @@ const AssessmentAddPage: React.FC = () => {
           status: 'pending' as 'pending',
           details: data.details.map(detail => ({
             part_of_building: detail.part_of_building,
-            assessment_status: detail.assessment_status
+            assessment_status: detail.assessment_status || 'Good'
           })),
           school_feedback: data.school_feedback,
           agent_feedback: data.agent_feedback,
@@ -822,8 +822,16 @@ const StreamSelect: React.FC<StreamSelectProps> = ({ onChange, value }) => {
                                               };
                                               facilityForm.setValue('details', updatedDetails);
                                             }}
-                                            className={`h-4 w-4 ${condition === 'urgent' && field.value === 'Urgent Attention' ? 'text-red-600' : ''}`}
-                                            style={condition === 'urgent' && field.value === 'Urgent Attention' ? { accentColor: '#dc2626' } : {}}
+                                            className={`h-4 w-4 ${
+                                              condition === 'urgent' && field.value === 'Urgent Attention' ? 'text-red-600' :
+                                              condition === 'attention' && field.value === 'Attention Required' ? 'text-blue-600' :
+                                              condition === 'good' && field.value === 'Good' ? 'text-green-600' : ''
+                                            }`}
+                                            style={
+                                              condition === 'urgent' && field.value === 'Urgent Attention' ? { accentColor: '#dc2626' } :
+                                              condition === 'attention' && field.value === 'Attention Required' ? { accentColor: '#2563eb' } :
+                                              condition === 'good' && field.value === 'Good' ? { accentColor: '#16a34a' } : {}
+                                            }
                                           />
                                         </FormControl>
                                       </FormItem>
@@ -842,29 +850,58 @@ const StreamSelect: React.FC<StreamSelectProps> = ({ onChange, value }) => {
                   </TabsContent>
                   {/* Grade and Stream Selects */}
                   {selectedFacility?.name.toLowerCase().includes('class') && (
-                    <div className="flex gap-4">
-                      {/* classes */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {/* Grade */}
                       <FormField
                         control={facilityForm.control}
-                        name="class"
+                        name="grade"
                         render={({ field }) => (
                           <FormItem>
-                         <FormLabel className="flex items-center space-x-2 w-full">
-                           <Users className="h-8 w-12 center" />
-                            <span>Enter Class</span>
+                            <FormLabel className="flex items-center space-x-2 font-semibold">
+                              <Users className="h-4 w-4 text-indigo-500" />
+                              <span>Grade</span>
                             </FormLabel>
-                          <FormControl>
-                            <Input
-                          placeholder="e.g., Form 1 East"
-                            value={field.value ?? ''}
-                              onChange={field.onChange}
-                              className="w-full"
-                               />
-                             </FormControl>
-                           <FormMessage />
-                              </FormItem>
-                                )}
-                            />
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select grade" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="PP1">PP1</SelectItem>
+                                <SelectItem value="PP2">PP2</SelectItem>
+                                {Array.from({ length: 12 }, (_, i) => (
+                                  <SelectItem key={i + 1} value={`Grade ${i + 1}`}>
+                                    Grade {i + 1}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Streams */}
+                      <FormField
+                        control={facilityForm.control}
+                        name="streams"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="flex items-center space-x-2 font-semibold">
+                              <Users className="h-4 w-4 text-green-500" />
+                              <span>Streams</span>
+                            </FormLabel>
+                            <FormControl>
+                              <StreamSelect
+                                onChange={field.onChange}
+                                value={field.value || []}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     </div>
                   )}
                   {/* File Upload Section */}
