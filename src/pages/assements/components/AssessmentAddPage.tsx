@@ -468,58 +468,126 @@ const AssessmentAddPage: React.FC = () => {
 
   // Fetch facilities and entities data
   useEffect(() => {
+    console.log('useEffect triggered for fetching data');
     const fetchData = async () => {
       try {
+        console.log('Starting to fetch facilities and entities...');
+
         // Fetch facilities
         const facilitiesResponse = await getFacilities();
-        setFacilities(facilitiesResponse.data || []);
+        const facilitiesData = facilitiesResponse.data || [];
+        console.log('Fetched facilities:', facilitiesData);
+        // Log facility type mappings
+        facilitiesData.forEach(facility => {
+          console.log(`Facility: ${facility.name} -> Type: ${getFacilityType(facility.name)}`);
+        });
+        setFacilities(facilitiesData);
 
         // Fetch entities to get real class data
         const entitiesResponse = await getSchoolEntities();
         const rawEntities = entitiesResponse.data || [];
+        console.log('Fetched raw entities:', rawEntities);
 
         // Transform entities to include facilityName (same as EntitiesListPage)
         const entities = rawEntities.map((entity: any) => {
-          const facility = facilities.find(f => f.id === entity.facility_id);
+          const facility = facilitiesData.find(f => f.id === entity.facility_id);
           const facilityName = facility ? facility.name : 'Unknown Facility';
           return {
             ...entity,
             facilityName
           };
         });
+        console.log('Transformed entities:', entities);
 
         // Filter entities by finding facility IDs that match each type
-        const classroomFacilityIds = facilities.filter(f => getFacilityType(f.name) === 'classroom').map(f => f.id);
+        const classroomFacilityIds = facilitiesData.filter(f => getFacilityType(f.name) === 'classroom').map(f => f.id);
+        console.log('Classroom facility IDs:', classroomFacilityIds);
         const classroomEntities = entities.filter((entity: any) => classroomFacilityIds.includes(entity.facility_id));
+        console.log('Classroom entities:', classroomEntities);
         const classOptions = classroomEntities.map((entity: any) => entity.name).sort();
+        console.log('Class options:', classOptions);
         setRealClassOptions(classOptions);
+        console.log('Set class options state');
 
-        const toiletFacilityIds = facilities.filter(f => getFacilityType(f.name) === 'toilet').map(f => f.id);
+        const toiletFacilityIds = facilitiesData.filter(f => getFacilityType(f.name) === 'toilet').map(f => f.id);
+        console.log('Toilet facility IDs:', toiletFacilityIds);
         const toiletEntities = entities.filter((entity: any) => toiletFacilityIds.includes(entity.facility_id));
+        console.log('Toilet entities:', toiletEntities);
         const toiletOpts = toiletEntities.map((entity: any) => entity.name).sort();
+        console.log('Toilet options:', toiletOpts);
         setToiletOptions(toiletOpts);
 
-        const laboratoryFacilityIds = facilities.filter(f => getFacilityType(f.name) === 'laboratory').map(f => f.id);
+        const laboratoryFacilityIds = facilitiesData.filter(f => getFacilityType(f.name) === 'laboratory').map(f => f.id);
+        console.log('Laboratory facility IDs:', laboratoryFacilityIds);
         const laboratoryEntities = entities.filter((entity: any) => laboratoryFacilityIds.includes(entity.facility_id));
+        console.log('Laboratory entities:', laboratoryEntities);
         const laboratoryOpts = laboratoryEntities.map((entity: any) => entity.name).sort();
+        console.log('Laboratory options:', laboratoryOpts);
         setLaboratoryOptions(laboratoryOpts);
 
-        const diningHallFacilityIds = facilities.filter(f => getFacilityType(f.name) === 'dining_hall').map(f => f.id);
+        const diningHallFacilityIds = facilitiesData.filter(f => getFacilityType(f.name) === 'dining_hall').map(f => f.id);
+        console.log('Dining hall facility IDs:', diningHallFacilityIds);
         const diningHallEntities = entities.filter((entity: any) => diningHallFacilityIds.includes(entity.facility_id));
+        console.log('Dining hall entities:', diningHallEntities);
         const diningHallOpts = diningHallEntities.map((entity: any) => entity.name).sort();
+        console.log('Dining hall options:', diningHallOpts);
         setDiningHallOptions(diningHallOpts);
 
-        const dormitoryFacilityIds = facilities.filter(f => getFacilityType(f.name) === 'dormitory').map(f => f.id);
+        const dormitoryFacilityIds = facilitiesData.filter(f => getFacilityType(f.name) === 'dormitory').map(f => f.id);
+        console.log('Dormitory facility IDs:', dormitoryFacilityIds);
         const dormitoryEntities = entities.filter((entity: any) => dormitoryFacilityIds.includes(entity.facility_id));
+        console.log('Dormitory entities:', dormitoryEntities);
         const dormitoryOpts = dormitoryEntities.map((entity: any) => entity.name).sort();
+        console.log('Dormitory options:', dormitoryOpts);
         setDormitoryOptions(dormitoryOpts);
 
-        const officeFacilityIds = facilities.filter(f => getFacilityType(f.name) === 'office').map(f => f.id);
+        const officeFacilityIds = facilitiesData.filter(f => getFacilityType(f.name) === 'office').map(f => f.id);
+        console.log('Office facility IDs:', officeFacilityIds);
         const officeEntities = entities.filter((entity: any) => officeFacilityIds.includes(entity.facility_id));
+        console.log('Office entities:', officeEntities);
         const officeOpts = officeEntities.map((entity: any) => entity.name).sort();
+        console.log('Office options:', officeOpts);
         setOfficeOptions(officeOpts);
 
+        // Validation logs
+        console.log('Data loading summary:');
+        console.log('- Facilities loaded:', facilitiesData.length);
+        console.log('- Entities loaded:', entities.length);
+        console.log('- Class options:', classOptions.length);
+        console.log('- Toilet options:', toiletOpts.length);
+        console.log('- Laboratory options:', laboratoryOpts.length);
+        console.log('- Dining hall options:', diningHallOpts.length);
+        console.log('- Dormitory options:', dormitoryOpts.length);
+        console.log('- Office options:', officeOpts.length);
+
+        // Validation checks
+        if (facilitiesData.length === 0) {
+          console.warn('Warning: No facilities loaded!');
+        }
+        if (entities.length === 0) {
+          console.warn('Warning: No entities loaded!');
+        }
+        if (classOptions.length === 0) {
+          console.warn('Warning: No class options found!');
+        }
+        if (toiletOpts.length === 0) {
+          console.warn('Warning: No toilet options found!');
+        }
+        if (laboratoryOpts.length === 0) {
+          console.warn('Warning: No laboratory options found!');
+        }
+        if (diningHallOpts.length === 0) {
+          console.warn('Warning: No dining hall options found!');
+        }
+        if (dormitoryOpts.length === 0) {
+          console.warn('Warning: No dormitory options found!');
+        }
+        if (officeOpts.length === 0) {
+          console.warn('Warning: No office options found!');
+        }
+
       } catch (error) {
+        console.error('Error fetching facilities and entities:', error);
         toast({
           title: "Error",
           description: "Failed to load data.",
@@ -533,9 +601,35 @@ const AssessmentAddPage: React.FC = () => {
         setDormitoryOptions([]);
         setOfficeOptions([]);
       }
-    };
-    fetchData();
-  }, [toast]);
+  };
+  fetchData();
+  console.log('useEffect completed');
+}, [toast]);
+
+// Debug: Monitor option changes
+useEffect(() => {
+  console.log('realClassOptions changed:', realClassOptions);
+}, [realClassOptions]);
+
+useEffect(() => {
+  console.log('toiletOptions changed:', toiletOptions);
+}, [toiletOptions]);
+
+useEffect(() => {
+  console.log('laboratoryOptions changed:', laboratoryOptions);
+}, [laboratoryOptions]);
+
+useEffect(() => {
+  console.log('diningHallOptions changed:', diningHallOptions);
+}, [diningHallOptions]);
+
+useEffect(() => {
+  console.log('dormitoryOptions changed:', dormitoryOptions);
+}, [dormitoryOptions]);
+
+useEffect(() => {
+  console.log('officeOptions changed:', officeOptions);
+}, [officeOptions]);
 
   // Initialize form with empty values
   const facilityForm = useForm<FacilityAssessmentData>({
