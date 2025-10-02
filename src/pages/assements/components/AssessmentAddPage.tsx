@@ -463,16 +463,18 @@ const AssessmentAddPage: React.FC = () => {
 
         setRealClassOptions(classOptions);
 
-        // Filter for toilet entities (facility_id: 4) and use the names
-        const toiletEntities = entities.filter((entity: any) => entity.facility_id === 4);
-        const toiletOpts = toiletEntities.map((entity: any) => entity.name).sort();
+        // Find facility IDs dynamically
+        const toiletFacility = facilities.find(f => getFacilityType(f.name) === 'toilet');
+        const laboratoryFacility = facilities.find(f => getFacilityType(f.name) === 'laboratory');
 
+        // Filter for toilet entities and use the names
+        const toiletEntities = entities.filter((entity: any) => toiletFacility && entity.facility_id === toiletFacility.id);
+        const toiletOpts = toiletEntities.map((entity: any) => entity.name).sort();
         setToiletOptions(toiletOpts);
 
-        // Filter for laboratory entities (facility_id: 3) and use the names
-        const laboratoryEntities = entities.filter((entity: any) => entity.facility_id === 3);
+        // Filter for laboratory entities and use the names
+        const laboratoryEntities = entities.filter((entity: any) => laboratoryFacility && entity.facility_id === laboratoryFacility.id);
         const laboratoryOpts = laboratoryEntities.map((entity: any) => entity.name).sort();
-
         setLaboratoryOptions(laboratoryOpts);
 
       } catch (error) {
