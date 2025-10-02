@@ -396,6 +396,12 @@ const getFacilityParts = (facilityType: string): string[] => {
   return parts || [];
 };
 
+// Helper function to get standardized facility type
+const getFacilityType = (facilityName: string): string => {
+  const normalizedInput = facilityName.toLowerCase().trim();
+  return FACILITY_TYPE_MAPPINGS[normalizedInput] || normalizedInput;
+};
+
 // Helper function to get facility safety parts based on facility type
 const getFacilitySafetyParts = (facilityType: string): string[] => {
   // Clean and normalize the input facility type
@@ -513,7 +519,8 @@ const AssessmentAddPage: React.FC = () => {
         good: false,
       }));
       setSafetyData(initialSafetyData);
-      const isClassFacility = selectedFacility.name.toLowerCase().includes('class');
+      const facilityType = getFacilityType(selectedFacility.name);
+      const isClassFacility = facilityType === 'classroom';
       facilityForm.reset({
         institution_id: selectedFacility.institution_id || 1,
         facility_id: selectedFacility.id,
@@ -558,11 +565,11 @@ const AssessmentAddPage: React.FC = () => {
 
   const openAssessmentModal = (facility: Facility) => {
     setSelectedFacility(facility);
-    
+
     // Get the parts for this facility type
     const facilityParts = getFacilityParts(facility.name);
     setFacilityParts(facilityParts);
-    
+
     // Initialize form with default values for each part
     facilityForm.reset({
       facility_id: facility.id,
@@ -586,9 +593,10 @@ const AssessmentAddPage: React.FC = () => {
     try {
       if (!selectedFacility) return;
 
-      const isClassFacility = selectedFacility.name.toLowerCase().includes('class');
-      const isToiletFacility = selectedFacility.name.toLowerCase().includes('toilet');
-      const isLaboratoryFacility = selectedFacility.name.toLowerCase().includes('laboratory');
+      const facilityType = getFacilityType(selectedFacility.name);
+      const isClassFacility = facilityType === 'classroom';
+      const isToiletFacility = facilityType === 'toilet';
+      const isLaboratoryFacility = facilityType === 'laboratory';
 
       // Special handling for toilet facilities when not available
       if (isToiletFacility && hasToiletFacility === false) {
@@ -661,20 +669,22 @@ const AssessmentAddPage: React.FC = () => {
 
       if (hasMaintenanceChanges) {
         // Create the assessment input object matching MaintenanceAssessmentInput type
-        const assessmentInput = {
-          institution_id: selectedFacility.institution_id || 1,
-          institution_name: 'Institution', // Add required institution_name
-          facility_id: data.facility_id,
-          class: isClassFacility && data.classes ? data.classes : [],
-          status: 'pending' as 'pending',
-          details: data.details.map(detail => ({
-            part_of_building: detail.part_of_building,
-            assessment_status: detail.assessment_status || 'Good'
-          })),
-          school_feedback: data.school_feedback,
-          agent_feedback: data.agent_feedback,
-          files: uploadedFiles,
-        };
+         const assessmentInput = {
+           institution_id: selectedFacility.institution_id || 1,
+           institution_name: 'Institution', // Add required institution_name
+           facility_id: data.facility_id,
+           entity: isClassFacility ? (data.classes || []) :
+                   isToiletFacility ? selectedToiletTypes :
+                   isLaboratoryFacility ? selectedLaboratoryTypes : [],
+           status: 'pending' as 'pending',
+           details: data.details.map(detail => ({
+             part_of_building: detail.part_of_building,
+             assessment_status: detail.assessment_status || 'Good'
+           })),
+           school_feedback: data.school_feedback,
+           agent_feedback: data.agent_feedback,
+           files: uploadedFiles,
+         };
 
         const response = await createMaintenanceAssessment(assessmentInput);
 
@@ -695,7 +705,9 @@ const AssessmentAddPage: React.FC = () => {
           institution_id: selectedFacility.institution_id || 1,
           institution_name: 'Institution',
           facility_id: data.facility_id,
-          class: isClassFacility && data.classes ? data.classes : [],
+          entity: isClassFacility ? (data.classes || []) :
+                  isToiletFacility ? selectedToiletTypes :
+                  isLaboratoryFacility ? selectedLaboratoryTypes : [],
           status: 'pending' as 'pending',
           details: safetyData.map(item => ({
             part_of_building: item.part,
@@ -978,7 +990,7 @@ const ClassSelect: React.FC<ClassSelectProps> = ({ onChange, value, classOptions
                 )} */}
 
                 {/* Class Selection */}
-                {selectedFacility?.name.toLowerCase().includes('class') && (
+                {getFacilityType(selectedFacility?.name || '') === 'classroom' && (
                   <FormField
                     control={facilityForm.control}
                     name="classes"
@@ -1002,7 +1014,7 @@ const ClassSelect: React.FC<ClassSelectProps> = ({ onChange, value, classOptions
                 )}
 
                 {/* Toilets Section */}
-                {selectedFacility?.name.toLowerCase().includes('toilet') && (
+                {getFacilityType(selectedFacility?.name || '') === 'toilet' && (
                   <div className="space-y-6">
                     {/* Facility Availability Check */}
                     <div className="space-y-4">
@@ -1119,7 +1131,7 @@ const ClassSelect: React.FC<ClassSelectProps> = ({ onChange, value, classOptions
                 )}
 
                 {/* Laboratories Section */}
-                {selectedFacility?.name.toLowerCase().includes('laboratory') && (
+                {getFacilityType(selectedFacility?.name || '') === 'laboratory' && (
                   <div className="space-y-6">
                     {/* Facility Availability Check */}
                     <div className="space-y-4">

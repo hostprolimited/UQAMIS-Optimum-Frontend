@@ -23,8 +23,8 @@ export const createMaintenanceAssessment = async (data: MaintenanceAssessmentInp
   formData.append('school_feedback', data.school_feedback);
   formData.append('agent_feedback', data.agent_feedback);
 
-  formData.append('class', JSON.stringify(data.class || []));
-  
+  formData.append('entity', JSON.stringify(data.entity || []));
+
   if (data.files && data.files.length > 0) {
     data.files.forEach((file: File) => {
       formData.append('files[]', file);
@@ -64,7 +64,7 @@ export const createSafetyAssessment = async (data: SafetyAssessmentInput): Promi
   formData.append('school_feedback', data.school_feedback);
   formData.append('agent_feedback', data.agent_feedback);
 
-  formData.append('class', JSON.stringify(data.class || []));
+  formData.append('entity', JSON.stringify(data.entity || []));
 
   if (data.files && data.files.length > 0) {
     data.files.forEach((file: File) => {
@@ -136,5 +136,40 @@ export const getSafetyReports = async (): Promise<APIResponse<SafetyReport[]>> =
 // agent review safety report
 export const agentReviewSafetyReport = async (id: number, data: { review_decision: 'approved' | 'rejected' | 'requires_clarification' | 'pending'; review_remarks: string; recommended_action: string; priority?: 'low' | 'medium' | 'high' | 'urgent'; }): Promise<APIResponse<any>> => {
   const response = await api.put<APIResponse<any>>(Urls.AGENT_REVIEW_SAFETY_ASSESSMENT(id), data);
+  return response.data;
+};
+
+// update assessment
+export const updateAssessment = async (id: number, data: { status:'submitted' | 'under_review' | 'approved' | 'rejected'; school_feedback?: string; agent_feedback?: string; class?: string[]; files?: File[]; details: { part_of_building: string; assessment_status: 'good' | 'needs_maintenance' | 'critical' }[]; }): Promise<APIResponse<any>> => {
+  const formData = new FormData();
+  formData.append('status', data.status);
+  formData.append('school_feedback', data.school_feedback);
+  formData.append('agent_feedback', data.agent_feedback);
+  formData.append('class', JSON.stringify(data.class || []));
+  data.details.forEach((detail, i) => {
+    formData.append(`details[${i}][part_of_building]`, detail.part_of_building);
+    formData.append(`details[${i}][assessment_status]`, detail.assessment_status);
+  });
+  if (data.files && data.files.length > 0) {
+    data.files.forEach((file: File) => {
+      formData.append('files[]', file);
+    });
+  }
+
+  const response = await api.put<APIResponse<any>>(
+    Urls.UPDATE_ASSESSMENT_URL(id),
+    formData,
+    {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    }
+  );
+  return response.data;
+};
+
+// delete asessment
+export const deleteAssessment = async (id: number): Promise<APIResponse<any>> => {
+  const response = await api.delete<APIResponse<any>>(Urls.DELETE_ASSESSMENT_URL(id));
   return response.data;
 };

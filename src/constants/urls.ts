@@ -18,6 +18,8 @@ export const Urls = {
    CREATE_INSTITUTION_METRICS_URL: '/institutions/metrics/create',
    UPDATE_INSTITUTION_METRICS_URL: (id: number) => `/institutions/metrics/update`,
    DELETE_INSTITUTION_METRICS_URL: (id: number) => `/institutions/metrics/${id}`,
+   UPDATE_ASSESSMENT_URL: (id: number) => `/institutions/metrics/assessment/${id}`,
+   DELETE_ASSESSMENT_URL: (id: number) => `/institutions/metrics/assessment/${id}`,
 
    // Facilities Endpoints
    FACILITIES_URL: '/facilities/list',
@@ -48,8 +50,8 @@ export const Urls = {
   CREATE_TERM_DATES_URL: '/settings/term-dates/create',
   GET_TERM_DATES_URL: '/settings/term-dates/list',
   GET_TERM_DATES_BY_ID_URL: (id: number) => `/settings/term-dates/${id}`,
-  UPDATE_TERM_DATES_URL: (id: number) => `/term-dates/${id}`,
-  DELETE_TERM_DATES_URL: (id: number) => `/term-dates/${id}`,
+  UPDATE_TERM_DATES_URL: (id: number) => `/settings/term-dates/${id}`,
+  DELETE_TERM_DATES_URL: (id: number) => `/settings/term-dates/${id}`,
 
   // School Entities Endpoints
   CREATE_SCHOOL_ENTITIES_URL: '/facilities/entities/create',

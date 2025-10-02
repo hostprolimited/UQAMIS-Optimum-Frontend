@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import withReactContent from "sweetalert2-react-content";
-import { ArrowLeft, FileText, Building2, AlertTriangle, CheckCircle, Clock } from "lucide-react";
+import { ArrowLeft, FileText, Building2, AlertTriangle, CheckCircle, Clock, MoreHorizontal, Edit, Trash2 } from "lucide-react";
 import { ColumnDef } from "@tanstack/react-table";
 
 import { Button } from "@/components/ui/button";
@@ -19,11 +19,13 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
 import { useToast } from "@/hooks/use-toast";
 
-import { getMaintenanceReports, agentReviewMaintenanceReport, getFacilities, getSafetyReports, agentReviewSafetyReport } from "../core/_request";
+import { getMaintenanceReports, agentReviewMaintenanceReport, getFacilities, getSafetyReports, agentReviewSafetyReport, updateAssessment, deleteAssessment } from "../core/_request";
 import { Facility } from "../core/_model";
 
 // --- Types ---
@@ -95,6 +97,14 @@ const AssessmentViewPage: React.FC = () => {
     priority: '',
     remarks: '',
     recommendedAction: '',
+  });
+
+  // Edit modal
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingDetail, setEditingDetail] = useState<AssessmentDetail | null>(null);
+  const [editForm, setEditForm] = useState({
+    part_of_building: '',
+    assessment_status: '',
   });
 
   const MySwal = withReactContent(Swal);
@@ -194,6 +204,59 @@ const AssessmentViewPage: React.FC = () => {
   const handleReview = () => {
     setReviewForm({ status: '', priority: '', remarks: '', recommendedAction: '' });
     setIsReviewModalOpen(true);
+  };
+
+  // Edit actions
+  const handleEditDetail = (detail: AssessmentDetail) => {
+    setEditingDetail(detail);
+    setEditForm({
+      part_of_building: detail.part_of_building,
+      assessment_status: detail.assessment_status,
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleEditSubmit = async () => {
+    if (!editingDetail || !selectedAssessment) return;
+
+    try {
+      // Update the details array
+      const updatedDetails = selectedAssessment.details?.map(d =>
+        d.part_of_building === editingDetail.part_of_building
+          ? { ...d, part_of_building: editForm.part_of_building, assessment_status: editForm.assessment_status }
+          : d
+      ) || [];
+
+      await updateAssessment(parseInt(selectedAssessment.id), {
+        status: selectedAssessment.status as any,
+        school_feedback: selectedAssessment.school_feedback || '',
+        agent_feedback: selectedAssessment.agent_feedback || '',
+        class: selectedAssessment.class,
+        details: updatedDetails.map(d => ({
+          part_of_building: d.part_of_building,
+          assessment_status: d.assessment_status as any,
+        })),
+      });
+
+      toast({ title: "Success", description: "Detail updated successfully" });
+      setIsEditModalOpen(false);
+      // Refresh data
+      window.location.reload();
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to update detail", variant: "destructive" });
+    }
+  };
+
+  const handleDeleteAssessment = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this assessment?')) return;
+
+    try {
+      await deleteAssessment(parseInt(id));
+      toast({ title: "Success", description: "Assessment deleted successfully" });
+      navigate(-1); // Go back
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to delete assessment", variant: "destructive" });
+    }
   };
 
   const handleReviewSubmit = async () => {
@@ -296,6 +359,33 @@ const AssessmentViewPage: React.FC = () => {
       accessorKey: "agent_feedback",
       header: "Agent Feedback",
       cell: ({ row }) => row.getValue("agent_feedback") || '-',
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      cell: ({ row }) => {
+        const detail = row.original;
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-8 w-8 p-0">
+                <span className="sr-only">Open menu</span>
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => handleEditDetail(detail)}>
+                <Edit className="mr-2 h-4 w-4" />
+                Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleDeleteAssessment(selectedAssessment!.id)} className="text-destructive">
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete Assessment
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        );
+      },
     },
   ];
 
@@ -431,6 +521,48 @@ const AssessmentViewPage: React.FC = () => {
         </Card>
       )}
 
+      {/* Edit Detail Modal */}
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Edit Assessment Detail</DialogTitle>
+            <DialogDescription>
+              Update the assessment detail below.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="part_of_building">Part of Building</Label>
+              <Input
+                id="part_of_building"
+                value={editForm.part_of_building}
+                onChange={(e) => setEditForm(prev => ({ ...prev, part_of_building: e.target.value }))}
+              />
+            </div>
+            <div>
+              <Label htmlFor="assessment_status">Condition</Label>
+              <Select value={editForm.assessment_status} onValueChange={(value) => setEditForm(prev => ({ ...prev, assessment_status: value }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select condition" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Good">Good</SelectItem>
+                  <SelectItem value="Attention Required">Attention Required</SelectItem>
+                  <SelectItem value="Urgent Attention">Urgent Attention</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleEditSubmit}>
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Review Modal */}
       <Dialog open={isReviewModalOpen} onOpenChange={setIsReviewModalOpen}>

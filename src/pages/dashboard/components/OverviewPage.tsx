@@ -246,39 +246,6 @@ const Overview = () => {
           </Badge>
         </div> */}
       </div>
-
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {kpiData.map((kpi, index) => (
-          <Card key={index} className="relative overflow-hidden">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {kpi.title}
-              </CardTitle>
-              <kpi.icon className={`h-4 w-4 ${kpi.color}`} />
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center space-x-2">
-                <div className="text-2xl font-bold text-foreground">{kpi.value}</div>
-                <Badge
-                  variant="secondary"
-                  className={`text-xs ${
-                    kpi.trend.startsWith('+')
-                      ? 'text-success border-success/20 bg-success/10'
-                      : 'text-muted-foreground'
-                  }`}
-                >
-                  {kpi.trend !== '0' && kpi.trend}
-                </Badge>
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {kpi.trend.startsWith('+') ? 'vs last month' : 'no change'}
-              </p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Assessment Status Distribution */}
         <Card>
@@ -374,6 +341,40 @@ const Overview = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {kpiData.map((kpi, index) => (
+          <Card key={index} className="relative overflow-hidden">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                {kpi.title}
+              </CardTitle>
+              <kpi.icon className={`h-4 w-4 ${kpi.color}`} />
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center space-x-2">
+                <div className="text-2xl font-bold text-foreground">{kpi.value}</div>
+                <Badge
+                  variant="secondary"
+                  className={`text-xs ${
+                    kpi.trend.startsWith('+')
+                      ? 'text-success border-success/20 bg-success/10'
+                      : 'text-muted-foreground'
+                  }`}
+                >
+                  {kpi.trend !== '0' && kpi.trend}
+                </Badge>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {kpi.trend.startsWith('+') ? 'vs last month' : 'no change'}
+              </p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      
 
       {/* County/Regional Performance (for Admin and County Admin) */}
       {(currentUser.role === 'ministry_admin' || currentUser.role === 'agent') && (
