@@ -430,6 +430,7 @@ const AssessmentAddPage: React.FC = () => {
   const [laboratoryOptions, setLaboratoryOptions] = useState<string[]>([]);
   const [diningHallOptions, setDiningHallOptions] = useState<string[]>([]);
   const [dormitoryOptions, setDormitoryOptions] = useState<string[]>([]);
+  const [officeOptions, setOfficeOptions] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Safety data
@@ -459,6 +460,12 @@ const AssessmentAddPage: React.FC = () => {
   const [selectedDormitoryTypes, setSelectedDormitoryTypes] = useState<string[]>([]);
   const [dormitoryQuantities, setDormitoryQuantities] = useState<{[key: string]: number}>({});
 
+  // Office specific states
+  const [hasOfficeFacility, setHasOfficeFacility] = useState<boolean | null>(null);
+  const [officeAbsenceReason, setOfficeAbsenceReason] = useState('');
+  const [selectedOfficeTypes, setSelectedOfficeTypes] = useState<string[]>([]);
+  const [officeQuantities, setOfficeQuantities] = useState<{[key: string]: number}>({});
+
   // Fetch facilities and entities data
   useEffect(() => {
     const fetchData = async () => {
@@ -481,27 +488,36 @@ const AssessmentAddPage: React.FC = () => {
           };
         });
 
-        // Filter for classroom entities and use the full names directly
-        const classroomEntities = entities.filter((entity: any) => getFacilityType(entity.facilityName) === 'classroom');
+        // Filter entities by finding facility IDs that match each type
+        const classroomFacilityIds = facilities.filter(f => getFacilityType(f.name) === 'classroom').map(f => f.id);
+        const classroomEntities = entities.filter((entity: any) => classroomFacilityIds.includes(entity.facility_id));
         const classOptions = classroomEntities.map((entity: any) => entity.name).sort();
         setRealClassOptions(classOptions);
 
-        // Filter entities by facility type using the same logic as EntitiesListPage
-        const toiletEntities = entities.filter((entity: any) => getFacilityType(entity.facilityName) === 'toilet');
+        const toiletFacilityIds = facilities.filter(f => getFacilityType(f.name) === 'toilet').map(f => f.id);
+        const toiletEntities = entities.filter((entity: any) => toiletFacilityIds.includes(entity.facility_id));
         const toiletOpts = toiletEntities.map((entity: any) => entity.name).sort();
         setToiletOptions(toiletOpts);
 
-        const laboratoryEntities = entities.filter((entity: any) => getFacilityType(entity.facilityName) === 'laboratory');
+        const laboratoryFacilityIds = facilities.filter(f => getFacilityType(f.name) === 'laboratory').map(f => f.id);
+        const laboratoryEntities = entities.filter((entity: any) => laboratoryFacilityIds.includes(entity.facility_id));
         const laboratoryOpts = laboratoryEntities.map((entity: any) => entity.name).sort();
         setLaboratoryOptions(laboratoryOpts);
 
-        const diningHallEntities = entities.filter((entity: any) => getFacilityType(entity.facilityName) === 'dining_hall');
+        const diningHallFacilityIds = facilities.filter(f => getFacilityType(f.name) === 'dining_hall').map(f => f.id);
+        const diningHallEntities = entities.filter((entity: any) => diningHallFacilityIds.includes(entity.facility_id));
         const diningHallOpts = diningHallEntities.map((entity: any) => entity.name).sort();
         setDiningHallOptions(diningHallOpts);
 
-        const dormitoryEntities = entities.filter((entity: any) => getFacilityType(entity.facilityName) === 'dormitory');
+        const dormitoryFacilityIds = facilities.filter(f => getFacilityType(f.name) === 'dormitory').map(f => f.id);
+        const dormitoryEntities = entities.filter((entity: any) => dormitoryFacilityIds.includes(entity.facility_id));
         const dormitoryOpts = dormitoryEntities.map((entity: any) => entity.name).sort();
         setDormitoryOptions(dormitoryOpts);
+
+        const officeFacilityIds = facilities.filter(f => getFacilityType(f.name) === 'office').map(f => f.id);
+        const officeEntities = entities.filter((entity: any) => officeFacilityIds.includes(entity.facility_id));
+        const officeOpts = officeEntities.map((entity: any) => entity.name).sort();
+        setOfficeOptions(officeOpts);
 
       } catch (error) {
         toast({
@@ -515,6 +531,7 @@ const AssessmentAddPage: React.FC = () => {
         setLaboratoryOptions([]);
         setDiningHallOptions([]);
         setDormitoryOptions([]);
+        setOfficeOptions([]);
       }
     };
     fetchData();
@@ -637,6 +654,7 @@ const AssessmentAddPage: React.FC = () => {
       const isLaboratoryFacility = facilityType === 'laboratory';
       const isDiningHallFacility = facilityType === 'dining_hall';
       const isDormitoryFacility = facilityType === 'dormitory';
+      const isOfficeFacility = facilityType === 'office';
 
       // Special handling for toilet facilities when not available
       if (isToiletFacility && hasToiletFacility === false) {
@@ -758,6 +776,36 @@ const AssessmentAddPage: React.FC = () => {
         return;
       }
 
+      // Special handling for office facilities when not available
+      if (isOfficeFacility && hasOfficeFacility === false) {
+        if (!officeAbsenceReason.trim()) {
+          toast({
+            title: 'Validation Error',
+            description: 'Please provide a reason for the absence of office facilities.',
+            variant: 'destructive',
+          });
+          return;
+        }
+
+        // Submit only the absence reason for office facilities
+        toast({
+          title: 'Assessment Submitted',
+          description: `Office facility absence recorded for ${selectedFacility.name}. Reason: ${officeAbsenceReason}`,
+          variant: 'default',
+        });
+
+        setIsModalOpen(false);
+        setUploadedFiles([]);
+        facilityForm.reset();
+        setSelectedFacility(null);
+        setSafetyData([]);
+        setHasOfficeFacility(null);
+        setOfficeAbsenceReason('');
+        setSelectedOfficeTypes([]);
+        setOfficeQuantities({});
+        return;
+      }
+
       let maintenanceSubmitted = false;
       let safetySubmitted = false;
 
@@ -777,7 +825,8 @@ const AssessmentAddPage: React.FC = () => {
                    isToiletFacility ? selectedToiletTypes :
                    isLaboratoryFacility ? selectedLaboratoryTypes :
                    isDiningHallFacility ? selectedDiningHallTypes :
-                   isDormitoryFacility ? selectedDormitoryTypes : [],
+                   isDormitoryFacility ? selectedDormitoryTypes :
+                   isOfficeFacility ? selectedOfficeTypes : [],
            status: 'pending' as 'pending',
            details: data.details.map(detail => ({
              part_of_building: detail.part_of_building,
@@ -811,7 +860,8 @@ const AssessmentAddPage: React.FC = () => {
                   isToiletFacility ? selectedToiletTypes :
                   isLaboratoryFacility ? selectedLaboratoryTypes :
                   isDiningHallFacility ? selectedDiningHallTypes :
-                  isDormitoryFacility ? selectedDormitoryTypes : [],
+                  isDormitoryFacility ? selectedDormitoryTypes :
+                  isOfficeFacility ? selectedOfficeTypes : [],
           status: 'pending' as 'pending',
           details: safetyData.map(item => ({
             part_of_building: item.part,
@@ -890,6 +940,15 @@ const AssessmentAddPage: React.FC = () => {
       setDormitoryAbsenceReason('');
       setSelectedDormitoryTypes([]);
       setDormitoryQuantities({});
+      // Reset office-specific states
+      setHasOfficeFacility(null);
+      setOfficeAbsenceReason('');
+      setSelectedOfficeTypes([]);
+      setOfficeQuantities({});
+      setHasOfficeFacility(null);
+      setOfficeAbsenceReason('');
+      setSelectedOfficeTypes([]);
+      setOfficeQuantities({});
     } catch (error: any) {
       // Try to extract backend error message
       let message = 'Failed to submit assessment';
@@ -1024,8 +1083,8 @@ const ClassSelect: React.FC<ClassSelectProps> = ({ onChange, value, classOptions
               <form onSubmit={facilityForm.handleSubmit(handleFacilityAssessmentSubmit)}>
                 <Tabs defaultValue="maintenance" className="space-y-4">
                   <TabsList>
-                    <TabsTrigger value="maintenance" disabled={hasToiletFacility === false || hasLaboratoryFacility === false || hasDiningHallFacility === false || hasDormitoryFacility === false}>Maintenance</TabsTrigger>
-                    <TabsTrigger value="safety" disabled={hasToiletFacility === false || hasLaboratoryFacility === false || hasDiningHallFacility === false || hasDormitoryFacility === false}>Safety</TabsTrigger>
+                    <TabsTrigger value="maintenance" disabled={hasToiletFacility === false || hasLaboratoryFacility === false || hasDiningHallFacility === false || hasDormitoryFacility === false || hasOfficeFacility === false}>Maintenance</TabsTrigger>
+                    <TabsTrigger value="safety" disabled={hasToiletFacility === false || hasLaboratoryFacility === false || hasDiningHallFacility === false || hasDormitoryFacility === false || hasOfficeFacility === false}>Safety</TabsTrigger>
                   </TabsList>
                   <TabsContent value="maintenance">
                     <div className="max-w-5xl mx-auto bg-white shadow-lg rounded-xl p-6 mt-10">
@@ -1056,7 +1115,7 @@ const ClassSelect: React.FC<ClassSelectProps> = ({ onChange, value, classOptions
                                           <input
                                             type="radio"
                                             value={condition}
-                                            disabled={hasToiletFacility === false || hasLaboratoryFacility === false || hasDiningHallFacility === false || hasDormitoryFacility === false}
+                                            disabled={hasToiletFacility === false || hasLaboratoryFacility === false || hasDiningHallFacility === false || hasDormitoryFacility === false || hasOfficeFacility === false}
                                             checked={field.value === (condition === 'urgent' ? 'Urgent Attention' : condition === 'attention' ? 'Attention Required' : 'Good')}
                                             onChange={() => {
                                               const updatedDetails = [...facilityForm.getValues().details];
@@ -1090,7 +1149,7 @@ const ClassSelect: React.FC<ClassSelectProps> = ({ onChange, value, classOptions
                     </div>
                   </TabsContent>
                   <TabsContent value="safety">
-                    <div className={hasToiletFacility === false || hasLaboratoryFacility === false || hasDiningHallFacility === false || hasDormitoryFacility === false ? 'opacity-50 pointer-events-none' : ''}>
+                    <div className={hasToiletFacility === false || hasLaboratoryFacility === false || hasDiningHallFacility === false || hasDormitoryFacility === false || hasOfficeFacility === false ? 'opacity-50 pointer-events-none' : ''}>
                       <ClassSafetyForm safetyData={safetyData} onSafetyDataChange={setSafetyData} />
                     </div>
                   </TabsContent>
@@ -1595,8 +1654,125 @@ const ClassSelect: React.FC<ClassSelectProps> = ({ onChange, value, classOptions
                   </div>
                 )}
 
+                {/* Offices Section */}
+                {getFacilityType(selectedFacility?.name || '') === 'office' && (
+                  <div className="space-y-6">
+                    {/* Facility Availability Check */}
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium text-gray-700">
+                          Does the school have this facility?
+                        </Label>
+                        <Select
+                          value={hasOfficeFacility === null ? '' : hasOfficeFacility ? 'yes' : 'no'}
+                          onValueChange={(value) => {
+                            const isAvailable = value === 'yes';
+                            setHasOfficeFacility(isAvailable);
+                            if (!isAvailable) {
+                              // Clear maintenance and safety data when facility is not available
+                              setSafetyData([]);
+                              facilityForm.setValue('details', []);
+                              setOfficeAbsenceReason('');
+                            }
+                          }}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select availability" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="yes">Yes</SelectItem>
+                            <SelectItem value="no">No</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Show absence reason if facility is not available */}
+                      {hasOfficeFacility === false && (
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium text-gray-700">
+                            Reason for Absence
+                          </Label>
+                          <Textarea
+                            placeholder="Please provide the reason why the school does not have office facilities..."
+                            value={officeAbsenceReason}
+                            onChange={(e) => setOfficeAbsenceReason(e.target.value)}
+                            className="w-full min-h-[100px]"
+                          />
+                        </div>
+                      )}
+
+                      {/* Show office configuration if facility is available */}
+                      {hasOfficeFacility === true && (
+                        <>
+                          <div className="space-y-4">
+                            {/* Office Type Selection */}
+                            <div className="space-y-2">
+                              <Label className="text-sm font-medium text-gray-700">
+                                Select Office Types Available
+                              </Label>
+                              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                {officeOptions.map((type) => (
+                                  <div key={type} className="flex items-center space-x-2">
+                                    <Checkbox
+                                      id={type}
+                                      checked={selectedOfficeTypes.includes(type)}
+                                      onCheckedChange={(checked) => {
+                                        if (checked) {
+                                          setSelectedOfficeTypes(prev => [...prev, type]);
+                                          setOfficeQuantities(prev => ({ ...prev, [type]: 1 }));
+                                        } else {
+                                          setSelectedOfficeTypes(prev => prev.filter(t => t !== type));
+                                          setOfficeQuantities(prev => {
+                                            const newQuantities = { ...prev };
+                                            delete newQuantities[type];
+                                            return newQuantities;
+                                          });
+                                        }
+                                      }}
+                                    />
+                                    <Label htmlFor={type} className="text-sm capitalize">
+                                      {type}
+                                    </Label>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Office Quantities */}
+                            {selectedOfficeTypes.length > 0 && (
+                              <div className="space-y-4">
+                                <Label className="text-sm font-medium text-gray-700">
+                                  Number of Offices for Each Type
+                                </Label>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  {selectedOfficeTypes.map((type) => (
+                                    <div key={type} className="space-y-2">
+                                      <Label className="text-sm capitalize">{type}</Label>
+                                      <Input
+                                        type="number"
+                                        placeholder="Enter number"
+                                        value={officeQuantities[type] || 1}
+                                        onChange={(e) => {
+                                          const value = e.target.value === '' ? 1 : Number(e.target.value);
+                                          setOfficeQuantities(prev => ({ ...prev, [type]: value }));
+                                        }}
+                                        className="w-full"
+                                        min="1"
+                                      />
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* File Upload Section */}
-                <div className={`space-y-4 ${hasToiletFacility === false || hasLaboratoryFacility === false || hasDiningHallFacility === false || hasDormitoryFacility === false ? 'opacity-50 pointer-events-none' : ''}`}>
+                <div className={`space-y-4 ${hasToiletFacility === false || hasLaboratoryFacility === false || hasDiningHallFacility === false || hasDormitoryFacility === false || hasOfficeFacility === false ? 'opacity-50 pointer-events-none' : ''}`}>
                   <FormField
                     control={facilityForm.control}
                     name="files"
@@ -1607,10 +1783,10 @@ const ClassSelect: React.FC<ClassSelectProps> = ({ onChange, value, classOptions
                           <div className="space-y-4">
                             {/* File Upload Area */}
                             <div
-                              onDragOver={hasToiletFacility === false || hasLaboratoryFacility === false || hasDiningHallFacility === false || hasDormitoryFacility === false ? undefined : handleDragOver}
-                              onDrop={hasToiletFacility === false || hasLaboratoryFacility === false || hasDiningHallFacility === false || hasDormitoryFacility === false ? undefined : handleDrop}
-                              className={`border-2 border-dashed border-gray-300 rounded-lg p-6 text-center transition-colors ${hasToiletFacility === false || hasLaboratoryFacility === false || hasDiningHallFacility === false || hasDormitoryFacility === false ? 'cursor-not-allowed' : 'hover:border-gray-400 cursor-pointer'}`}
-                              onClick={hasToiletFacility === false || hasLaboratoryFacility === false || hasDiningHallFacility === false || hasDormitoryFacility === false ? undefined : () => fileInputRef.current?.click()}
+                              onDragOver={hasToiletFacility === false || hasLaboratoryFacility === false || hasDiningHallFacility === false || hasDormitoryFacility === false || hasOfficeFacility === false ? undefined : handleDragOver}
+                              onDrop={hasToiletFacility === false || hasLaboratoryFacility === false || hasDiningHallFacility === false || hasDormitoryFacility === false || hasOfficeFacility === false ? undefined : handleDrop}
+                              className={`border-2 border-dashed border-gray-300 rounded-lg p-6 text-center transition-colors ${hasToiletFacility === false || hasLaboratoryFacility === false || hasDiningHallFacility === false || hasDormitoryFacility === false || hasOfficeFacility === false ? 'cursor-not-allowed' : 'hover:border-gray-400 cursor-pointer'}`}
+                              onClick={hasToiletFacility === false || hasLaboratoryFacility === false || hasDiningHallFacility === false || hasDormitoryFacility === false || hasOfficeFacility === false ? undefined : () => fileInputRef.current?.click()}
                             >
                               <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
                               <p className="text-lg font-medium text-gray-700">Drop files here or click to upload</p>
@@ -1621,7 +1797,7 @@ const ClassSelect: React.FC<ClassSelectProps> = ({ onChange, value, classOptions
                                 multiple
                                 accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif"
                                 onChange={handleFileUpload}
-                                disabled={hasToiletFacility === false || hasLaboratoryFacility === false || hasDiningHallFacility === false || hasDormitoryFacility === false}
+                                disabled={hasToiletFacility === false || hasLaboratoryFacility === false || hasDiningHallFacility === false || hasDormitoryFacility === false || hasOfficeFacility === false}
                                 className="hidden"
                               />
                             </div>
@@ -1646,8 +1822,8 @@ const ClassSelect: React.FC<ClassSelectProps> = ({ onChange, value, classOptions
                                         type="button"
                                         variant="ghost"
                                         size="sm"
-                                        onClick={hasToiletFacility === false || hasLaboratoryFacility === false || hasDiningHallFacility === false || hasDormitoryFacility === false ? undefined : () => removeFile(index)}
-                                        disabled={hasToiletFacility === false || hasLaboratoryFacility === false || hasDiningHallFacility === false || hasDormitoryFacility === false}
+                                        onClick={hasToiletFacility === false || hasLaboratoryFacility === false || hasDiningHallFacility === false || hasDormitoryFacility === false || hasOfficeFacility === false ? undefined : () => removeFile(index)}
+                                        disabled={hasToiletFacility === false || hasLaboratoryFacility === false || hasDiningHallFacility === false || hasDormitoryFacility === false || hasOfficeFacility === false}
                                         className="text-red-500 hover:text-red-700 hover:bg-red-50"
                                       >
                                         <X className="h-4 w-4" />
@@ -1674,7 +1850,7 @@ const ClassSelect: React.FC<ClassSelectProps> = ({ onChange, value, classOptions
                         <FormControl>
                           <Textarea
                             {...field}
-                            disabled={hasToiletFacility === false || hasLaboratoryFacility === false || hasDiningHallFacility === false || hasDormitoryFacility === false}
+                            disabled={hasToiletFacility === false || hasLaboratoryFacility === false || hasDiningHallFacility === false || hasDormitoryFacility === false || hasOfficeFacility === false}
                             placeholder="Enter notes, concerns, and priorities..."
                             className={`min-h-[120px] resize-none ${hasToiletFacility === false || hasLaboratoryFacility === false ? 'cursor-not-allowed' : ''}`}
                           />
