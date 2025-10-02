@@ -469,37 +469,37 @@ const AssessmentAddPage: React.FC = () => {
 
         // Fetch entities to get real class data
         const entitiesResponse = await getSchoolEntities();
-        const entities = entitiesResponse.data || [];
+        const rawEntities = entitiesResponse.data || [];
 
-        // Filter for classroom entities (facility_id: 1) and use the full names directly
-        const classroomEntities = entities.filter((entity: any) => entity.facility_id === 1);
+        // Transform entities to include facilityName (same as EntitiesListPage)
+        const entities = rawEntities.map((entity: any) => {
+          const facility = facilities.find(f => f.id === entity.facility_id);
+          const facilityName = facility ? facility.name : 'Unknown Facility';
+          return {
+            ...entity,
+            facilityName
+          };
+        });
+
+        // Filter for classroom entities and use the full names directly
+        const classroomEntities = entities.filter((entity: any) => getFacilityType(entity.facilityName) === 'classroom');
         const classOptions = classroomEntities.map((entity: any) => entity.name).sort();
-
         setRealClassOptions(classOptions);
 
-        // Find facility IDs dynamically
-        const toiletFacility = facilities.find(f => getFacilityType(f.name) === 'toilet');
-        const laboratoryFacility = facilities.find(f => getFacilityType(f.name) === 'laboratory');
-        const diningHallFacility = facilities.find(f => getFacilityType(f.name) === 'dining_hall');
-        const dormitoryFacility = facilities.find(f => getFacilityType(f.name) === 'dormitory');
-
-        // Filter for toilet entities and use the names
-        const toiletEntities = entities.filter((entity: any) => toiletFacility && entity.facility_id === toiletFacility.id);
+        // Filter entities by facility type using the same logic as EntitiesListPage
+        const toiletEntities = entities.filter((entity: any) => getFacilityType(entity.facilityName) === 'toilet');
         const toiletOpts = toiletEntities.map((entity: any) => entity.name).sort();
         setToiletOptions(toiletOpts);
 
-        // Filter for laboratory entities and use the names
-        const laboratoryEntities = entities.filter((entity: any) => laboratoryFacility && entity.facility_id === laboratoryFacility.id);
+        const laboratoryEntities = entities.filter((entity: any) => getFacilityType(entity.facilityName) === 'laboratory');
         const laboratoryOpts = laboratoryEntities.map((entity: any) => entity.name).sort();
         setLaboratoryOptions(laboratoryOpts);
 
-        // Filter for dining hall entities and use the names
-        const diningHallEntities = entities.filter((entity: any) => diningHallFacility && entity.facility_id === diningHallFacility.id);
+        const diningHallEntities = entities.filter((entity: any) => getFacilityType(entity.facilityName) === 'dining_hall');
         const diningHallOpts = diningHallEntities.map((entity: any) => entity.name).sort();
         setDiningHallOptions(diningHallOpts);
 
-        // Filter for dormitory entities and use the names
-        const dormitoryEntities = entities.filter((entity: any) => dormitoryFacility && entity.facility_id === dormitoryFacility.id);
+        const dormitoryEntities = entities.filter((entity: any) => getFacilityType(entity.facilityName) === 'dormitory');
         const dormitoryOpts = dormitoryEntities.map((entity: any) => entity.name).sort();
         setDormitoryOptions(dormitoryOpts);
 
