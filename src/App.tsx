@@ -6,10 +6,9 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useRole } from "@/contexts/RoleContext";
 import Unauthorized from "./pages/Unauthorized";
 // ProtectedRoute component using RoleContext
-const ProtectedRoute = ({ allowedRoles, children }: { allowedRoles: string[]; children: React.ReactNode }) => {
-  const { currentUser } = useRole();
-  if (!currentUser) return <Navigate to="/unauthorized" replace />;
-  if (!allowedRoles.includes(currentUser.role)) return <Navigate to="/unauthorized" replace />;
+const ProtectedRoute = ({ page, children }: { page: string; children: React.ReactNode }) => {
+  const { hasAccess } = useRole();
+  if (!hasAccess(page)) return <Navigate to="/unauthorized" replace />;
   return <>{children}</>;
 };
 import { RoleProvider } from "@/contexts/RoleContext";
@@ -49,61 +48,61 @@ const App = () => (
           <Routes>
             {/* Public Routes */}
             <Route path="/" element={<LoginPage />} />
-            <Route path="/unauthorized" element={<Unauthorized />} />
+            {/* <Route path="/unauthorized" element={<Unauthorized />} /> */}
             {/* Protected Routes with AppLayout */}
             <Route path="/*" element={
               <AppLayout>
                 <Routes>
                   {/* School Admin: dashboard, reports, assessments (list/add) */}
                   <Route path="/dashboard" element={
-                    <ProtectedRoute allowedRoles={["school_admin", "agent", "ministry_admin"]}>
+                    <ProtectedRoute page="overview">
                       <Overview />
                     </ProtectedRoute>
                   } />
                   <Route path="/onboard" element={
-                    <ProtectedRoute allowedRoles={["ministry_admin", "agent"]}>
+                    <ProtectedRoute page="onboard">
                       <Onboard />
                     </ProtectedRoute>
                   } />
                   <Route path="/onboarded-schools" element={
-                    <ProtectedRoute allowedRoles={["ministry_admin", "agent"]}>
+                    <ProtectedRoute page="onboard">
                       <OnboardedSchoolList />
                     </ProtectedRoute>
                   } />
 
                   <Route path ="/facilities/add" element={
-                    <ProtectedRoute allowedRoles={["school_admin"]}>
+                    <ProtectedRoute page="entities">
                       <FacilityAddPage />
                     </ProtectedRoute>
                   } />
                   <Route path ="/entities" element={
-                    <ProtectedRoute allowedRoles={["school_admin", "agent", "ministry_admin"]}>
+                    <ProtectedRoute page="entities">
                       <EntitiesListPage />
                     </ProtectedRoute>
                   } />
                   <Route path="/assessment" element={
-                    <ProtectedRoute allowedRoles={["school_admin", "agent", "ministry_admin"]}>
+                    <ProtectedRoute page="assessment">
                       <RoleBasedAssessmentPage />
                     </ProtectedRoute>
                   } />
                   <Route path="/maintenance/assessment" element={
-                    <ProtectedRoute allowedRoles={["school_admin", "agent", "ministry_admin"]}>
+                    <ProtectedRoute page="assessment">
                       <RoleBasedAssessmentPage />
                     </ProtectedRoute>
                   } />
                   <Route path="/safety/assessment/report" element={
-                    <ProtectedRoute allowedRoles={["school_admin"]}>
+                    <ProtectedRoute page="school_form">
                       <SafetyReportPage />
                     </ProtectedRoute>
                   } />
                   <Route path="/school-metrics" element={
-                    <ProtectedRoute allowedRoles={["school_admin"]}>
+                    <ProtectedRoute page="school_form">
                       <SchoolFormListPage />
                     </ProtectedRoute>
                   } />
-                  
+
                   <Route path="/school-metrics/add" element={
-                    <ProtectedRoute allowedRoles={["school_admin"]}>
+                    <ProtectedRoute page="school_form">
                       <SchoolFormAddPage />
                     </ProtectedRoute>
                   } />
@@ -112,58 +111,58 @@ const App = () => (
                   
                   {/* Assesments Routes*/}
                   <Route path="/assessments/add" element={
-                    <ProtectedRoute allowedRoles={["school_admin", "ministry_admin"]}>
+                    <ProtectedRoute page="assessment">
                       <AssessmentAdd />
                     </ProtectedRoute>
                   } />
                   <Route path="/assessments/edit/:id" element={
-                    <ProtectedRoute allowedRoles={["school_admin", "ministry_admin"]}>
+                    <ProtectedRoute page="assessment">
                       <AssessmentAdd />
                     </ProtectedRoute>
                   } />
                   <Route path="/assessments/review" element={
-                    <ProtectedRoute allowedRoles={["agent", "ministry_admin"]}>
+                    <ProtectedRoute page="review">
                       <AssessmentReviewPage />
                     </ProtectedRoute>
                   } />
                   <Route path="/safety/review" element={
-                    <ProtectedRoute allowedRoles={["agent", "ministry_admin"]}>
+                    <ProtectedRoute page="review">
                       <SafetyReviewPage />
                     </ProtectedRoute>
                   } />
                   <Route path="/assessments/view/:id" element ={
-                    <ProtectedRoute allowedRoles={["agent", "ministry_admin"]}>
+                    <ProtectedRoute page="review">
                       <AssessmentViewPage />
                     </ProtectedRoute>
                   } />
                   <Route path="/maintenance/reports" element={
-                    <ProtectedRoute allowedRoles={["agent", "ministry_admin"]}>
+                    <ProtectedRoute page="reports">
                       <MaintenanceAssessmentReportPage />
                     </ProtectedRoute>
                   } />
                   <Route path="/safety/reports" element={
-                    <ProtectedRoute allowedRoles={["agent", "ministry_admin"]}>
+                    <ProtectedRoute page="reports">
                       <SafetyReportsPage />
                     </ProtectedRoute>
                   } />
                   <Route path="/termly-dates" element={
-                    <ProtectedRoute allowedRoles={["agent", "ministry_admin", "school_admin"]}>
+                    <ProtectedRoute page="term_dates">
                       <TermDateListPage />
                     </ProtectedRoute>
                   } />
                   <Route path="/termly-dates/add" element={
-                    <ProtectedRoute allowedRoles={["agent", "ministry_admin"]}>
+                    <ProtectedRoute page="term_dates">
                       <TermDates />
                     </ProtectedRoute>
                   } />
                   {/* Users routes */}
                   <Route path="/users" element={
-                    <ProtectedRoute allowedRoles={["agent", "ministry_admin"]}>
+                    <ProtectedRoute page="user_management">
                       <Users />
                     </ProtectedRoute>
                   } />
                   <Route path="/roles" element={
-                    <ProtectedRoute allowedRoles={["agent", "ministry_admin"]}>
+                    <ProtectedRoute page="user_management">
                       <RolesPermissions />
                     </ProtectedRoute>
                   } />

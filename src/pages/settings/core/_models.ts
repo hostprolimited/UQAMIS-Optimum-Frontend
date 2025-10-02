@@ -9,6 +9,8 @@ export interface User {
   email: string;
   phone?: string;
 
+
+
   gender?: string;
   role?: string;
   status?: string;
@@ -26,6 +28,8 @@ export interface CreateUserInput {
   phone?: string;
   password: string;
   role?: string;
+  subcounty?: string;
+  ward?: string;
 }
 
 export interface UpdateUserInput {
@@ -35,6 +39,11 @@ export interface UpdateUserInput {
   password?: string;
   role?: string;
   status?: string;
+  institution_id?: number;
+  county?: string;
+  subcounty?: string;
+  ward?: string;
+  gender?: string;
 }
 
 export interface Role {

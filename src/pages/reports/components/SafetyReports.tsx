@@ -72,7 +72,7 @@ interface FacilityAssessment {
    id: string;
    institutionName: string;
    facilityType: string;
-   class: string[];
+   entity: string[];
    assessmentDate: string;
    urgentItems: number;
    attentionItems: number;
@@ -103,7 +103,7 @@ const mapSafetyReport = (report: any, facilityIdToName: Record<string, string>):
   return {
     id: report.id?.toString() ?? "",
     institutionName: report.institution_name || report.school_name || getCurrentInstitutionName(),
-    class: report.class ? JSON.parse(report.class) : [],
+    entity: report.entity ? JSON.parse(report.entity) : [],
     facilityType: facilityIdToName[report.facility_id?.toString()] || report.facility_type || report.facility_id?.toString() || "",
     assessmentDate: report.assessment_date ?? report.date ?? "",
     urgentItems: report.urgent_items ?? 0,
@@ -272,6 +272,16 @@ const SafetyReportsPage: React.FC = () => {
       cell: ({ row }) => (
         <div className="capitalize font-medium">{row.getValue("facilityType")}</div>
       ),
+    },
+
+    {
+      accessorKey: "entity",
+      header: "Entity",
+      cell: ({ row }) => {
+        const entityArray = row.getValue("entity") as string[];
+        const displayText = entityArray.length > 0 ? entityArray.join(", ") : "N/A";
+        return <div className="font-medium max-w-[250px] truncate" title={displayText}>{displayText}</div>;
+      },
     },
    
     {

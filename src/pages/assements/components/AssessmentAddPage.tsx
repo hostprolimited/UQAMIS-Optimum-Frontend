@@ -438,31 +438,26 @@ const AssessmentAddPage: React.FC = () => {
 
   // Toilet specific states
   const [hasToiletFacility, setHasToiletFacility] = useState<boolean | null>(null);
-  const [toiletAbsenceReason, setToiletAbsenceReason] = useState('');
   const [selectedToiletTypes, setSelectedToiletTypes] = useState<string[]>([]);
   const [toiletQuantities, setToiletQuantities] = useState<{[key: string]: number}>({});
 
   // Laboratory specific states
   const [hasLaboratoryFacility, setHasLaboratoryFacility] = useState<boolean | null>(null);
-  const [laboratoryAbsenceReason, setLaboratoryAbsenceReason] = useState('');
   const [selectedLaboratoryTypes, setSelectedLaboratoryTypes] = useState<string[]>([]);
   const [laboratoryQuantities, setLaboratoryQuantities] = useState<{[key: string]: number}>({});
 
   // Dining Hall specific states
   const [hasDiningHallFacility, setHasDiningHallFacility] = useState<boolean | null>(null);
-  const [diningHallAbsenceReason, setDiningHallAbsenceReason] = useState('');
   const [selectedDiningHallTypes, setSelectedDiningHallTypes] = useState<string[]>([]);
   const [diningHallQuantities, setDiningHallQuantities] = useState<{[key: string]: number}>({});
 
   // Dormitory specific states
   const [hasDormitoryFacility, setHasDormitoryFacility] = useState<boolean | null>(null);
-  const [dormitoryAbsenceReason, setDormitoryAbsenceReason] = useState('');
   const [selectedDormitoryTypes, setSelectedDormitoryTypes] = useState<string[]>([]);
   const [dormitoryQuantities, setDormitoryQuantities] = useState<{[key: string]: number}>({});
 
   // Office specific states
   const [hasOfficeFacility, setHasOfficeFacility] = useState<boolean | null>(null);
-  const [officeAbsenceReason, setOfficeAbsenceReason] = useState('');
   const [selectedOfficeTypes, setSelectedOfficeTypes] = useState<string[]>([]);
   const [officeQuantities, setOfficeQuantities] = useState<{[key: string]: number}>({});
 
@@ -721,19 +716,15 @@ useEffect(() => {
     setIsModalOpen(true);
     // Reset facility-specific states
     setHasToiletFacility(null);
-    setToiletAbsenceReason('');
     setSelectedToiletTypes([]);
     setToiletQuantities({});
     setHasLaboratoryFacility(null);
-    setLaboratoryAbsenceReason('');
     setSelectedLaboratoryTypes([]);
     setLaboratoryQuantities({});
     setHasDiningHallFacility(null);
-    setDiningHallAbsenceReason('');
     setSelectedDiningHallTypes([]);
     setDiningHallQuantities({});
     setHasDormitoryFacility(null);
-    setDormitoryAbsenceReason('');
     setSelectedDormitoryTypes([]);
     setDormitoryQuantities({});
   };
@@ -750,155 +741,10 @@ useEffect(() => {
       const isDormitoryFacility = facilityType === 'dormitory';
       const isOfficeFacility = facilityType === 'office';
 
-      // Special handling for toilet facilities when not available
-      if (isToiletFacility && hasToiletFacility === false) {
-        if (!toiletAbsenceReason.trim()) {
-          toast({
-            title: 'Validation Error',
-            description: 'Please provide a reason for the absence of toilet facilities.',
-            variant: 'destructive',
-          });
-          return;
-        }
 
-        // Submit only the absence reason for toilet facilities
-        toast({
-          title: 'Assessment Submitted',
-          description: `Toilet facility absence recorded for ${selectedFacility.name}. Reason: ${toiletAbsenceReason}`,
-          variant: 'default',
-        });
 
-        setIsModalOpen(false);
-        setUploadedFiles([]);
-        facilityForm.reset();
-        setSelectedFacility(null);
-        setSafetyData([]);
-        setHasToiletFacility(null);
-        setToiletAbsenceReason('');
-        setSelectedToiletTypes([]);
-        setToiletQuantities({});
-        return;
-      }
 
-      // Special handling for laboratory facilities when not available
-      if (isLaboratoryFacility && hasLaboratoryFacility === false) {
-        if (!laboratoryAbsenceReason.trim()) {
-          toast({
-            title: 'Validation Error',
-            description: 'Please provide a reason for the absence of laboratory facilities.',
-            variant: 'destructive',
-          });
-          return;
-        }
 
-        // Submit only the absence reason for laboratory facilities
-        toast({
-          title: 'Assessment Submitted',
-          description: `Laboratory facility absence recorded for ${selectedFacility.name}. Reason: ${laboratoryAbsenceReason}`,
-          variant: 'default',
-        });
-
-        setIsModalOpen(false);
-        setUploadedFiles([]);
-        facilityForm.reset();
-        setSelectedFacility(null);
-        setSafetyData([]);
-        setHasLaboratoryFacility(null);
-        setLaboratoryAbsenceReason('');
-        setSelectedLaboratoryTypes([]);
-        setLaboratoryQuantities({});
-        return;
-      }
-
-      // Special handling for dining hall facilities when not available
-      if (isDiningHallFacility && hasDiningHallFacility === false) {
-        if (!diningHallAbsenceReason.trim()) {
-          toast({
-            title: 'Validation Error',
-            description: 'Please provide a reason for the absence of dining hall facilities.',
-            variant: 'destructive',
-          });
-          return;
-        }
-
-        // Submit only the absence reason for dining hall facilities
-        toast({
-          title: 'Assessment Submitted',
-          description: `Dining hall facility absence recorded for ${selectedFacility.name}. Reason: ${diningHallAbsenceReason}`,
-          variant: 'default',
-        });
-
-        setIsModalOpen(false);
-        setUploadedFiles([]);
-        facilityForm.reset();
-        setSelectedFacility(null);
-        setSafetyData([]);
-        setHasDiningHallFacility(null);
-        setDiningHallAbsenceReason('');
-        setSelectedDiningHallTypes([]);
-        setDiningHallQuantities({});
-        return;
-      }
-
-      // Special handling for dormitory facilities when not available
-      if (isDormitoryFacility && hasDormitoryFacility === false) {
-        if (!dormitoryAbsenceReason.trim()) {
-          toast({
-            title: 'Validation Error',
-            description: 'Please provide a reason for the absence of dormitory facilities.',
-            variant: 'destructive',
-          });
-          return;
-        }
-
-        // Submit only the absence reason for dormitory facilities
-        toast({
-          title: 'Assessment Submitted',
-          description: `Dormitory facility absence recorded for ${selectedFacility.name}. Reason: ${dormitoryAbsenceReason}`,
-          variant: 'default',
-        });
-
-        setIsModalOpen(false);
-        setUploadedFiles([]);
-        facilityForm.reset();
-        setSelectedFacility(null);
-        setSafetyData([]);
-        setHasDormitoryFacility(null);
-        setDormitoryAbsenceReason('');
-        setSelectedDormitoryTypes([]);
-        setDormitoryQuantities({});
-        return;
-      }
-
-      // Special handling for office facilities when not available
-      if (isOfficeFacility && hasOfficeFacility === false) {
-        if (!officeAbsenceReason.trim()) {
-          toast({
-            title: 'Validation Error',
-            description: 'Please provide a reason for the absence of office facilities.',
-            variant: 'destructive',
-          });
-          return;
-        }
-
-        // Submit only the absence reason for office facilities
-        toast({
-          title: 'Assessment Submitted',
-          description: `Office facility absence recorded for ${selectedFacility.name}. Reason: ${officeAbsenceReason}`,
-          variant: 'default',
-        });
-
-        setIsModalOpen(false);
-        setUploadedFiles([]);
-        facilityForm.reset();
-        setSelectedFacility(null);
-        setSafetyData([]);
-        setHasOfficeFacility(null);
-        setOfficeAbsenceReason('');
-        setSelectedOfficeTypes([]);
-        setOfficeQuantities({});
-        return;
-      }
 
       let maintenanceSubmitted = false;
       let safetySubmitted = false;
@@ -908,6 +754,13 @@ useEffect(() => {
 
       // Check if safety has changes
       const hasSafetyChanges = safetyData.some(item => item.attentionRequired || item.good);
+
+      // Check if facility is not available
+      const isFacilityNotAvailable = (isToiletFacility && hasToiletFacility === false) ||
+                                     (isLaboratoryFacility && hasLaboratoryFacility === false) ||
+                                     (isDiningHallFacility && hasDiningHallFacility === false) ||
+                                     (isDormitoryFacility && hasDormitoryFacility === false) ||
+                                     (isOfficeFacility && hasOfficeFacility === false);
 
       if (hasMaintenanceChanges) {
         // Create the assessment input object matching MaintenanceAssessmentInput type
@@ -937,6 +790,31 @@ useEffect(() => {
           toast({
             title: 'Maintenance Submission Error',
             description: response.message || 'Failed to submit maintenance assessment',
+            variant: 'destructive',
+          });
+          return;
+        }
+        maintenanceSubmitted = true;
+      } else if (isFacilityNotAvailable && data.school_feedback.trim()) {
+        // Submit notes-only assessment for unavailable facility
+        const assessmentInput = {
+          institution_id: selectedFacility.institution_id || 1,
+          institution_name: 'Institution',
+          facility_id: data.facility_id,
+          entity: [],
+          status: 'pending' as 'pending',
+          details: [],
+          school_feedback: data.school_feedback,
+          agent_feedback: data.agent_feedback,
+          files: uploadedFiles,
+        };
+
+        const response = await createMaintenanceAssessment(assessmentInput);
+
+        if (response && response.status === 'error') {
+          toast({
+            title: 'Submission Error',
+            description: response.message || 'Failed to submit assessment',
             variant: 'destructive',
           });
           return;
@@ -979,10 +857,10 @@ useEffect(() => {
         safetySubmitted = true;
       }
 
-      if (!maintenanceSubmitted && !safetySubmitted) {
+      if (!maintenanceSubmitted && !safetySubmitted && !data.school_feedback.trim()) {
         toast({
           title: 'No Changes',
-          description: 'No assessments were submitted as no changes were made.',
+          description: 'Please provide notes or make assessment changes.',
           variant: 'default',
         });
         return;
@@ -1016,31 +894,26 @@ useEffect(() => {
       setSafetyData([]);
       // Reset toilet-specific states
       setHasToiletFacility(null);
-      setToiletAbsenceReason('');
       setSelectedToiletTypes([]);
       setToiletQuantities({});
       // Reset laboratory-specific states
       setHasLaboratoryFacility(null);
-      setLaboratoryAbsenceReason('');
       setSelectedLaboratoryTypes([]);
       setLaboratoryQuantities({});
       // Reset dining hall-specific states
       setHasDiningHallFacility(null);
-      setDiningHallAbsenceReason('');
       setSelectedDiningHallTypes([]);
       setDiningHallQuantities({});
       // Reset dormitory-specific states
       setHasDormitoryFacility(null);
-      setDormitoryAbsenceReason('');
       setSelectedDormitoryTypes([]);
       setDormitoryQuantities({});
       // Reset office-specific states
       setHasOfficeFacility(null);
-      setOfficeAbsenceReason('');
       setSelectedOfficeTypes([]);
       setOfficeQuantities({});
       setHasOfficeFacility(null);
-      setOfficeAbsenceReason('');
+      
       setSelectedOfficeTypes([]);
       setOfficeQuantities({});
     } catch (error: any) {
@@ -1298,7 +1171,6 @@ const ClassSelect: React.FC<ClassSelectProps> = ({ onChange, value, classOptions
                               // Clear maintenance and safety data when facility is not available
                               setSafetyData([]);
                               facilityForm.setValue('details', []);
-                              setToiletAbsenceReason('');
                             }
                           }}
                         >
@@ -1312,20 +1184,6 @@ const ClassSelect: React.FC<ClassSelectProps> = ({ onChange, value, classOptions
                         </Select>
                       </div>
 
-                      {/* Show absence reason if facility is not available */}
-                      {hasToiletFacility === false && (
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium text-gray-700">
-                            Reason for Absence
-                          </Label>
-                          <Textarea
-                            placeholder="Please provide the reason why the school does not have toilet facilities..."
-                            value={toiletAbsenceReason}
-                            onChange={(e) => setToiletAbsenceReason(e.target.value)}
-                            className="w-full min-h-[100px]"
-                          />
-                        </div>
-                      )}
 
                       {/* Show toilet configuration if facility is available */}
                       {hasToiletFacility === true && (
@@ -1415,7 +1273,6 @@ const ClassSelect: React.FC<ClassSelectProps> = ({ onChange, value, classOptions
                               // Clear maintenance and safety data when facility is not available
                               setSafetyData([]);
                               facilityForm.setValue('details', []);
-                              setLaboratoryAbsenceReason('');
                             }
                           }}
                         >
@@ -1429,20 +1286,6 @@ const ClassSelect: React.FC<ClassSelectProps> = ({ onChange, value, classOptions
                         </Select>
                       </div>
 
-                      {/* Show absence reason if facility is not available */}
-                      {hasLaboratoryFacility === false && (
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium text-gray-700">
-                            Reason for Absence
-                          </Label>
-                          <Textarea
-                            placeholder="Please provide the reason why the school does not have laboratory facilities..."
-                            value={laboratoryAbsenceReason}
-                            onChange={(e) => setLaboratoryAbsenceReason(e.target.value)}
-                            className="w-full min-h-[100px]"
-                          />
-                        </div>
-                      )}
 
                       {/* Show laboratory configuration if facility is available */}
                       {hasLaboratoryFacility === true && (
@@ -1532,7 +1375,6 @@ const ClassSelect: React.FC<ClassSelectProps> = ({ onChange, value, classOptions
                               // Clear maintenance and safety data when facility is not available
                               setSafetyData([]);
                               facilityForm.setValue('details', []);
-                              setDiningHallAbsenceReason('');
                             }
                           }}
                         >
@@ -1546,20 +1388,6 @@ const ClassSelect: React.FC<ClassSelectProps> = ({ onChange, value, classOptions
                         </Select>
                       </div>
 
-                      {/* Show absence reason if facility is not available */}
-                      {hasDiningHallFacility === false && (
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium text-gray-700">
-                            Reason for Absence
-                          </Label>
-                          <Textarea
-                            placeholder="Please provide the reason why the school does not have dining hall facilities..."
-                            value={diningHallAbsenceReason}
-                            onChange={(e) => setDiningHallAbsenceReason(e.target.value)}
-                            className="w-full min-h-[100px]"
-                          />
-                        </div>
-                      )}
 
                       {/* Show dining hall configuration if facility is available */}
                       {hasDiningHallFacility === true && (
@@ -1649,7 +1477,6 @@ const ClassSelect: React.FC<ClassSelectProps> = ({ onChange, value, classOptions
                               // Clear maintenance and safety data when facility is not available
                               setSafetyData([]);
                               facilityForm.setValue('details', []);
-                              setDormitoryAbsenceReason('');
                             }
                           }}
                         >
@@ -1663,20 +1490,6 @@ const ClassSelect: React.FC<ClassSelectProps> = ({ onChange, value, classOptions
                         </Select>
                       </div>
 
-                      {/* Show absence reason if facility is not available */}
-                      {hasDormitoryFacility === false && (
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium text-gray-700">
-                            Reason for Absence
-                          </Label>
-                          <Textarea
-                            placeholder="Please provide the reason why the school does not have dormitory facilities..."
-                            value={dormitoryAbsenceReason}
-                            onChange={(e) => setDormitoryAbsenceReason(e.target.value)}
-                            className="w-full min-h-[100px]"
-                          />
-                        </div>
-                      )}
 
                       {/* Show dormitory configuration if facility is available */}
                       {hasDormitoryFacility === true && (
@@ -1766,7 +1579,6 @@ const ClassSelect: React.FC<ClassSelectProps> = ({ onChange, value, classOptions
                               // Clear maintenance and safety data when facility is not available
                               setSafetyData([]);
                               facilityForm.setValue('details', []);
-                              setOfficeAbsenceReason('');
                             }
                           }}
                         >
@@ -1780,20 +1592,6 @@ const ClassSelect: React.FC<ClassSelectProps> = ({ onChange, value, classOptions
                         </Select>
                       </div>
 
-                      {/* Show absence reason if facility is not available */}
-                      {hasOfficeFacility === false && (
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium text-gray-700">
-                            Reason for Absence
-                          </Label>
-                          <Textarea
-                            placeholder="Please provide the reason why the school does not have office facilities..."
-                            value={officeAbsenceReason}
-                            onChange={(e) => setOfficeAbsenceReason(e.target.value)}
-                            className="w-full min-h-[100px]"
-                          />
-                        </div>
-                      )}
 
                       {/* Show office configuration if facility is available */}
                       {hasOfficeFacility === true && (
@@ -1866,7 +1664,7 @@ const ClassSelect: React.FC<ClassSelectProps> = ({ onChange, value, classOptions
                 )}
 
                 {/* File Upload Section */}
-                <div className={`space-y-4 ${hasToiletFacility === false || hasLaboratoryFacility === false || hasDiningHallFacility === false || hasDormitoryFacility === false || hasOfficeFacility === false ? 'opacity-50 pointer-events-none' : ''}`}>
+                <div className="space-y-4">
                   <FormField
                     control={facilityForm.control}
                     name="files"
@@ -1877,10 +1675,10 @@ const ClassSelect: React.FC<ClassSelectProps> = ({ onChange, value, classOptions
                           <div className="space-y-4">
                             {/* File Upload Area */}
                             <div
-                              onDragOver={hasToiletFacility === false || hasLaboratoryFacility === false || hasDiningHallFacility === false || hasDormitoryFacility === false || hasOfficeFacility === false ? undefined : handleDragOver}
-                              onDrop={hasToiletFacility === false || hasLaboratoryFacility === false || hasDiningHallFacility === false || hasDormitoryFacility === false || hasOfficeFacility === false ? undefined : handleDrop}
-                              className={`border-2 border-dashed border-gray-300 rounded-lg p-6 text-center transition-colors ${hasToiletFacility === false || hasLaboratoryFacility === false || hasDiningHallFacility === false || hasDormitoryFacility === false || hasOfficeFacility === false ? 'cursor-not-allowed' : 'hover:border-gray-400 cursor-pointer'}`}
-                              onClick={hasToiletFacility === false || hasLaboratoryFacility === false || hasDiningHallFacility === false || hasDormitoryFacility === false || hasOfficeFacility === false ? undefined : () => fileInputRef.current?.click()}
+                              onDragOver={handleDragOver}
+                              onDrop={handleDrop}
+                              className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center transition-colors hover:border-gray-400 cursor-pointer"
+                              onClick={() => fileInputRef.current?.click()}
                             >
                               <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
                               <p className="text-lg font-medium text-gray-700">Drop files here or click to upload</p>
@@ -1891,7 +1689,6 @@ const ClassSelect: React.FC<ClassSelectProps> = ({ onChange, value, classOptions
                                 multiple
                                 accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif"
                                 onChange={handleFileUpload}
-                                disabled={hasToiletFacility === false || hasLaboratoryFacility === false || hasDiningHallFacility === false || hasDormitoryFacility === false || hasOfficeFacility === false}
                                 className="hidden"
                               />
                             </div>
@@ -1916,8 +1713,7 @@ const ClassSelect: React.FC<ClassSelectProps> = ({ onChange, value, classOptions
                                         type="button"
                                         variant="ghost"
                                         size="sm"
-                                        onClick={hasToiletFacility === false || hasLaboratoryFacility === false || hasDiningHallFacility === false || hasDormitoryFacility === false || hasOfficeFacility === false ? undefined : () => removeFile(index)}
-                                        disabled={hasToiletFacility === false || hasLaboratoryFacility === false || hasDiningHallFacility === false || hasDormitoryFacility === false || hasOfficeFacility === false}
+                                        onClick={() => removeFile(index)}
                                         className="text-red-500 hover:text-red-700 hover:bg-red-50"
                                       >
                                         <X className="h-4 w-4" />
@@ -1944,9 +1740,8 @@ const ClassSelect: React.FC<ClassSelectProps> = ({ onChange, value, classOptions
                         <FormControl>
                           <Textarea
                             {...field}
-                            disabled={hasToiletFacility === false || hasLaboratoryFacility === false || hasDiningHallFacility === false || hasDormitoryFacility === false || hasOfficeFacility === false}
                             placeholder="Enter notes, concerns, and priorities..."
-                            className={`min-h-[120px] resize-none ${hasToiletFacility === false || hasLaboratoryFacility === false ? 'cursor-not-allowed' : ''}`}
+                            className="min-h-[120px] resize-none"
                           />
                         </FormControl>
                         <FormMessage />

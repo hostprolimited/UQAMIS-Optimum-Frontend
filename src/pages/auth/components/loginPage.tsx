@@ -25,15 +25,14 @@ const LoginPage = () => {
     setIsSubmitting(true);
     try {
       const res = await login(email, password);
-      const validRoles = ['ministry_admin', 'agent', 'school_admin'];
-      if (!res || !res.user || !res.token || !res.user.role || !validRoles.includes(res.user.role)) {
+      if (!res || !res.user || !res.token || !res.user.role) {
         setError("Invalid credentials");
         setIsSubmitting(false);
         return;
       }
       // Save token/user as needed
       localStorage.setItem("auth_token", res.token);
-      setCurrentUser({ ...res.user, id: String(res.user.id) });
+      setCurrentUser({ ...res.user, id: String(res.user.id), permissions: res.user.permissions || [] });
       navigate('/dashboard');
     } catch (err: any) {
       let msg = "Login failed. Please try again.";

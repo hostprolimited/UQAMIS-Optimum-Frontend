@@ -31,7 +31,7 @@ export interface MaintenanceReport {
   facility_type: string;
   institution_name: string;
   assessment_date: string;
-  class: string[];
+  entity: string[];
   urgent_items: number;
   attention_items: number;
   good_items: number;
@@ -70,7 +70,7 @@ export interface SafetyReport {
   facility_type: string;
   institution_name: string;
   assessment_date: string;
-  class: string[];
+  entity: string[];
   urgent_items: number;
   attention_items: number;
   good_items: number;

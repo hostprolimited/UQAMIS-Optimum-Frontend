@@ -21,7 +21,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
 import { useToast } from "@/hooks/use-toast";
 
@@ -39,7 +39,7 @@ interface FacilityAssessment {
   id: string;
   institutionName: string;
   facilityType: string;
-  class: string[];
+  entity: string[];
   assessmentDate: string;
   urgentItems: number;
   attentionItems: number;
@@ -59,7 +59,7 @@ interface FacilityAssessment {
 const mapMaintenanceReport = (report: any, facilityIdToName: Record<string, string>): FacilityAssessment => ({
   id: report.id?.toString() ?? "",
   institutionName: report.institution_name || report.school_name || "School",
-  class: report.class ? JSON.parse(report.class) : [],
+  entity: report.entity ? JSON.parse(report.entity) : [],
   facilityType: facilityIdToName[report.facility_id?.toString()] || report.facility_type || report.facility_id?.toString() || "",
   assessmentDate: report.assessment_date ?? report.date ?? "",
   urgentItems: report.urgent_items ?? 0,
@@ -88,6 +88,7 @@ const AssessmentViewPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [assessmentType, setAssessmentType] = useState<'maintenance' | 'safety' | ''>('');
   const [selectedFacility, setSelectedFacility] = useState<string>('');
+  const [selectedEntity, setSelectedEntity] = useState<string>('');
   const [selectedAssessment, setSelectedAssessment] = useState<FacilityAssessment | null>(null);
 
   // Review modal
@@ -160,18 +161,19 @@ const AssessmentViewPage: React.FC = () => {
 
   useEffect(() => {
     setSelectedFacility('');
+    setSelectedEntity('');
     setSelectedAssessment(null);
   }, [assessmentType]);
 
   useEffect(() => {
-    if (assessmentType && selectedFacility) {
+    if (assessmentType && selectedFacility && selectedEntity) {
       const assessments = assessmentType === 'maintenance' ? allAssessments : safetyAssessments;
-      const ass = assessments.find(a => a.facilityType === selectedFacility);
+      const ass = assessments.find(a => a.facilityType === selectedFacility && a.entity.includes(selectedEntity));
       setSelectedAssessment(ass || null);
     } else {
       setSelectedAssessment(null);
     }
-  }, [assessmentType, selectedFacility, allAssessments, safetyAssessments]);
+  }, [assessmentType, selectedFacility, selectedEntity, allAssessments, safetyAssessments]);
 
   // Helpers for badges
   function getAverageConditionBadge(condition?: FacilityAssessment["averageCondition"]) {
@@ -231,7 +233,7 @@ const AssessmentViewPage: React.FC = () => {
         status: selectedAssessment.status as any,
         school_feedback: selectedAssessment.school_feedback || '',
         agent_feedback: selectedAssessment.agent_feedback || '',
-        class: selectedAssessment.class,
+        entity: selectedAssessment.entity,
         details: updatedDetails.map(d => ({
           part_of_building: d.part_of_building,
           assessment_status: d.assessment_status as any,
@@ -314,6 +316,7 @@ const AssessmentViewPage: React.FC = () => {
     facilityType: selectedAssessment.facilityType,
     school_feedback: selectedAssessment.school_feedback,
     agent_feedback: selectedAssessment.agent_feedback,
+    entity: selectedAssessment.entity,
   })) || [] : [];
 
   const columns: ColumnDef<typeof tableData[0]>[] = [
@@ -324,6 +327,15 @@ const AssessmentViewPage: React.FC = () => {
     {
       accessorKey: "facilityType",
       header: "Facility Type",
+    },
+    {
+      accessorKey: "entity",
+      header: "Entity",
+      cell: ({ row }) => {
+        const entityArray = row.getValue("entity") as string[] || [];
+        const displayText = entityArray.length > 0 ? entityArray.join(", ") : "N/A";
+        return <div className="font-medium max-w-[250px] truncate" title={displayText}>{displayText}</div>;
+      },
     },
     {
       accessorKey: "assessment_status",
@@ -378,10 +390,10 @@ const AssessmentViewPage: React.FC = () => {
                 <Edit className="mr-2 h-4 w-4" />
                 Edit
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleDeleteAssessment(selectedAssessment!.id)} className="text-destructive">
+              {/* <DropdownMenuItem onClick={() => handleDeleteAssessment(selectedAssessment!.id)} className="text-destructive">
                 <Trash2 className="mr-2 h-4 w-4" />
                 Delete Assessment
-              </DropdownMenuItem>
+              </DropdownMenuItem> */}
             </DropdownMenuContent>
           </DropdownMenu>
         );
@@ -394,8 +406,8 @@ const AssessmentViewPage: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold">Maintenance Assessment Review</h1>
-          <p className="text-muted-foreground">Review assessment for {assessment.institutionName}</p>
+          <h1 className="text-3xl font-bold">Assessment Review</h1>
+          <p className="text-muted-foreground">Review assessments for {assessment.institutionName}</p>
         </div>
         <Button variant="outline" onClick={() => navigate(-1)}>
           <ArrowLeft className="mr-2 h-4 w-4" />
@@ -420,7 +432,7 @@ const AssessmentViewPage: React.FC = () => {
               <span className="font-medium">Facility Type:</span> {assessment.facilityType}
             </div>
             <div>
-              <span className="font-medium">Class:</span> {assessment.class.length > 0 ? assessment.class.join(", ") : "N/A"}
+              <span className="font-medium">Entity:</span> {assessment.entity.length > 0 ? assessment.entity.join(", ") : "N/A"}
             </div>
             <div>
               <span className="font-medium">Assessment Date:</span> {new Date(assessment.assessmentDate).toLocaleDateString()}
@@ -469,6 +481,9 @@ const AssessmentViewPage: React.FC = () => {
         <Card>
           <CardHeader>
             <CardTitle>Select Assessment To Review</CardTitle>
+            <CardDescription>
+              Choose assessment type, facility type, and specific entity to review
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex items-end gap-4">
@@ -487,7 +502,7 @@ const AssessmentViewPage: React.FC = () => {
               {assessmentType && (
                 <div className="flex-1">
                   <Label htmlFor="facility-type">Facility Type</Label>
-                  <Select value={selectedFacility} onValueChange={setSelectedFacility}>
+                  <Select value={selectedFacility} onValueChange={(value) => { setSelectedFacility(value); setSelectedEntity(''); }}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select facility" />
                     </SelectTrigger>
@@ -499,7 +514,26 @@ const AssessmentViewPage: React.FC = () => {
                   </Select>
                 </div>
               )}
-              {selectedAssessment && (
+              {assessmentType && selectedFacility && (
+                <div className="flex-1">
+                  <Label htmlFor="entity-type">Entity</Label>
+                  <Select value={selectedEntity} onValueChange={setSelectedEntity}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select entity" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[...new Set(
+                        (assessmentType === 'maintenance' ? allAssessments : safetyAssessments)
+                          .filter(a => a.facilityType === selectedFacility)
+                          .flatMap(a => a.entity)
+                      )].map(entity => (
+                        <SelectItem key={entity} value={entity}>{entity}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              {selectedAssessment && selectedEntity && (
                 <Button onClick={handleReview} disabled={selectedAssessment.status === 'approved' || selectedAssessment.status === 'rejected'}>
                   {selectedAssessment.status === 'approved' || selectedAssessment.status === 'rejected' ? 'Reviewed' : 'Review'}
                 </Button>
@@ -513,7 +547,7 @@ const AssessmentViewPage: React.FC = () => {
       {selectedAssessment && (
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle>{assessmentType === 'maintenance' ? 'Maintenance' : 'Safety'} Details</CardTitle>
+            <CardTitle>{assessmentType === 'maintenance' ? 'Maintenance' : 'Safety'} Details - {selectedEntity}</CardTitle>
           </CardHeader>
           <CardContent>
             <DataTable columns={columns} data={tableData} searchKey="part_of_building" />
@@ -568,9 +602,9 @@ const AssessmentViewPage: React.FC = () => {
       <Dialog open={isReviewModalOpen} onOpenChange={setIsReviewModalOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Review {assessmentType} Assessment - {selectedAssessment?.institutionName}</DialogTitle>
+            <DialogTitle>Review {assessmentType} Assessment - {selectedAssessment?.institutionName} ({selectedEntity})</DialogTitle>
             <DialogDescription>
-              Review the {assessmentType} assessment and provide your decision.
+              Review the {assessmentType} assessment for {selectedEntity} and provide your decision.
             </DialogDescription>
           </DialogHeader>
 
@@ -581,6 +615,9 @@ const AssessmentViewPage: React.FC = () => {
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <span className="font-medium">Facility:</span> {selectedAssessment?.facilityType}
+                </div>
+                <div>
+                  <span className="font-medium">Entity:</span> {selectedEntity}
                 </div>
                 <div>
                   <span className="font-medium">Overall Condition:</span> {selectedAssessment ? getAverageConditionBadge(selectedAssessment.averageCondition) : ''}

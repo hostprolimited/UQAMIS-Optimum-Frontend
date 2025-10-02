@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { User, Mail, Shield, Edit, X, Trash2, AlertCircle } from 'lucide-react';
+import { User, Mail, Shield, Edit, X, Trash2, AlertCircle, Phone } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -17,19 +17,43 @@ import {
 import { Input } from '@/components/ui/input';
 import { getUsers, createUser, deleteUser, updateUser } from '../core/_requests';
 import { getInstitutions } from '@/pages/onboarding/core/_requests';
+import { getPermissions } from '../core/_requests';
 import { User as UserModel, CreateUserInput } from '../core/_models';
 import { useRole } from '@/contexts/RoleContext';
 import { useToast } from "@/components/ui/use-toast";
 import { Toaster } from "@/components/ui/toaster";
+import data from '@/constants/data.json';
+
+// Extract counties, subcounties, and wards from JSON
+const counties = data.find((t) => t.name === 'counties').data;
+const subcounties = data.find((t) => t.name === 'subcounties').data;
+const wards = data.find((t) => t.name === 'station').data;
+
+// Utility functions
+function getSubCountiesByCountyId(county_id) {
+  return subcounties
+    .filter((s): s is { subcounty_id: string; county_id: string; constituency_name: string } => 'county_id' in s && 'constituency_name' in s)
+    .filter((s) => s.county_id === county_id);
+}
+function getWardsBySubCountyId(subCountyId) {
+  return wards
+    .filter((w): w is { station_id: string; subcounty_id: string; constituency_name: string; ward: string } =>
+      typeof w === 'object' && 'subcounty_id' in w && typeof w.subcounty_id === 'string'
+    )
+    .filter((w) => w.subcounty_id === subCountyId);
+}
 
 const Users = () => {
   const [users, setUsers] = useState<UserModel[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [form, setForm] = useState<CreateUserInput>({ name: '', email: '', password: '', phone: '', role: '' });
+  const [form, setForm] = useState<CreateUserInput & { subcounty_id?: string; ward_id?: string }>({ name: '', email: '', password: '', phone: '', role: '' });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [institutions, setInstitutions] = useState<any[]>([]);
+  const [subcounties, setSubcounties] = useState<any[]>([]);
+  const [wards, setWards] = useState<any[]>([]);
+  const [roles, setRoles] = useState<any[]>([]);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserModel | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -72,10 +96,60 @@ const Users = () => {
     }
   };
 
+  // Fetch roles for dropdown
+  const fetchRoles = async () => {
+    try {
+      const data = await getPermissions();
+      setRoles(data.roles || []);
+    } catch (e) {
+      setRoles([]);
+    }
+  };
+
+  // Fetch subcounties for the agent's county
+   const fetchSubcounties = async (countyId: string) => {
+     try {
+       // Filter subcounties from data.json based on county_id
+       const subcountiesData = getSubCountiesByCountyId(countyId).map((subcounty: any) => ({
+         id: subcounty.subcounty_id,
+         name: subcounty.constituency_name,
+         county_id: subcounty.county_id
+       }));
+       setSubcounties(subcountiesData);
+     } catch (e) {
+       setSubcounties([]);
+     }
+   };
+
+  // Fetch wards for the selected subcounty
+   const fetchWards = async (subcountyId: string) => {
+     try {
+       // Filter wards from data.json based on subcounty_id
+       const wardsData = getWardsBySubCountyId(subcountyId).map((ward: any) => ({
+         id: ward.station_id,
+         name: ward.ward,
+         subcounty_id: ward.subcounty_id
+       }));
+       setWards(wardsData);
+     } catch (e) {
+       setWards([]);
+     }
+   };
+
   useEffect(() => {
     fetchUsers();
     fetchInstitutions();
+    fetchRoles();
   }, []);
+
+  // Fetch wards when subcounty changes
+  useEffect(() => {
+    if (form.subcounty_id) {
+      fetchWards(form.subcounty_id);
+    } else {
+      setWards([]);
+    }
+  }, [form.subcounty_id]);
 
   const formatRole = (role: string) => {
     return role.split('_').map(word => 
@@ -113,6 +187,11 @@ const Users = () => {
     setForm({ name: '', email: '', password: '', phone: '', role: '' });
     setError(null);
     setShowModal(true);
+
+    // If current user is agent, fetch subcounties for their county
+    if (currentUser?.role === 'agent' && currentUser?.county_code) {
+      fetchSubcounties(currentUser.county_code);
+    }
   };
 
   const handleCloseModal = () => {
@@ -121,10 +200,19 @@ const Users = () => {
     setIsEditing(false);
     setSelectedUser(null);
     setForm({ name: '', email: '', password: '', phone: '', role: '' });
+    setSubcounties([]);
+    setWards([]);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+
+    if (name === 'subcounty_id') {
+      // Reset ward when subcounty changes
+      setForm({ ...form, [name]: value, ward_id: '' });
+    } else {
+      setForm({ ...form, [name]: value });
+    }
   };
 
   const handleEdit = (user: UserModel) => {
@@ -136,8 +224,19 @@ const Users = () => {
       role: user.role || '',
       gender: user.gender,
       institution_id: user.institution_id,
+      subcounty_id: (user as any).subcounty_id,
+      ward_id: (user as any).ward_id,
       password: '' // Password is optional for updates
     });
+
+    // If current user is agent, fetch subcounties and wards for editing any user
+    if (currentUser?.role === 'agent' && currentUser?.county_code) {
+      fetchSubcounties(currentUser.county_code);
+      if ((user as any).subcounty_id) {
+        fetchWards((user as any).subcounty_id);
+      }
+    }
+
     setIsEditing(true);
     setShowModal(true);
   };
@@ -174,12 +273,38 @@ const Users = () => {
     e.preventDefault();
     setSubmitting(true);
     setError(null);
+
+    // Validation for subcounty and ward when current user is agent
+    if (currentUser?.role === 'agent') {
+      if (!form.subcounty_id) {
+        setError('Subcounty is required');
+        setSubmitting(false);
+        return;
+      }
+      if (!form.ward_id) {
+        setError('Ward is required');
+        setSubmitting(false);
+        return;
+      }
+    }
+
     try {
       if (isEditing && selectedUser) {
         // Handle update
         const updateData = { ...form };
         if (!updateData.password) {
           delete updateData.password; // Don't send empty password
+        }
+        // Map subcounty_id to subcounty name and ward_id to ward name
+        if (updateData.subcounty_id) {
+          const selectedSubcounty = subcounties.find(s => s.id === updateData.subcounty_id);
+          updateData.subcounty = selectedSubcounty ? selectedSubcounty.name : '';
+          delete updateData.subcounty_id;
+        }
+        if (updateData.ward_id) {
+          const selectedWard = wards.find(w => w.id === updateData.ward_id);
+          updateData.ward = selectedWard ? selectedWard.name : '';
+          delete updateData.ward_id;
         }
         await updateUser(selectedUser.id, updateData);
         toast({
@@ -189,7 +314,19 @@ const Users = () => {
         });
       } else {
         // Handle create
-        await createUser(form);
+        const createData = { ...form };
+        // Map subcounty_id to subcounty name and ward_id to ward name
+        if (createData.subcounty_id) {
+          const selectedSubcounty = subcounties.find(s => s.id === createData.subcounty_id);
+          createData.subcounty = selectedSubcounty ? selectedSubcounty.name : '';
+          delete createData.subcounty_id;
+        }
+        if (createData.ward_id) {
+          const selectedWard = wards.find(w => w.id === createData.ward_id);
+          createData.ward = selectedWard ? selectedWard.name : '';
+          delete createData.ward_id;
+        }
+        await createUser(createData);
         toast({
           title: "Success",
           description: "User created successfully",
@@ -289,64 +426,126 @@ const Users = () => {
       {/* Modal for creating user */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-6 relative">
+          <div className="bg-white rounded-lg shadow-lg w-full p-6 relative" style={{ maxWidth: '650px' }}>
             <button className="absolute top-2 right-2 text-muted-foreground" onClick={handleCloseModal}>
               <X className="h-5 w-5" />
             </button>
             <h2 className="text-xl font-bold mb-4">{isEditing ? 'Edit User' : 'Create New User'}</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Name <span className="text-destructive">*</span></label>
-                <Input name="name" value={form.name} onChange={handleChange} required disabled={submitting} />
+              {/* First Row */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Name <span className="text-destructive">*</span></label>
+                  <Input name="name" value={form.name} onChange={handleChange} required disabled={submitting} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Email <span className="text-destructive">*</span></label>
+                  <Input name="email" type="email" value={form.email} onChange={handleChange} required disabled={submitting} />
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Email <span className="text-destructive">*</span></label>
-                <Input name="email" type="email" value={form.email} onChange={handleChange} required disabled={submitting} />
+
+              {/* Second Row */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Phone Number */}
+<div>
+ <label className="block text-sm font-medium mb-1 flex items-center space-x-2">
+   <Phone className="h-4 w-4" />
+   <span>Phone Number</span>
+ </label>
+ <Input name="phone" value={form.phone} onChange={handleChange} placeholder="e.g., +254712345678" disabled={submitting} />
+</div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Gender</label>
+                  <select name="gender" value={form.gender} onChange={handleChange} className="w-full border rounded px-2 py-1" disabled={submitting}>
+                    <option value="">Select gender</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Phone</label>
-                <Input name="phone" value={form.phone} onChange={handleChange} disabled={submitting} />
+
+              {/* Third Row */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Password <span className="text-destructive">*</span></label>
+                  <Input name="password" type="password" value={form.password} onChange={handleChange} required disabled={submitting} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Institution (School)</label>
+                  <select name="institution_id" value={form.institution_id || ''} onChange={handleChange} className="w-full border rounded px-2 py-1" disabled={submitting}>
+                    <option value="">Select institution</option>
+                    {institutions.map(inst => (
+                      <option key={inst.id} value={inst.id}>{inst.name}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
-              {/*  gender Field */}
-              <div>
-                <label className="block text-sm font-medium mb-1">Gender</label>
-                <select name="gender" value={form.gender} onChange={handleChange} className="w-full border rounded px-2 py-1" disabled={submitting}>
-                  <option value="">Select gender</option>
-                  <option value="male">Male</option>
-                  <option value="female">Female</option>
-                  <option value="other">Other</option>
-                </select>
+
+              {/* Fourth Row */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Role</label>
+                  <select name="role" value={form.role} onChange={handleChange} className="w-full border rounded px-2 py-1" disabled={submitting}>
+                    <option value="">Select role</option>
+                    {roles
+                      .filter(role =>
+                        // Agents cannot assign 'agent' or 'ministry_admin' roles
+                        !(currentUser?.role === 'agent' && (role.name === 'agent' || role.name === 'ministry_admin'))
+                      )
+                      .map(role => (
+                        <option key={role.id} value={role.name}>
+                          {role.name.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+
+                {/* Subcounty field for agents */}
+                {currentUser?.role === 'agent' && (
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Subcounty <span className="text-destructive">*</span></label>
+                    <select
+                      name="subcounty_id"
+                      value={form.subcounty_id || ''}
+                      onChange={handleChange}
+                      className="w-full border rounded px-2 py-1"
+                      disabled={submitting}
+                      required
+                    >
+                      <option value="">Select subcounty</option>
+                      {subcounties.map(subcounty => (
+                        <option key={subcounty.id} value={subcounty.id}>{subcounty.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Password <span className="text-destructive">*</span></label>
-                <Input name="password" type="password" value={form.password} onChange={handleChange} required disabled={submitting} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Institution (School)</label>
-                <select name="institution_id" value={form.institution_id || ''} onChange={handleChange} className="w-full border rounded px-2 py-1" disabled={submitting}>
-                  <option value="">Select institution</option>
-                  {institutions.map(inst => (
-                    <option key={inst.id} value={inst.id}>{inst.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Role</label>
-                <select name="role" value={form.role} onChange={handleChange} className="w-full border rounded px-2 py-1" disabled={submitting}>
-                  <option value="">Select role</option>
-                 
-                  {/* <option value="county_admin">County Admin</option> */}
-                  <option value="school_admin">School Admin</option>
-                  {/* Only show agent option if current user is NOT agent */}
-                  {currentUser?.role !== 'agent' && (
-                    <option value="agent">Agent</option>
-                  )}
-                  {currentUser?.role !== 'agent' && (
-                    <option value="ministry_admin">Ministry Admin</option>
-                  )}
-                </select>
-              </div>
-              
+
+              {/* Fifth Row - Ward field for agents (only show if subcounty is selected) */}
+              {currentUser?.role === 'agent' && form.subcounty_id && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Ward <span className="text-destructive">*</span></label>
+                    <select
+                      name="ward_id"
+                      value={form.ward_id || ''}
+                      onChange={handleChange}
+                      className="w-full border rounded px-2 py-1"
+                      disabled={submitting || !form.subcounty_id}
+                      required
+                    >
+                      <option value="">Select ward</option>
+                      {wards.map(ward => (
+                        <option key={ward.id} value={ward.id}>{ward.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  {/* Empty div to maintain grid layout */}
+                  <div></div>
+                </div>
+              )}
+
               {error && <div className="text-destructive text-sm">{error}</div>}
               <div className="flex justify-end">
                 <Button type="button" variant="outline" className="mr-2" onClick={handleCloseModal} disabled={submitting}>Cancel</Button>

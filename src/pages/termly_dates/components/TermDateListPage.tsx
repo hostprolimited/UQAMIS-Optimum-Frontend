@@ -165,7 +165,10 @@ function EnhancedTableHead(props: EnhancedTableProps) {
             </TableSortLabel>
           </TableCell>
         ))}
+
+         
         <TableCell align="right" sx={{ width: '10%', fontWeight: 'bold' }}>Actions</TableCell>
+        
       </TableRow>
     </TableHead>
   );
@@ -593,7 +596,7 @@ const TermDateListPage = () => {
             Manage and track term opening and closing dates.
           </p>
         </div>
-        {(currentUser?.role === 'agent' || currentUser?.role === 'ministry_admin') && (
+        {(currentUser?.role === 'ministry_admin') && (
           <Button onClick={handleAddNew} variant="default" size="lg" className="shadow-lg hover:shadow-xl transition-shadow duration-300">
             <Plus className="h-5 w-5 mr-2" />
             Add Term Date
@@ -758,6 +761,8 @@ const TermDateListPage = () => {
                             <TableCell sx={{ width: '25%' }}>{row.closingDate}</TableCell>
                             <TableCell align="right" sx={{ width: '15%' }}>{row.year}</TableCell>
                             <TableCell align="right" sx={{ width: '10%' }}>
+
+                              {(currentUser?.role === 'ministry_admin') && (
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                   <IconButton size="small" aria-label="More actions" onClick={(e) => e.stopPropagation()}>
@@ -775,6 +780,7 @@ const TermDateListPage = () => {
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>
+                              )}
                             </TableCell>
                           </TableRow>
                         );

@@ -73,6 +73,7 @@ interface AssessmentDetail {
 interface FacilityAssessment {
    id: string;
    institutionName: string;
+   entity: string[];
    facilityType: string;
    assessmentDate: string; // ISO date string
    urgentItems: number;
@@ -105,6 +106,7 @@ const mapMaintenanceReport = (report: any, facilityIdToName: Record<string, stri
       facilityIdToName[report.facility_id?.toString()] || report.facility_type || report.facility_id?.toString() || "",
     assessmentDate: report.assessment_date ?? report.date ?? "",
     urgentItems: report.urgent_items ?? 0,
+    entity: report.entity ? JSON.parse(report.entity) : [],
     attentionItems: report.attention_items ?? 0,
     goodItems: report.good_items ?? 0,
     totalItems: report.total_items ?? 0,
@@ -290,6 +292,15 @@ const MaintenanceAssessmentReportPage: React.FC = () => {
       accessorKey: "facilityType",
       header: "Facility Type",
       cell: ({ row }) => <div className="capitalize font-medium">{row.getValue("facilityType")}</div>,
+    },
+    {
+      accessorKey: "entity",
+      header: "Entity",
+      cell: ({ row }) => {
+        const entityArray = row.getValue("entity") as string[];
+        const displayText = entityArray.length > 0 ? entityArray.join(", ") : "N/A";
+        return <div className="font-medium max-w-[250px] truncate" title={displayText}>{displayText}</div>;
+      },
     },
     {
       accessorKey: "school_feedback",

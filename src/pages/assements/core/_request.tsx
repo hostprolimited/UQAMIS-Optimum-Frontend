@@ -140,12 +140,12 @@ export const agentReviewSafetyReport = async (id: number, data: { review_decisio
 };
 
 // update assessment
-export const updateAssessment = async (id: number, data: { status:'submitted' | 'under_review' | 'approved' | 'rejected'; school_feedback?: string; agent_feedback?: string; class?: string[]; files?: File[]; details: { part_of_building: string; assessment_status: 'good' | 'needs_maintenance' | 'critical' }[]; }): Promise<APIResponse<any>> => {
+export const updateAssessment = async (id: number, data: { status:'submitted' | 'under_review' | 'approved' | 'rejected'; school_feedback?: string; agent_feedback?: string; entity?: string[]; files?: File[]; details: { part_of_building: string; assessment_status: 'good' | 'needs_maintenance' | 'critical' }[]; }): Promise<APIResponse<any>> => {
   const formData = new FormData();
   formData.append('status', data.status);
   formData.append('school_feedback', data.school_feedback);
   formData.append('agent_feedback', data.agent_feedback);
-  formData.append('class', JSON.stringify(data.class || []));
+  formData.append('entity', JSON.stringify(data.entity || []));
   data.details.forEach((detail, i) => {
     formData.append(`details[${i}][part_of_building]`, detail.part_of_building);
     formData.append(`details[${i}][assessment_status]`, detail.assessment_status);

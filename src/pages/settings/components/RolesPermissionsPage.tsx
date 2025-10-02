@@ -755,7 +755,7 @@ const RolesPermissions = () => {
             </div>
 
             <div className="pt-6">
-              <h3 className="text-sm font-medium text-gray-500">Permissions:</h3>
+              {/* <h3 className="text-sm font-medium text-gray-500">Permissions:</h3> */}
 
               <div className="mt-4 space-y-8">
                 {GROUP_ORDER.map((group) => {

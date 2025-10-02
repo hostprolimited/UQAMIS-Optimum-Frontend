@@ -1,15 +1,16 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 
-export type UserRole = 'school_admin' | 'agent' | 'ministry_admin';
+export type UserRole = string;
 
 export interface User {
-  county_id: any;
+  county_id?: any;
   id: string;
   name: string;
   email: string;
-  institution_name
+  institution_name?: string;
   phone?: string;
   role: UserRole;
+  permissions?: string[];
   institution_id?: number;
   county_code?: string;
   county_name?: string;
@@ -72,15 +73,37 @@ export const RoleProvider: React.FC<RoleProviderProps> = ({ children }) => {
     }
   };
 
+  const pagePermissions: Record<string, string> = {
+    'overview': 'view_county_dashboard',
+    'reports': 'view_reports',
+    'onboard': 'view_institution',
+    'system_safety': 'view_system_safety',
+    'review': 'maintenance_review',
+    'entities': 'view_entities',
+    'term_dates': 'manage_term_dates',
+    'backup': 'manage_backup',
+    'user_management': 'manage_users',
+    'assessment': 'create_assessment',
+    'school_form': 'view_school_metrics',
+    'institutions_assessment': 'view_assessments',
+  };
+
   const hasAccess = (page: string): boolean => {
     if (!currentUser) return false;
+
+    // If user has permissions, check them
+    if (currentUser.permissions && currentUser.permissions.length > 0) {
+      const requiredPerm = pagePermissions[page];
+      if (!requiredPerm) return false;
+      return currentUser.permissions.includes(requiredPerm);
+    }
+
+    // Fallback to role-based access for backward compatibility
     switch (currentUser.role) {
       case 'ministry_admin':
         return [
           'overview',
           'reports',
-          // 'maintenance_review',
-          // 'safety_review',
           'onboard',
           'system_safety',
           'review',
@@ -88,7 +111,7 @@ export const RoleProvider: React.FC<RoleProviderProps> = ({ children }) => {
           'term_dates',
           'backup',
           'user_management'
-        ].includes(page)
+        ].includes(page);
 
       case 'agent':
         return [
@@ -97,8 +120,6 @@ export const RoleProvider: React.FC<RoleProviderProps> = ({ children }) => {
           'review',
           'entities',
           'term_dates',
-          // 'maintenance_review',
-          // 'safety_review',
           'onboard',
           'user_management'
         ].includes(page);
@@ -106,7 +127,6 @@ export const RoleProvider: React.FC<RoleProviderProps> = ({ children }) => {
         return [
           'overview',
           'assessment',
-          // 'reports',
           'school_form',
           'entities',
           'term_dates',

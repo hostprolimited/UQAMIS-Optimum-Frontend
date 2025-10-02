@@ -70,7 +70,7 @@ interface FacilityAssessment {
   id: string;
   schoolName: string;
   facilityType: string;
-  class: string[];
+  entity: string[];
   assessmentDate: string; // ISO date string
   urgentItems: number;
   attentionItems: number;
@@ -91,7 +91,7 @@ interface FacilityAssessment {
 const mapMaintenanceReport = (report: any, facilityIdToName: Record<string, string>): FacilityAssessment => ({
   id: report.id?.toString() ?? "",
   schoolName: report.school_name ?? report.school ?? getCurrentInstitutionName(),
-  class: report.class ? JSON.parse(report.class) : [],
+  entity: report.entity ? JSON.parse(report.entity) : [],
   facilityType:
     facilityIdToName[report.facility_id?.toString()] || report.facility_type || report.facility_id?.toString() || "",
   assessmentDate: report.assessment_date ?? report.date ?? "",
@@ -156,7 +156,7 @@ const AssessmentListPage: React.FC = () => {
     const header = [
       "ID",
       "Facility Type",
-      "class",
+      "entity",
       "Agent Feedback",
       "Score",
       "Attention Items",
@@ -299,11 +299,11 @@ const AssessmentListPage: React.FC = () => {
       ),
     },
     {
-      accessorKey: "class",
-      header: "Class",
+      accessorKey: "entity",
+      header: "Entity",
       cell: ({ row }) => {
-        const classArray = row.getValue("class") as string[];
-        const displayText = classArray.length > 0 ? classArray.join(", ") : "N/A";
+        const entityArray = row.getValue("entity") as string[];
+        const displayText = entityArray.length > 0 ? entityArray.join(", ") : "N/A";
         return <div className="font-medium max-w-[250px] truncate" title={displayText}>{displayText}</div>;
       },
     },
