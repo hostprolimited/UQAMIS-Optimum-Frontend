@@ -298,7 +298,7 @@ const FacilityAddPage = () => {
                     </div>
                   </div>
 
-                  {/* <div className="space-y-2">
+                  <div className="space-y-2">
                     <Label className="text-sm font-medium text-gray-700">
                       Number of Classes
                     </Label>
@@ -310,7 +310,7 @@ const FacilityAddPage = () => {
                       className="w-full"
                       min="1"
                     />
-                  </div> */}
+                  </div>
                 </div>
               ))}
             </div>
