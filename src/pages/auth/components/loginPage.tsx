@@ -32,7 +32,7 @@ const LoginPage = () => {
       }
       // Save token/user as needed
       localStorage.setItem("auth_token", res.token);
-      setCurrentUser({ ...res.user, id: String(res.user.id), permissions: res.user.permissions || [] });
+      setCurrentUser({ ...res.user, id: String(res.user.id), permissions: res.permissions || [] });
       navigate('/dashboard');
     } catch (err: any) {
       let msg = "Login failed. Please try again.";

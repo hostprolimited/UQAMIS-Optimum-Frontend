@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { User, Mail, Shield, Edit, X, Trash2, AlertCircle, Phone } from 'lucide-react';
+import { User, Mail, Shield, Edit, X, Trash2, AlertCircle, Phone, MoreHorizontal } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Input } from '@/components/ui/input';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { getUsers, createUser, deleteUser, updateUser } from '../core/_requests';
 import { getInstitutions } from '@/pages/onboarding/core/_requests';
 import { getPermissions } from '../core/_requests';
@@ -47,7 +48,7 @@ const Users = () => {
   const [users, setUsers] = useState<UserModel[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [form, setForm] = useState<CreateUserInput & { subcounty_id?: string; ward_id?: string }>({ name: '', email: '', password: '', phone: '', role: '' });
+  const [form, setForm] = useState<CreateUserInput & { subcounty_id?: string; ward_id?: string }>({ name: '', email: '', password: '', phone: '', role: '', county_code: '' });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [institutions, setInstitutions] = useState<any[]>([]);
@@ -57,6 +58,8 @@ const Users = () => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserModel | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(5);
   const { currentUser } = useRole();
   const { toast } = useToast();
 
@@ -183,8 +186,13 @@ const Users = () => {
     }
   };
 
+  const visibleUsers = React.useMemo(
+    () => users.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage),
+    [users, page, rowsPerPage]
+  );
+
   const handleOpenModal = () => {
-    setForm({ name: '', email: '', password: '', phone: '', role: '' });
+    setForm({ name: '', email: '', password: '', phone: '', role: '', county_code: '' });
     setError(null);
     setShowModal(true);
 
@@ -199,7 +207,7 @@ const Users = () => {
     setError(null);
     setIsEditing(false);
     setSelectedUser(null);
-    setForm({ name: '', email: '', password: '', phone: '', role: '' });
+    setForm({ name: '', email: '', password: '', phone: '', role: '', county_code: '' });
     setSubcounties([]);
     setWards([]);
   };
@@ -226,6 +234,7 @@ const Users = () => {
       institution_id: user.institution_id,
       subcounty_id: (user as any).subcounty_id,
       ward_id: (user as any).ward_id,
+      county_code: (user as any).county_code || '',
       password: '' // Password is optional for updates
     });
 
@@ -269,6 +278,15 @@ const Users = () => {
     }
   };
 
+  const handleChangePage = (newPage: number) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
@@ -283,6 +301,15 @@ const Users = () => {
       }
       if (!form.ward_id) {
         setError('Ward is required');
+        setSubmitting(false);
+        return;
+      }
+    }
+
+    // Validation for county_code when current user is ministry_admin
+    if (currentUser?.role === 'ministry_admin') {
+      if (!form.county_code) {
+        setError('County Code is required');
         setSubmitting(false);
         return;
       }
@@ -520,6 +547,23 @@ const Users = () => {
                     </select>
                   </div>
                 )}
+
+                {/* County Code field for ministry */}
+                {currentUser?.role === 'ministry_admin' && (
+                  <div>
+                    <label className="block text-sm font-medium mb-1">County Code <span className="text-destructive">*</span></label>
+                    <Input
+                      name="county_code"
+                      type="number"
+                      value={form.county_code}
+                      onChange={handleChange}
+                      placeholder="e.g., 23"
+                      disabled={submitting}
+                      required
+                      className="w-72"
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Fifth Row - Ward field for agents (only show if subcounty is selected) */}
@@ -611,7 +655,7 @@ const Users = () => {
                   <TableCell colSpan={6} className="text-center">No users found.</TableCell>
                 </TableRow>
               ) : (
-                users.map((user) => (
+                visibleUsers.map((user) => (
                   <TableRow key={user.id} className="hover:bg-muted/50">
                     <TableCell>
                       <div className="flex items-center space-x-3">
@@ -652,29 +696,77 @@ const Users = () => {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="flex space-x-2">
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => handleEdit(user)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => handleDelete(user)}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-40">
+                          <DropdownMenuItem
+                            onClick={() => handleEdit(user)}
+                            className="cursor-pointer"
+                          >
+                            <Edit className="h-4 w-4 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleDelete(user)}
+                            className="text-destructive cursor-pointer focus:text-destructive focus:bg-destructive/10"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))
               )}
             </TableBody>
           </Table>
+
+          {/* Pagination */}
+          {!loading && users.length > 0 && (
+            <div className="flex items-center justify-between px-2 py-4">
+              <div className="flex items-center space-x-2">
+                <label className="text-sm font-medium">Rows per page:</label>
+                <select
+                  value={rowsPerPage}
+                  onChange={handleChangeRowsPerPage}
+                  className="border rounded px-2 py-1 text-sm"
+                >
+                  <option value={5}>5</option>
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                </select>
+              </div>
+              <div className="flex items-center space-x-2">
+                <span className="text-sm">
+                  {page * rowsPerPage + 1}-{Math.min((page + 1) * rowsPerPage, users.length)} of {users.length}
+                </span>
+                <div className="flex space-x-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleChangePage(page - 1)}
+                    disabled={page === 0}
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleChangePage(page + 1)}
+                    disabled={(page + 1) * rowsPerPage >= users.length}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
       </div>

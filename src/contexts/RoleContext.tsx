@@ -75,11 +75,11 @@ export const RoleProvider: React.FC<RoleProviderProps> = ({ children }) => {
 
   const pagePermissions: Record<string, string> = {
     'overview': 'view_county_dashboard',
-    'reports': 'view_reports',
+    'reports': 'view_school_reports',
     'onboard': 'view_institution',
     'system_safety': 'view_system_safety',
     'review': 'maintenance_review',
-    'entities': 'view_entities',
+    'entities': 'view_institution',
     'term_dates': 'manage_term_dates',
     'backup': 'manage_backup',
     'user_management': 'manage_users',
@@ -91,50 +91,55 @@ export const RoleProvider: React.FC<RoleProviderProps> = ({ children }) => {
   const hasAccess = (page: string): boolean => {
     if (!currentUser) return false;
 
-    // If user has permissions, check them
+    // For built-in roles, use role-based access
+    if (['ministry_admin', 'agent', 'school_admin'].includes(currentUser.role)) {
+      switch (currentUser.role) {
+        case 'ministry_admin':
+          return [
+            'overview',
+            'reports',
+            'onboard',
+            'system_safety',
+            'review',
+            // 'entities',
+            'term_dates',
+            'backup',
+            'user_management'
+          ].includes(page);
+
+        case 'agent':
+          return [
+            'overview',
+            'reports',
+            'review',
+            // 'entities',
+            'term_dates',
+            'onboard',
+            'user_management'
+          ].includes(page);
+        case 'school_admin':
+          return [
+            'overview',
+            'assessment',
+            'school_form',
+            'entities',
+            'term_dates',
+            'institutions_assessment'
+          ].includes(page);
+        default:
+          return false;
+      }
+    }
+
+    // For custom roles, check permissions
     if (currentUser.permissions && currentUser.permissions.length > 0) {
       const requiredPerm = pagePermissions[page];
       if (!requiredPerm) return false;
       return currentUser.permissions.includes(requiredPerm);
     }
 
-    // Fallback to role-based access for backward compatibility
-    switch (currentUser.role) {
-      case 'ministry_admin':
-        return [
-          'overview',
-          'reports',
-          'onboard',
-          'system_safety',
-          'review',
-          'entities',
-          'term_dates',
-          'backup',
-          'user_management'
-        ].includes(page);
-
-      case 'agent':
-        return [
-          'overview',
-          'reports',
-          'review',
-          'entities',
-          'term_dates',
-          'onboard',
-          'user_management'
-        ].includes(page);
-      case 'school_admin':
-        return [
-          'overview',
-          'assessment',
-          'school_form',
-          'entities',
-          'term_dates',
-          'institutions_assessment'
-        ].includes(page);
-      default:
-        return false;
-    }
+    // Default deny
+    return false;
   };
 
   return (

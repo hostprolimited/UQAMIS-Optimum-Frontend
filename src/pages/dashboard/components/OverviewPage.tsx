@@ -49,16 +49,26 @@ const Overview = () => {
   const [schoolMetricsData, setSchoolMetricsData] = useState<SchoolMetric[] | null>(null);
   const [dashboardData, setDashboardData] = useState<DashboardResponse | null>(null);
 
+  const getDashboardType = () => {
+    if (currentUser.permissions?.includes('view_national_dashboard')) return 'ministry_admin';
+    if (currentUser.permissions?.includes('view_county_dashboard')) return 'agent';
+    if (currentUser.permissions?.includes('view_school_dashboard')) return 'school_admin';
+    // fallback to role
+    return currentUser.role;
+  };
+
+  const dashboardType = getDashboardType();
+
   useEffect(() => {
     const fetchData = async () => {
       try {
-        if (currentUser.role === 'ministry_admin' || currentUser.role === 'agent' || currentUser.role === 'school_admin') {
+        if (dashboardType === 'ministry_admin' || dashboardType === 'agent' || dashboardType === 'school_admin') {
           const response = await getDashboardData();
           if (response.status === 'success') {
             setDashboardData(response);
           }
         }
-        if (currentUser.role === 'ministry_admin') {
+        if (dashboardType === 'ministry_admin') {
           const response = await getSchoolMetrics();
           if (response.status === 'success') {
             setSchoolMetricsData(response.data);
@@ -69,31 +79,29 @@ const Overview = () => {
       }
     };
     fetchData();
-  }, [currentUser.role]);
+  }, [dashboardType]);
 
   const getOverviewTitle = () => {
-    switch (currentUser.role) {
+    switch (dashboardType) {
       case 'ministry_admin':
-      case 'agent':
-      case 'school_admin':
-        if (dashboardData && dashboardData.title && currentUser.role === 'ministry_admin') {
+        if (dashboardData && dashboardData.title) {
           return dashboardData.title;
         } else {
-          if (currentUser.role === 'ministry_admin') return 'National Overview';
-          if (currentUser.role === 'agent') {
-            const code = (currentUser as any).county_code || currentUser.county_code || currentUser.county_name;
-            const countyName = countyCodeToName[String(code)] || 'Unknown';
-            return `${countyName} County Overview`;
-          }
-          if (currentUser.role === 'school_admin') return `${dashboardData?.institution_name || currentUser.institution_name} Overview`;
+          return 'National Overview';
         }
+      case 'agent':
+        const code = (currentUser as any).county_code || currentUser.county_code || currentUser.county_name;
+        const countyName = countyCodeToName[String(code)] || 'Unknown';
+        return `${countyName} County Overview`;
+      case 'school_admin':
+        return `${dashboardData?.institution_name || currentUser.institution_name} Overview`;
       default:
         return 'Overview';
     }
   };
 
    const getKPIData = () => {
-      switch (currentUser.role) {
+       switch (dashboardType) {
         case 'ministry_admin':
           if (dashboardData) {
             return [
@@ -377,13 +385,13 @@ const Overview = () => {
       
 
       {/* County/Regional Performance (for Admin and County Admin) */}
-      {(currentUser.role === 'ministry_admin' || currentUser.role === 'agent') && (
+      {(dashboardType === 'ministry_admin' || dashboardType === 'agent') && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <BarChart3 className="h-5 w-5 text-primary" />
               <span>
-                {currentUser.role === 'ministry_admin' ? 'County Performance' : 'Sub-County Performance'}
+                {dashboardType === 'ministry_admin' ? 'County Performance' : 'Sub-County Performance'}
               </span>
             </CardTitle>
             <CardDescription>

@@ -25,6 +25,7 @@ export interface CreateUserInput {
   gender?: string;
   institution_id?: number;
   county?: string;
+  county_code?: string;
   phone?: string;
   password: string;
   role?: string;

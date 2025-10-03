@@ -4,7 +4,7 @@ export interface LoginUser {
   email: string;
   phone: string;
   password: string;
-  role: 'school_admin' | 'agent' | 'ministry_admin';
+  role: string;
   institution_id?: number;
   county_code?: string;
   created_at: string;
@@ -16,4 +16,5 @@ export interface LoginResponse {
   token: string;
   message: string;
   dashboard: string;
+  permissions: string[];
 }

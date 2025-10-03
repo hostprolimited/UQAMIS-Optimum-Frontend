@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Shield, Users, School, CheckCircle, XCircle, Plus, X, Lock } from 'lucide-react';
+import { Shield, Users, School, CheckCircle, XCircle, Plus, X, Lock, MoreHorizontal, Edit, Trash2 } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -39,6 +39,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Form, FormControl, FormField, FormItem, FormLabel as FormLabelComponent, FormMessage } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -167,6 +168,8 @@ const RolesPermissions = () => {
     totalPermissions: 0,
     totalUsers: 0
   });
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(5);
   const { toast } = useToast();
   const { currentUser } = useRole();
 
@@ -199,6 +202,20 @@ const RolesPermissions = () => {
   const availableRoles = currentUser?.role === 'agent'
     ? roles.filter(r => r.name === 'school_admin')
     : roles;
+
+  const visiblePermissions = React.useMemo(
+    () => permissions.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage),
+    [permissions, page, rowsPerPage]
+  );
+
+  const handleChangePage = (newPage: number) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
 
   const openAssignRoleModal = (user: User) => {
     setSelectedUser(user);
@@ -556,57 +573,107 @@ const RolesPermissions = () => {
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
               </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Permission Name</TableHead>
-                    <TableHead>Assign Permission to Role</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {permissions.map((perm) => (
-                    <TableRow key={perm.id}>
-                      <TableCell>{perm.name}</TableCell>
-                      <TableCell>
-                        <select
-                          onChange={e => handleAssignPermissionToRole(perm.name, e.target.value)}
-                          defaultValue=""
-                          className="border rounded px-2 py-1"
-                        >
-                          <option value="">Assign to role...</option>
-                          {roles.map(r => (
-                            <option key={r.id} value={r.name}>{r.name}</option>
-                          ))}
-                        </select>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex space-x-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedItemId(perm.id);
-                              setEditName(perm.name);
-                              setShowEditPermissionModal(true);
-                            }}
-                          >
-                            Edit
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-destructive"
-                            onClick={() => handleDeletePermission(perm.id)}
-                          >
-                            Delete
-                          </Button>
-                        </div>
-                      </TableCell>
+              <>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Permission Name</TableHead>
+                      <TableHead>Assign Permission to Role</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {visiblePermissions.map((perm) => (
+                      <TableRow key={perm.id}>
+                        <TableCell>{perm.name}</TableCell>
+                        <TableCell>
+                          <select
+                            onChange={e => handleAssignPermissionToRole(perm.name, e.target.value)}
+                            defaultValue=""
+                            className="border rounded px-2 py-1"
+                          >
+                            <option value="">Assign to role...</option>
+                            {roles.map(r => (
+                              <option key={r.id} value={r.name}>{r.name}</option>
+                            ))}
+                          </select>
+                        </TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-40">
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setSelectedItemId(perm.id);
+                                  setEditName(perm.name);
+                                  setShowEditPermissionModal(true);
+                                }}
+                                className="cursor-pointer"
+                              >
+                                <Edit className="h-4 w-4 mr-2" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleDeletePermission(perm.id)}
+                                className="text-destructive cursor-pointer focus:text-destructive focus:bg-destructive/10"
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+
+                {/* Pagination */}
+                {permissions.length > 0 && (
+                  <div className="flex items-center justify-between px-2 py-4">
+                    <div className="flex items-center space-x-2">
+                      <label className="text-sm font-medium">Rows per page:</label>
+                      <select
+                        value={rowsPerPage}
+                        onChange={handleChangeRowsPerPage}
+                        className="border rounded px-2 py-1 text-sm"
+                      >
+                        <option value={5}>5</option>
+                        <option value={10}>10</option>
+                        <option value={25}>25</option>
+                        <option value={50}>50</option>
+                      </select>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm">
+                        {page * rowsPerPage + 1}-{Math.min((page + 1) * rowsPerPage, permissions.length)} of {permissions.length}
+                      </span>
+                      <div className="flex space-x-1">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleChangePage(page - 1)}
+                          disabled={page === 0}
+                        >
+                          Previous
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleChangePage(page + 1)}
+                          disabled={(page + 1) * rowsPerPage >= permissions.length}
+                        >
+                          Next
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </CardContent>
         </Card>
