@@ -229,10 +229,10 @@ const Overview = () => {
     { name: 'Not Assessed', value: 67, color: 'hsl(var(--muted-foreground))' },
   ];
 
-  const subCountyData = dashboardData && dashboardData.data.sub_county_performance ?
-    dashboardData.data.sub_county_performance.labels.map((label, i) => {
+  const subCountyData = dashboardData && (dashboardData.data.county_performance || dashboardData.data.sub_county_performance) ?
+    (dashboardData.data.county_performance || dashboardData.data.sub_county_performance).labels.map((label, i) => {
       const obj: any = { name: countyCodeToName[label] || label };
-      dashboardData.data.sub_county_performance!.data.forEach(item => {
+      (dashboardData.data.county_performance || dashboardData.data.sub_county_performance)!.data.forEach(item => {
         obj[item.label] = item.values[i];
       });
       return obj;
@@ -399,13 +399,24 @@ const Overview = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={400}>
-              <BarChart data={subCountyData}>
+            <ResponsiveContainer width="100%" height={500}>
+              <BarChart
+                data={subCountyData}
+                barCategoryGap="20%"
+                barGap={4}
+                margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+              >
                 <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
                 <XAxis
                   dataKey="name"
                   className="text-muted-foreground"
-                  fontSize={12}
+                  fontSize={10}
+                  angle={-45}
+                  textAnchor="end"
+                  height={100}
+                  interval={0}
+                  dy={10}
+                  tickLine={false}
                 />
                 <YAxis className="text-muted-foreground" fontSize={12} />
                 <Tooltip
@@ -415,17 +426,17 @@ const Overview = () => {
                     borderRadius: '6px'
                   }}
                 />
-                {dashboardData && (
-                  currentUser.role === 'ministry_admin' && dashboardData.data.county_performance ?
-                    dashboardData.data.county_performance.data.map(item => (
-                      <Bar key={item.label} dataKey={item.label} fill={item.color} name={item.label} />
-                    )) :
-                  dashboardData.data.sub_county_performance ?
-                    dashboardData.data.sub_county_performance.data.map(item => (
-                      <Bar key={item.label} dataKey={item.label} fill={item.color} name={item.label} />
-                    )) :
-                  null
-                )}
+                {dashboardData && (dashboardData.data.county_performance || dashboardData.data.sub_county_performance) &&
+                  (dashboardData.data.county_performance || dashboardData.data.sub_county_performance).data.map(item => (
+                    <Bar
+                      key={item.label}
+                      dataKey={item.label}
+                      fill={item.color}
+                      name={item.label}
+                      maxBarSize={40}
+                    />
+                  ))
+                }
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
