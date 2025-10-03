@@ -83,7 +83,7 @@ export const Urls = {
   GET_USER_ROLE: (id: number) => `/users/role/${id}`,
   ASSIGN_USER_ROLE_URL: (id: number) => `/users/assign-role/${id}`,
   UPDATE_ROLE_URL: (id: number) => `/update-role/${id}`,
-  DELETE_ROLE_URL: (id: number) => `/remove-role/${id}`,
+  DELETE_ROLE_URL: (id: number) => `/roles/${id}`,
   
 
   // Dashboard Endpoints
