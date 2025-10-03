@@ -37,6 +37,8 @@ const OnboardedSchoolList: React.FC = () => {
   const [selected, setSelected] = useState<number[]>([]);
   const [search, setSearch] = useState('');
   const [countyFilter, setCountyFilter] = useState('');
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(5);
   const navigate = useNavigate();
 
   const fetchInstitutions = async () => {
@@ -81,6 +83,20 @@ const OnboardedSchoolList: React.FC = () => {
     if (aValue > bValue) return sortAsc ? 1 : -1;
     return 0;
   });
+
+  const visibleInstitutions = React.useMemo(
+    () => sortedInstitutions.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage),
+    [sortedInstitutions, page, rowsPerPage]
+  );
+
+  const handleChangePage = (newPage: number) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
 
   const handleSelect = (id: number) => {
     setSelected((prev) => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
@@ -190,7 +206,7 @@ const OnboardedSchoolList: React.FC = () => {
                 <TableCell colSpan={8} className="text-center">No institutions found.</TableCell>
               </TableRow>
             ) : (
-              sortedInstitutions.map(inst => (
+              visibleInstitutions.map(inst => (
                 <TableRow key={inst.id} className={selected.includes(inst.id) ? 'bg-muted/30' : ''}>
                   <TableCell>
                     <input
@@ -230,6 +246,48 @@ const OnboardedSchoolList: React.FC = () => {
             )}
           </TableBody>
         </Table>
+
+        {/* Pagination */}
+        {!loading && sortedInstitutions.length > 0 && (
+          <div className="flex items-center justify-between px-2 py-4">
+            <div className="flex items-center space-x-2">
+              <label className="text-sm font-medium">Rows per page:</label>
+              <select
+                value={rowsPerPage}
+                onChange={handleChangeRowsPerPage}
+                className="border rounded px-2 py-1 text-sm"
+              >
+                <option value={5}>5</option>
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+              </select>
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="text-sm">
+                {page * rowsPerPage + 1}-{Math.min((page + 1) * rowsPerPage, sortedInstitutions.length)} of {sortedInstitutions.length}
+              </span>
+              <div className="flex space-x-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleChangePage(page - 1)}
+                  disabled={page === 0}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleChangePage(page + 1)}
+                  disabled={(page + 1) * rowsPerPage >= sortedInstitutions.length}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
