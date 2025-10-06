@@ -1,489 +1,696 @@
-import React, { useState, useEffect } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { useRole } from '@/contexts/RoleContext';
-import { getDashboardData } from '../core/_request';
-import { getSchoolMetrics } from '../../assements/core/_request';
-import { DashboardData } from '../core/_models';
-import { DashboardResponse } from '../core/_models';
-import { SchoolMetric } from '../../assements/core/_model';
-import countiesData from '@/constants/data.json';
+// import React, { useState, useEffect } from 'react';
+// import { Plus, X } from 'lucide-react';
+// import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+// import { Input } from '@/components/ui/input';
+// import { Textarea } from '@/components/ui/textarea';
+// import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+// import { Button } from '@/components/ui/button';
+// import { Label } from '@/components/ui/label';
+// import { useToast } from '@/hooks/use-toast';
+// import { getFacilities } from '../../assements/core/_request';
+// import { Facility } from '../../assements/core/_model';
+// import { createSchoolEntities } from '../core/_requests';
+// import { entitiesData } from '../core/_models';
 
-// Kenya county code to name mapping from data.json
-const countiesTable = countiesData.find((item: any) => item.type === 'table' && item.name === 'counties');
-const counties = countiesTable?.data || [];
-const countyCodeToName: Record<string, string> = counties.reduce((acc: Record<string, string>, county: any) => {
-  acc[county.county_id] = county.county_name;
-  return acc;
-}, {});
-import { School, Users, FileText, TrendingUp, CheckCircle, AlertTriangle, XCircle, BarChart3 } from 'lucide-react';
+// const FacilityAddPage = () => {
+//   const { toast } = useToast();
+//   const [facilities, setFacilities] = useState<Facility[]>([]);
+//   const [selectedFacility, setSelectedFacility] = useState('');
+//   const [classrooms, setClassrooms] = useState([{ grade: '', stream: '', numberOfClasses: '' as number | '' }]);
+//   const [laboratories, setLaboratories] = useState([{ labType: '', numberOfLaboratories: '' as number | '' }]);
+//   const [toilets, setToilets] = useState([{ toiletType: '', numberOfToilets: '' as number | '' }]);
+//   const [dormitories, setDormitories] = useState([{ names: '', numberOfDormitories: '' as number | '' }]);
+//   const [diningHalls, setDiningHalls] = useState([{ names: '', numberOfDiningHalls: '' as number | '' }]);
+//   const [compounds, setCompounds] = useState([{ areas: '', numberOfCompounds: '' as number | '' }]);
+//   const [offices, setOffices] = useState([{ names: '', numberOfOffices: '' as number | '' }]);
 
-// Mock data for different levels
-const countyData = [
-  { name: 'Nairobi', schools: 245, assessments: 180, approved: 125, pending: 35, rejected: 20 },
-  { name: 'Mombasa', schools: 178, assessments: 134, approved: 98, pending: 28, rejected: 8 },
-  { name: 'Kisumu', schools: 156, assessments: 112, approved: 89, pending: 15, rejected: 8 },
-  { name: 'Nakuru', schools: 189, assessments: 145, approved: 102, pending: 31, rejected: 12 },
-];
+//   useEffect(() => {
+//     const fetchFacilities = async () => {
+//       try {
+//         const response = await getFacilities();
+//         setFacilities(response.data || []);
+//       } catch (error) {
+//         console.error('Error fetching facilities:', error);
+//         setFacilities([]);
+//       }
+//     };
+//     fetchFacilities();
+//   }, []);
 
-const schoolAssessmentData = [
-  { month: 'Jan', completed: 45, pending: 12, score: 85 },
-  { month: 'Feb', completed: 52, pending: 8, score: 87 },
-  { month: 'Mar', completed: 38, pending: 15, score: 82 },
-  { month: 'Apr', completed: 61, pending: 6, score: 89 },
-  { month: 'May', completed: 49, pending: 11, score: 86 },
-  { month: 'Jun', completed: 55, pending: 9, score: 88 },
-];
+//   // Functions to manage multiple entries
+//   const addClassroom = () => setClassrooms([...classrooms, { grade: '', stream: '', numberOfClasses: '' }]);
+//   const removeClassroom = (index: number) => setClassrooms(classrooms.filter((_, i) => i !== index));
+//   const updateClassroom = (index: number, field: string, value: any) => {
+//     const updated = [...classrooms];
+//     updated[index] = { ...updated[index], [field]: value };
+//     setClassrooms(updated);
+//   };
 
-const statusData = [
-  { name: 'Approved', value: 314, color: 'hsl(var(--success))' },
-  { name: 'Pending Review', value: 89, color: 'hsl(var(--warning))' },
-  { name: 'Needs Improvement', value: 48, color: 'hsl(var(--destructive))' },
-  { name: 'Not Assessed', value: 67, color: 'hsl(var(--muted-foreground))' },
-];
+//   const addLaboratory = () => setLaboratories([...laboratories, { labType: '', numberOfLaboratories: '' }]);
+//   const removeLaboratory = (index: number) => setLaboratories(laboratories.filter((_, i) => i !== index));
+//   const updateLaboratory = (index: number, field: string, value: any) => {
+//     const updated = [...laboratories];
+//     updated[index] = { ...updated[index], [field]: value };
+//     setLaboratories(updated);
+//   };
 
-const Overview = () => {
-  const { currentUser } = useRole();
-  // const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
-  const [schoolMetricsData, setSchoolMetricsData] = useState<SchoolMetric[] | null>(null);
-  const [dashboardData, setDashboardData] = useState<DashboardResponse | null>(null);
+//   const addToilet = () => setToilets([...toilets, { toiletType: '', numberOfToilets: '' }]);
+//   const removeToilet = (index: number) => setToilets(toilets.filter((_, i) => i !== index));
+//   const updateToilet = (index: number, field: string, value: any) => {
+//     const updated = [...toilets];
+//     updated[index] = { ...updated[index], [field]: value };
+//     setToilets(updated);
+//   };
 
-  const getDashboardType = () => {
-    if (currentUser.permissions?.includes('view_national_dashboard')) return 'ministry_admin';
-    if (currentUser.permissions?.includes('view_county_dashboard')) return 'agent';
-    if (currentUser.permissions?.includes('view_school_dashboard')) return 'school_admin';
-    // fallback to role
-    return currentUser.role;
-  };
+//   const addDormitory = () => setDormitories([...dormitories, { names: '', numberOfDormitories: '' }]);
+//   const removeDormitory = (index: number) => setDormitories(dormitories.filter((_, i) => i !== index));
+//   const updateDormitory = (index: number, field: string, value: any) => {
+//     const updated = [...dormitories];
+//     updated[index] = { ...updated[index], [field]: value };
+//     setDormitories(updated);
+//   };
 
-  const dashboardType = getDashboardType();
+//   const addDiningHall = () => setDiningHalls([...diningHalls, { names: '', numberOfDiningHalls: '' }]);
+//   const removeDiningHall = (index: number) => setDiningHalls(diningHalls.filter((_, i) => i !== index));
+//   const updateDiningHall = (index: number, field: string, value: any) => {
+//     const updated = [...diningHalls];
+//     updated[index] = { ...updated[index], [field]: value };
+//     setDiningHalls(updated);
+//   };
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        if (dashboardType === 'ministry_admin' || dashboardType === 'agent' || dashboardType === 'school_admin') {
-          const response = await getDashboardData();
-          if (response.status === 'success') {
-            setDashboardData(response);
-          }
-        }
-        if (dashboardType === 'ministry_admin') {
-          const response = await getSchoolMetrics();
-          if (response.status === 'success') {
-            setSchoolMetricsData(response.data);
-          }
-        }
-      } catch (error) {
-        console.error('Failed to fetch data', error);
-      }
-    };
-    fetchData();
-  }, [dashboardType]);
+//   const addCompound = () => setCompounds([...compounds, { areas: '', numberOfCompounds: '' }]);
+//   const removeCompound = (index: number) => setCompounds(compounds.filter((_, i) => i !== index));
+//   const updateCompound = (index: number, field: string, value: any) => {
+//     const updated = [...compounds];
+//     updated[index] = { ...updated[index], [field]: value };
+//     setCompounds(updated);
+//   };
 
-  const getOverviewTitle = () => {
-    switch (dashboardType) {
-      case 'ministry_admin':
-        if (dashboardData && dashboardData.title) {
-          return dashboardData.title;
-        } else {
-          return 'National Overview';
-        }
-      case 'agent':
-        const code = (currentUser as any).county_code || currentUser.county_code || currentUser.county_name;
-        const countyName = countyCodeToName[String(code)] || 'Unknown';
-        return `${countyName} County Overview`;
-      case 'school_admin':
-        return `${dashboardData?.institution_name || currentUser.institution_name} Overview`;
-      default:
-        return 'Overview';
-    }
-  };
+//   const addOffice = () => setOffices([...offices, { names: '', numberOfOffices: '' }]);
+//   const removeOffice = (index: number) => setOffices(offices.filter((_, i) => i !== index));
+//   const updateOffice = (index: number, field: string, value: any) => {
+//     const updated = [...offices];
+//     updated[index] = { ...updated[index], [field]: value };
+//     setOffices(updated);
+//   };
 
-   const getKPIData = () => {
-       switch (dashboardType) {
-        case 'ministry_admin':
-          if (dashboardData) {
-            return [
-              { title: 'Total Institutions', value: dashboardData.data.metrics_kpis.total_institutions.value.toString(), icon: School, trend: dashboardData.data.metrics_kpis.total_institutions.vs_last_month, color: 'text-primary' },
-              { title: 'Total Students', value: dashboardData.data.metrics_kpis.total_students.value.toString(), icon: Users, trend: dashboardData.data.metrics_kpis.total_students.vs_last_month, color: 'text-success' },
-              { title: 'Total Teachers', value: dashboardData.data.metrics_kpis.total_teachers.value.toString(), icon: Users, trend: dashboardData.data.metrics_kpis.total_teachers.vs_last_month, color: 'text-info' },
-              { title: 'Total Assessments', value: dashboardData.data.metrics_kpis.total_assessments.value.toString(), icon: FileText, trend: dashboardData.data.metrics_kpis.total_assessments.vs_last_month, color: 'text-warning' },
-              { title: 'Safety Assessments', value: dashboardData.data.metrics_kpis.total_safety_assessments.value.toString(), icon: CheckCircle, trend: dashboardData.data.metrics_kpis.total_safety_assessments.vs_last_month, color: 'text-primary' },
-              { title: 'Safety Score', value: dashboardData.data.metrics_kpis.safety_score.value.toString(), icon: TrendingUp, trend: dashboardData.data.metrics_kpis.safety_score.vs_last_month, color: 'text-success' },
-               { title: 'Maintenance Assessments', value: dashboardData.data.metrics_kpis.total_maintenance_assessments.value.toString(), icon: AlertTriangle, trend: dashboardData.data.metrics_kpis.total_maintenance_assessments.vs_last_month, color: 'text-info' },
-              { title: 'Maintenance Score', value: dashboardData.data.metrics_kpis.maintenance_score.value.toString(), icon: TrendingUp, trend: dashboardData.data.metrics_kpis.maintenance_score.vs_last_month, color: 'text-info' },
-              { title: 'Completed Maintenance', value: dashboardData.data.metrics_kpis.completed_maintenance.value.toString(), icon: CheckCircle, trend: dashboardData.data.metrics_kpis.completed_maintenance.vs_last_month, color: 'text-primary' },
-              { title: 'High Priority Maintenance', value: dashboardData.data.metrics_kpis.high_priority_maintenance.value.toString(), icon: AlertTriangle, trend: dashboardData.data.metrics_kpis.high_priority_maintenance.vs_last_month, color: 'text-destructive' },
-            ];
-          } else if (schoolMetricsData) {
-            const totalInstitutions = new Set(schoolMetricsData.map(m => m.institution_id)).size;
-            const totalStudents = schoolMetricsData.reduce((sum, m) => sum + m.students_count, 0);
-            const totalTeachers = schoolMetricsData.reduce((sum, m) => sum + m.teachers_count, 0);
-            return [
-              { title: 'Total Institutions', value: totalInstitutions.toString(), icon: School, trend: '+0', color: 'text-primary' },
-              { title: 'Total Students', value: totalStudents.toString(), icon: Users, trend: '+0', color: 'text-success' },
-              { title: 'Total Teachers', value: totalTeachers.toString(), icon: Users, trend: '+0', color: 'text-info' },
-              { title: 'Avg Score', value: '86.5', icon: TrendingUp, trend: '+2.3', color: 'text-warning' },
-            ];
-          } else {
-            return [
-              { title: 'Total Institutions', value: '1', icon: School, trend: '+100%', color: 'text-primary' },
-              { title: 'Total Students', value: '0', icon: Users, trend: '0%', color: 'text-success' },
-              { title: 'Total Teachers', value: '0', icon: Users, trend: '0%', color: 'text-info' },
-              { title: 'Total Actions', value: '5', icon: FileText, trend: '+100%', color: 'text-warning' },
-              { title: 'Safety Assessments', value: '2', icon: CheckCircle, trend: '+100%', color: 'text-primary' },
-              { title: 'Safety Score', value: '50', icon: TrendingUp, trend: 'N/A', color: 'text-success' },
-              { title: 'Maintenance Assessments', value: '3', icon: AlertTriangle, trend: '+100%', color: 'text-warning' },
-              { title: 'Maintenance Score', value: '30.8', icon: TrendingUp, trend: 'N/A', color: 'text-info' },
-              { title: 'Completed Maintenance', value: '0', icon: CheckCircle, trend: '0%', color: 'text-primary' },
-              { title: 'High Priority Maintenance', value: '0', icon: AlertTriangle, trend: '0%', color: 'text-destructive' },
-            ];
-          }
-        case 'agent':
-          if (dashboardData) {
-            return [
-              { title: 'Total Schools', value: dashboardData.data.metrics_kpis.total_schools.value.toString(), icon: School, trend: dashboardData.data.metrics_kpis.total_schools.vs_last_month, color: 'text-primary' },
-              { title: 'Total Teachers', value: dashboardData.data.metrics_kpis.total_teachers.value.toString(), icon: Users, trend: dashboardData.data.metrics_kpis.total_teachers.vs_last_month, color: 'text-success' },
-              { title: 'Total Students', value: dashboardData.data.metrics_kpis.total_students.value.toString(), icon: Users, trend: dashboardData.data.metrics_kpis.total_students.vs_last_month, color: 'text-info' },
-              { title: 'Total Assessments', value: dashboardData.data.metrics_kpis.total_assessments.value.toString(), icon: FileText, trend: dashboardData.data.metrics_kpis.total_assessments.vs_last_month, color: 'text-warning' },
-              { title: 'Safety Assessments', value: dashboardData.data.metrics_kpis.total_safety_assessments.value.toString(), icon: CheckCircle, trend: dashboardData.data.metrics_kpis.total_safety_assessments.vs_last_month, color: 'text-primary' },
-              { title: 'Safety Score', value: dashboardData.data.metrics_kpis.safety_score.value.toString(), icon: TrendingUp, trend: dashboardData.data.metrics_kpis.safety_score.vs_last_month, color: 'text-success' },
-              { title: 'Maintenance Assessments', value: dashboardData.data.metrics_kpis.total_maintenance_assessments.value.toString(), icon: AlertTriangle, trend: dashboardData.data.metrics_kpis.total_maintenance_assessments.vs_last_month, color: 'text-warning' },
-               { title: 'Maintenance Score', value: dashboardData.data.metrics_kpis.maintenance_score.value.toString(), icon: TrendingUp, trend: dashboardData.data.metrics_kpis.maintenance_score.vs_last_month, color: 'text-info' },
-              { title: 'Completed Maintenance', value: dashboardData.data.metrics_kpis.completed_maintenance.value.toString(), icon: CheckCircle, trend: dashboardData.data.metrics_kpis.completed_maintenance.vs_last_month, color: 'text-primary' },
-              { title: 'High Priority Maintenance', value: dashboardData.data.metrics_kpis.high_priority_maintenance.value.toString(), icon: AlertTriangle, trend: dashboardData.data.metrics_kpis.high_priority_maintenance.vs_last_month, color: 'text-destructive' },
-            ];
-          } else {
-            return [
-              { title: 'Total Schools', value: '1', icon: School, trend: '+100%', color: 'text-primary' },
-              { title: 'Total Teachers', value: '0', icon: Users, trend: '0%', color: 'text-success' },
-              { title: 'Total Students', value: '0', icon: Users, trend: '0%', color: 'text-info' },
-              { title: 'Total Assessments', value: '5', icon: FileText, trend: '+100%', color: 'text-warning' },
-              { title: 'Safety Assessments', value: '2', icon: CheckCircle, trend: '+100%', color: 'text-primary' },
-              { title: 'Safety Score', value: '50', icon: TrendingUp, trend: 'N/A', color: 'text-success' },
-              { title: 'Maintenance Assessments', value: '3', icon: AlertTriangle, trend: '+100%', color: 'text-warning' },
-              { title: 'Maintenance Score', value: '30.8', icon: TrendingUp, trend: 'N/A', color: 'text-info' },
-              { title: 'Completed Maintenance', value: '0', icon: CheckCircle, trend: '0%', color: 'text-primary' },
-              { title: 'High Priority Maintenance', value: '0', icon: AlertTriangle, trend: '0%', color: 'text-destructive' },
-            ];
-          }
-        case 'school_admin':
-          if (dashboardData) {
-            return [
-              { title: 'Students', value: dashboardData.data.metrics_kpis.students.value.toString(), icon: Users, trend: dashboardData.data.metrics_kpis.students.vs_last_month, color: 'text-primary' },
-              { title: 'Teachers', value: dashboardData.data.metrics_kpis.teachers.value.toString(), icon: Users, trend: dashboardData.data.metrics_kpis.teachers.vs_last_month, color: 'text-success' },
-              { title: 'Total Assessments', value: dashboardData.data.metrics_kpis.total_assessments.value.toString(), icon: FileText, trend: dashboardData.data.metrics_kpis.total_assessments.vs_last_month, color: 'text-info' },
-              { title: 'Safety Assessments', value: dashboardData.data.metrics_kpis.total_safety_assessments.value.toString(), icon: CheckCircle, trend: dashboardData.data.metrics_kpis.total_safety_assessments.vs_last_month, color: 'text-warning' },
-              { title: 'Safety Score', value: dashboardData.data.metrics_kpis.safety_score.value.toString(), icon: TrendingUp, trend: dashboardData.data.metrics_kpis.safety_score.vs_last_month, color: 'text-primary' },
-               { title: 'Maintenance Assessments', value: dashboardData.data.metrics_kpis.total_maintenance_assessments.value.toString(), icon: AlertTriangle, trend: dashboardData.data.metrics_kpis.total_maintenance_assessments.vs_last_month, color: 'text-info' },
-              { title: 'Maintenance Score', value: dashboardData.data.metrics_kpis.maintenance_score.value.toString(), icon: TrendingUp, trend: dashboardData.data.metrics_kpis.maintenance_score.vs_last_month, color: 'text-success' },
-              { title: 'Completed Maintenance', value: dashboardData.data.metrics_kpis.completed_maintenance.value.toString(), icon: CheckCircle, trend: dashboardData.data.metrics_kpis.completed_maintenance.vs_last_month, color: 'text-warning' },
-              { title: 'High Priority Maintenance', value: dashboardData.data.metrics_kpis.high_priority_maintenance.value.toString(), icon: AlertTriangle, trend: dashboardData.data.metrics_kpis.high_priority_maintenance.vs_last_month, color: 'text-destructive' },
-            ];
-          } else if (schoolMetricsData && currentUser.institution_id) {
-            const schoolMetrics = schoolMetricsData.filter(m => m.institution_id === currentUser.institution_id);
-            if (schoolMetrics.length > 0) {
-              // Take the latest by created_at
-              const latest = schoolMetrics.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
-              return [
-                { title: 'Students', value: latest.students_count.toString(), icon: Users, trend: '+0', color: 'text-primary' },
-                { title: 'Teachers', value: latest.teachers_count.toString(), icon: Users, trend: '+0', color: 'text-success' },
-                { title: 'Assessments', value: '12', icon: FileText, trend: '+3', color: 'text-info' },
-                { title: 'Score', value: '89.4', icon: TrendingUp, trend: '+3.2', color: 'text-warning' },
-              ];
-            }
-          }
-          return [
-            { title: 'Students', value: '0', icon: Users, trend: '0%', color: 'text-primary' },
-            { title: 'Teachers', value: '0', icon: Users, trend: '0%', color: 'text-success' },
-            { title: 'Total Actions', value: '5', icon: FileText, trend: '+100%', color: 'text-info' },
-            { title: 'Safety Assessments', value: '2', icon: CheckCircle, trend: '+100%', color: 'text-warning' },
-            { title: 'Safety Score', value: '50', icon: TrendingUp, trend: 'N/A', color: 'text-primary' },
-                      { title: 'Maintenance Assessments', value: '3', icon: AlertTriangle, trend: '+100%', color: 'text-info' },
-            { title: 'Maintenance Score', value: '30.8', icon: TrendingUp, trend: 'N/A', color: 'text-success' },
-            { title: 'Completed Maintenance', value: '0', icon: CheckCircle, trend: '0%', color: 'text-warning' },
-            { title: 'High Priority Maintenance', value: '0', icon: AlertTriangle, trend: '0%', color: 'text-destructive' },
-          ];
-        default:
-          return [];
-      }
-    };
+//   const handleSubmit = async () => {
+//     try {
+//       // Find the selected facility ID
+//       const selectedFacilityData = facilities.find(f => f.name === selectedFacility);
+//       if (!selectedFacilityData) {
+//         console.error('Selected facility not found');
+//         return;
+//       }
 
-  const kpiData = getKPIData();
+//       const facilityId = selectedFacilityData.id;
+//       let entities: entitiesData['entities'] = [];
 
-  const performanceData = dashboardData ? dashboardData.data.performance_trends.labels.map((label, i) => ({
-    month: label,
-    completed: dashboardData.data.performance_trends.completion_rate[i],
-    score: dashboardData.data.performance_trends.quality_score[i]
-  })) : schoolAssessmentData;
+//       // Transform data based on facility type
+//       if (selectedFacility.toLowerCase().includes('classroom')) {
+//         entities = classrooms
+//           .filter(classroom => classroom.grade && classroom.stream && classroom.numberOfClasses)
+//           .map(classroom => ({
+//             grade: classroom.grade,
+//             stream: classroom.stream,
+//             total: classroom.numberOfClasses as number
+//           }));
+//       } else if (selectedFacility.toLowerCase().includes('laboratory') || selectedFacility.toLowerCase().includes('lab')) {
+//         entities = laboratories
+//           .filter(lab => lab.labType && lab.numberOfLaboratories)
+//           .map(lab => ({
+//             name: lab.labType,
+//             total: lab.numberOfLaboratories as number
+//           }));
+//       } else if (selectedFacility.toLowerCase().includes('toilet')) {
+//         entities = toilets
+//           .filter(toilet => toilet.toiletType && toilet.numberOfToilets)
+//           .map(toilet => ({
+//             name: toilet.toiletType,
+//             total: toilet.numberOfToilets as number
+//           }));
+//       } else if (selectedFacility.toLowerCase().includes('dormitory') || selectedFacility.toLowerCase().includes('dorm')) {
+//         entities = dormitories
+//           .filter(dorm => dorm.names && dorm.numberOfDormitories)
+//           .map(dorm => ({
+//             name: dorm.names,
+//             total: dorm.numberOfDormitories as number
+//           }));
+//       } else if (selectedFacility.toLowerCase().includes('dining')) {
+//         entities = diningHalls
+//           .filter(dining => dining.names && dining.numberOfDiningHalls)
+//           .map(dining => ({
+//             name: dining.names,
+//             total: dining.numberOfDiningHalls as number
+//           }));
+//       } else if (selectedFacility.toLowerCase().includes('compound')) {
+//         entities = compounds
+//           .filter(compound => compound.areas && compound.numberOfCompounds)
+//           .map(compound => ({
+//             name: compound.areas,
+//             total: compound.numberOfCompounds as number
+//           }));
+//       } else if (selectedFacility.toLowerCase().includes('office')) {
+//         entities = offices
+//           .filter(office => office.names && office.numberOfOffices)
+//           .map(office => ({
+//             name: office.names,
+//             total: office.numberOfOffices as number
+//           }));
+//       }
 
-  const statusData = dashboardData && dashboardData.data.assessment_status_distribution ? dashboardData.data.assessment_status_distribution.map(item => ({
-    name: item.label,
-    value: item.value,
-    color: item.color
-  })) : [
-    { name: 'Approved', value: 314, color: 'hsl(var(--success))' },
-    { name: 'Pending Review', value: 89, color: 'hsl(var(--warning))' },
-    { name: 'Needs Improvement', value: 48, color: 'hsl(var(--destructive))' },
-    { name: 'Not Assessed', value: 67, color: 'hsl(var(--muted-foreground))' },
-  ];
+//       if (entities.length === 0) {
+//         console.error('No valid entities to submit');
+//         return;
+//       }
 
-  const subCountyData = dashboardData && (dashboardData.data.county_performance || dashboardData.data.sub_county_performance) ?
-    (dashboardData.data.county_performance || dashboardData.data.sub_county_performance).labels.map((label, i) => {
-      const obj: any = { name: countyCodeToName[label] || label };
-      (dashboardData.data.county_performance || dashboardData.data.sub_county_performance)!.data.forEach(item => {
-        obj[item.label] = item.values[i];
-      });
-      return obj;
-    }) :
-    countyData;
+//       const payload: entitiesData = {
+//         facility_id: facilityId,
+//         entities: entities
+//       };
 
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">{getOverviewTitle()}</h1>
-          <p className="text-muted-foreground">
-            Monitor and track quality assurance metrics across your jurisdiction
-          </p>
-        </div>
-        {/* <div className="flex items-center space-x-2">
-          <Badge variant="outline" className="text-sm">
-            Last updated: 2 minutes ago
-          </Badge>
-        </div> */}
-      </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Assessment Status Distribution */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <CheckCircle className="h-5 w-5 text-success" />
-              <span>Assessment Status</span>
-            </CardTitle>
-            <CardDescription>
-              Distribution of assessment outcomes
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={statusData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={100}
-                  paddingAngle={5}
-                  dataKey="value"
-                >
-                  {statusData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="grid grid-cols-2 gap-4 mt-4">
-              {statusData.map((item, index) => (
-                <div key={index} className="flex items-center space-x-2">
-                  <div 
-                    className="w-3 h-3 rounded-full" 
-                    style={{ backgroundColor: item.color }}
-                  />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">{item.name}</p>
-                    {/* <p className="text-xs text-muted-foreground">{item.value} assesments</p> */}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+//       console.log('Submitting payload:', payload);
 
-        {/* Performance Trends */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <TrendingUp className="h-5 w-5 text-info" />
-              <span>Performance Trends</span>
-            </CardTitle>
-            <CardDescription>
-              Assessment completion and quality scores over time
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={performanceData}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                <XAxis 
-                  dataKey="month" 
-                  className="text-muted-foreground" 
-                  fontSize={12}
-                />
-                <YAxis className="text-muted-foreground" fontSize={12} />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: 'hsl(var(--card))',
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '6px'
-                  }}
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="completed" 
-                  stroke="hsl(var(--primary))" 
-                  strokeWidth={2}
-                  name="Completed"
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="score" 
-                  stroke="hsl(var(--success))" 
-                  strokeWidth={2}
-                  name="Average Score"
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
+//       const response = await createSchoolEntities(payload);
+//       console.log('API Response:', response);
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {kpiData.map((kpi, index) => (
-          <Card key={index} className="relative overflow-hidden">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {kpi.title}
-              </CardTitle>
-              <kpi.icon className={`h-4 w-4 ${kpi.color}`} />
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center space-x-2">
-                <div className="text-2xl font-bold text-foreground">{kpi.value}</div>
-                <Badge
-                  variant="secondary"
-                  className={`text-xs ${
-                    kpi.trend.startsWith('+')
-                      ? 'text-success border-success/20 bg-success/10'
-                      : 'text-muted-foreground'
-                  }`}
-                >
-                  {kpi.trend !== '0' && kpi.trend}
-                </Badge>
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {kpi.trend.startsWith('+') ? 'vs last month' : 'no change'}
-              </p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+//       // Show success toast
+//       toast({
+//         title: 'Success',
+//         description: `Entities for ${selectedFacility} have been created successfully!`,
+//         variant: 'default',
+//       });
 
-      
+//       // Reset form after successful submission
+//       setSelectedFacility('');
+//       setClassrooms([{ grade: '', stream: '', numberOfClasses: '' }]);
+//       setLaboratories([{ labType: '', numberOfLaboratories: '' }]);
+//       setToilets([{ toiletType: '', numberOfToilets: '' }]);
+//       setDormitories([{ names: '', numberOfDormitories: '' }]);
+//       setDiningHalls([{ names: '', numberOfDiningHalls: '' }]);
+//       setCompounds([{ areas: '', numberOfCompounds: '' }]);
+//       setOffices([{ names: '', numberOfOffices: '' }]);
 
-      {/* County/Regional Performance (for Admin and County Admin) */}
-      {(dashboardType === 'ministry_admin' || dashboardType === 'agent') && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <BarChart3 className="h-5 w-5 text-primary" />
-              <span>
-                {dashboardType === 'ministry_admin' ? 'County Performance' : 'Sub-County Performance'}
-              </span>
-            </CardTitle>
-            <CardDescription>
-              Assessment metrics across different regions
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={400}>
-              <BarChart data={subCountyData}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                <XAxis
-                  dataKey="name"
-                  className="text-muted-foreground"
-                  fontSize={12}
-                />
-                <YAxis className="text-muted-foreground" fontSize={12} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: 'hsl(var(--card))',
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '6px'
-                  }}
-                />
-                {dashboardData && (dashboardData.data.county_performance || dashboardData.data.sub_county_performance) &&
-                  (dashboardData.data.county_performance || dashboardData.data.sub_county_performance).data.map(item => (
-                    <Bar key={item.label} dataKey={item.label} fill={item.color} name={item.label} />
-                  ))
-                }
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      )}
+//     } catch (error: any) {
+//       console.error('Error submitting entities:', error);
 
-      {/* Recent Activity */}
-      {/* <Card>
-        <CardHeader>
-          <CardTitle>Recent Activity</CardTitle>
-          <CardDescription>Latest assessment updates and system events</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {[
-              {
-                icon: CheckCircle,
-                color: 'text-success',
-                title: 'Green Valley Primary School',
-                description: 'Assessment approved with score 92.5',
-                time: '2 minutes ago'
-              },
-              {
-                icon: AlertTriangle,
-                color: 'text-warning',
-                title: 'St. Mary Secondary School',
-                description: 'Assessment pending review - missing documentation',
-                time: '15 minutes ago'
-              },
-              {
-                icon: FileText,
-                color: 'text-info',
-                title: 'Hillside Academy',
-                description: 'New assessment submitted for review',
-                time: '1 hour ago'
-              },
-              {
-                icon: XCircle,
-                color: 'text-destructive',
-                title: 'Riverside Primary',
-                description: 'Assessment requires improvements in safety protocols',
-                time: '2 hours ago'
-              }
-            ].map((activity, index) => (
-              <div key={index} className="flex items-start space-x-3">
-                <activity.icon className={`h-5 w-5 mt-0.5 ${activity.color}`} />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground">
-                    {activity.title}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {activity.description}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {activity.time}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card> */}
-    </div>
-  );
-};
+//       // Show error toast
+//       toast({
+//         title: 'Error',
+//         description: error?.response?.data?.message || 'Failed to create entities. Please try again.',
+//         variant: 'destructive',
+//       });
+//     }
+//   };
 
-export default Overview;
+//   return (
+//     <div className="container mx-auto p-4 bg-white">
+//       <Card className="w-full max-w-lg shadow-lg border-0 mx-auto">
+//         <CardHeader className="text-center">
+//           <CardTitle className="text-2xl font-bold text-gray-800">Add Entities</CardTitle>
+//           <p className="text-sm text-gray-600">Enter the details for the new facility</p>
+//         </CardHeader>
+//         <CardContent className="space-y-6">
+//           <div className="space-y-2">
+//             <Label htmlFor="facility" className="text-sm font-medium text-gray-700">
+//               Facility
+//             </Label>
+//             <Select value={selectedFacility} onValueChange={setSelectedFacility}>
+//               <SelectTrigger className="w-full">
+//                 <SelectValue placeholder="Select a facility" />
+//               </SelectTrigger>
+//               <SelectContent>
+//                 {facilities.map((facility) => (
+//                   <SelectItem key={facility.id} value={facility.name}>
+//                     {facility.name}
+//                   </SelectItem>
+//                 ))}
+//               </SelectContent>
+//             </Select>
+//             <p className="text-xs text-gray-500">
+//               Select the facility type to add specific details
+//             </p>
+//           </div>
+
+//           {/* Conditional fields based on facility type */}
+//           {selectedFacility.toLowerCase().includes('classroom') && (
+//             <div className="space-y-4">
+//               <div className="flex items-center justify-between">
+//                 <Label className="text-sm font-medium text-gray-700">Classrooms</Label>
+//                 <Button type="button" onClick={addClassroom} variant="outline" size="sm">
+//                   <Plus className="h-4 w-4 mr-1" /> Add Classroom
+//                 </Button>
+//               </div>
+//               {classrooms.map((classroom, index) => (
+//                 <div key={index} className="border rounded-lg p-4 space-y-4">
+//                   <div className="flex items-center justify-between">
+//                     <h4 className="text-sm font-medium">Classroom {index + 1}</h4>
+//                     {classrooms.length > 1 && (
+//                       <Button
+//                         type="button"
+//                         onClick={() => removeClassroom(index)}
+//                         variant="ghost"
+//                         size="sm"
+//                         className="text-red-500 hover:text-red-700"
+//                       >
+//                         <X className="h-4 w-4" />
+//                       </Button>
+//                     )}
+//                   </div>
+//                   <div className="grid grid-cols-2 gap-4">
+//                     <div className="space-y-2">
+//                       <Label className="text-sm font-medium text-gray-700">
+//                         Grade
+//                       </Label>
+//                       <Select
+//                         value={classroom.grade}
+//                         onValueChange={(value) => updateClassroom(index, 'grade', value)}
+//                       >
+//                         <SelectTrigger className="w-full">
+//                           <SelectValue placeholder="Select a grade" />
+//                         </SelectTrigger>
+//                         <SelectContent>
+//                           <SelectItem value="PP1">PP1</SelectItem>
+//                           <SelectItem value="PP2">PP2</SelectItem>
+//                           {Array.from({ length: 12 }, (_, i) => (
+//                             <SelectItem key={i + 1} value={`Grade ${i + 1}`}>
+//                               Grade {i + 1}
+//                             </SelectItem>
+//                           ))}
+//                         </SelectContent>
+//                       </Select>
+//                     </div>
+
+//                     <div className="space-y-2">
+//                       <Label className="text-sm font-medium text-gray-700">
+//                         Stream
+//                       </Label>
+//                       <Input
+//                         placeholder="Enter stream name"
+//                         value={classroom.stream}
+//                         onChange={(e) => updateClassroom(index, 'stream', e.target.value)}
+//                         disabled={!classroom.grade}
+//                         className="w-full"
+//                       />
+//                       {!classroom.grade && (
+//                         <p className="text-xs text-gray-500">Select a grade first</p>
+//                       )}
+//                     </div>
+//                   </div>
+
+//                   <div className="space-y-2">
+//                     <Label className="text-sm font-medium text-gray-700">
+//                       Number of Classes
+//                     </Label>
+//                     <Input
+//                       type="number"
+//                       placeholder="Enter number of classes"
+//                       value={classroom.numberOfClasses}
+//                       onChange={(e) => updateClassroom(index, 'numberOfClasses', e.target.value === '' ? '' : Number(e.target.value))}
+//                       className="w-full"
+//                       min="1"
+//                     />
+//                   </div>
+//                 </div>
+//               ))}
+//             </div>
+//           )}
+
+//           {(selectedFacility.toLowerCase().includes('laboratory') || selectedFacility.toLowerCase().includes('lab')) && (
+//             <div className="space-y-4">
+//               <div className="flex items-center justify-between">
+//                 <Label className="text-sm font-medium text-gray-700">Laboratories</Label>
+//                 <Button type="button" onClick={addLaboratory} variant="outline" size="sm">
+//                   <Plus className="h-4 w-4 mr-1" /> Add Laboratory
+//                 </Button>
+//               </div>
+//               {laboratories.map((lab, index) => (
+//                 <div key={index} className="border rounded-lg p-4 space-y-4">
+//                   <div className="flex items-center justify-between">
+//                     <h4 className="text-sm font-medium">Laboratory {index + 1}</h4>
+//                     {laboratories.length > 1 && (
+//                       <Button
+//                         type="button"
+//                         onClick={() => removeLaboratory(index)}
+//                         variant="ghost"
+//                         size="sm"
+//                         className="text-red-500 hover:text-red-700"
+//                       >
+//                         <X className="h-4 w-4" />
+//                       </Button>
+//                     )}
+//                   </div>
+//                   <div className="grid grid-cols-2 gap-4">
+//                     <div className="space-y-2">
+//                       <Label className="text-sm font-medium text-gray-700">
+//                         Lab Type
+//                       </Label>
+//                       <Select
+//                         value={lab.labType}
+//                         onValueChange={(value) => updateLaboratory(index, 'labType', value)}
+//                       >
+//                         <SelectTrigger className="w-full">
+//                           <SelectValue placeholder="Select lab type" />
+//                         </SelectTrigger>
+//                         <SelectContent>
+//                           <SelectItem value="chemistry">Chemistry</SelectItem>
+//                           <SelectItem value="physics">Physics</SelectItem>
+//                           <SelectItem value="biology">Biology</SelectItem>
+//                           <SelectItem value="mixed">Mixed</SelectItem>
+//                         </SelectContent>
+//                       </Select>
+//                     </div>
+
+//                     <div className="space-y-2">
+//                       <Label className="text-sm font-medium text-gray-700">
+//                         Number of Laboratories
+//                       </Label>
+//                       <Input
+//                         type="number"
+//                         placeholder="Enter number"
+//                         value={lab.numberOfLaboratories}
+//                         onChange={(e) => updateLaboratory(index, 'numberOfLaboratories', e.target.value === '' ? '' : Number(e.target.value))}
+//                         className="w-full"
+//                         min="1"
+//                       />
+//                     </div>
+//                   </div>
+//                 </div>
+//               ))}
+//             </div>
+//           )}
+
+//           {selectedFacility.toLowerCase().includes('toilet') && (
+//             <div className="space-y-4">
+//               <div className="flex items-center justify-between">
+//                 <Label className="text-sm font-medium text-gray-700">Toilets</Label>
+//                 <Button type="button" onClick={addToilet} variant="outline" size="sm">
+//                   <Plus className="h-4 w-4 mr-1" /> Add Toilet
+//                 </Button>
+//               </div>
+//               {toilets.map((toilet, index) => (
+//                 <div key={index} className="border rounded-lg p-4 space-y-4">
+//                   <div className="flex items-center justify-between">
+//                     <h4 className="text-sm font-medium">Toilet {index + 1}</h4>
+//                     {toilets.length > 1 && (
+//                       <Button
+//                         type="button"
+//                         onClick={() => removeToilet(index)}
+//                         variant="ghost"
+//                         size="sm"
+//                         className="text-red-500 hover:text-red-700"
+//                       >
+//                         <X className="h-4 w-4" />
+//                       </Button>
+//                     )}
+//                   </div>
+//                   <div className="grid grid-cols-2 gap-4">
+//                     <div className="space-y-2">
+//                       <Label className="text-sm font-medium text-gray-700">
+//                         Toilet Type
+//                       </Label>
+//                       <Select
+//                         value={toilet.toiletType}
+//                         onValueChange={(value) => updateToilet(index, 'toiletType', value)}
+//                       >
+//                         <SelectTrigger className="w-full">
+//                           <SelectValue placeholder="Select toilet type" />
+//                         </SelectTrigger>
+//                         <SelectContent>
+//                           <SelectItem value="boys">Boys</SelectItem>
+//                           <SelectItem value="girls">Girls</SelectItem>
+//                           <SelectItem value="staff">Staff</SelectItem>
+//                           <SelectItem value="disabled">Disabled</SelectItem>
+//                           <SelectItem value="mixed">Mixed</SelectItem>
+//                         </SelectContent>
+//                       </Select>
+//                     </div>
+
+//                     <div className="space-y-2">
+//                       <Label className="text-sm font-medium text-gray-700">
+//                         Number of Toilets
+//                       </Label>
+//                       <Input
+//                         type="number"
+//                         placeholder="Enter number"
+//                         value={toilet.numberOfToilets}
+//                         onChange={(e) => updateToilet(index, 'numberOfToilets', e.target.value === '' ? '' : Number(e.target.value))}
+//                         className="w-full"
+//                         min="1"
+//                       />
+//                     </div>
+//                   </div>
+//                 </div>
+//               ))}
+//             </div>
+//           )}
+
+//           {(selectedFacility.toLowerCase().includes('dormitory') || selectedFacility.toLowerCase().includes('dorm')) && (
+//             <div className="space-y-4">
+//               <div className="flex items-center justify-between">
+//                 <Label className="text-sm font-medium text-gray-700">Dormitories</Label>
+//                 <Button type="button" onClick={addDormitory} variant="outline" size="sm">
+//                   <Plus className="h-4 w-4 mr-1" /> Add Dormitory
+//                 </Button>
+//               </div>
+//               {dormitories.map((dorm, index) => (
+//                 <div key={index} className="border rounded-lg p-4 space-y-4">
+//                   <div className="flex items-center justify-between">
+//                     <h4 className="text-sm font-medium">Dormitory {index + 1}</h4>
+//                     {dormitories.length > 1 && (
+//                       <Button
+//                         type="button"
+//                         onClick={() => removeDormitory(index)}
+//                         variant="ghost"
+//                         size="sm"
+//                         className="text-red-500 hover:text-red-700"
+//                       >
+//                         <X className="h-4 w-4" />
+//                       </Button>
+//                     )}
+//                   </div>
+//                   <div className="grid grid-cols-2 gap-4">
+//                     <div className="space-y-2">
+//                       <Label className="text-sm font-medium text-gray-700">
+//                         Dormitory Names
+//                       </Label>
+//                       <Input
+//                         placeholder="Enter names separated by commas"
+//                         value={dorm.names}
+//                         onChange={(e) => updateDormitory(index, 'names', e.target.value)}
+//                         className="w-full"
+//                       />
+//                       <p className="text-xs text-gray-500">
+//                         e.g., Dorm A, Dorm B
+//                       </p>
+//                     </div>
+
+//                     <div className="space-y-2">
+//                       <Label className="text-sm font-medium text-gray-700">
+//                         Number of Dormitories
+//                       </Label>
+//                       <Input
+//                         type="number"
+//                         placeholder="Enter number"
+//                         value={dorm.numberOfDormitories}
+//                         onChange={(e) => updateDormitory(index, 'numberOfDormitories', e.target.value === '' ? '' : Number(e.target.value))}
+//                         className="w-full"
+//                         min="1"
+//                       />
+//                     </div>
+//                   </div>
+//                 </div>
+//               ))}
+//             </div>
+//           )}
+
+//           {selectedFacility.toLowerCase().includes('dining') && (
+//             <div className="space-y-4">
+//               <div className="flex items-center justify-between">
+//                 <Label className="text-sm font-medium text-gray-700">Dining Halls</Label>
+//                 <Button type="button" onClick={addDiningHall} variant="outline" size="sm">
+//                   <Plus className="h-4 w-4 mr-1" /> Add Dining Hall
+//                 </Button>
+//               </div>
+//               {diningHalls.map((dining, index) => (
+//                 <div key={index} className="border rounded-lg p-4 space-y-4">
+//                   <div className="flex items-center justify-between">
+//                     <h4 className="text-sm font-medium">Dining Hall {index + 1}</h4>
+//                     {diningHalls.length > 1 && (
+//                       <Button
+//                         type="button"
+//                         onClick={() => removeDiningHall(index)}
+//                         variant="ghost"
+//                         size="sm"
+//                         className="text-red-500 hover:text-red-700"
+//                       >
+//                         <X className="h-4 w-4" />
+//                       </Button>
+//                     )}
+//                   </div>
+//                   <div className="grid grid-cols-2 gap-4">
+//                     <div className="space-y-2">
+//                       <Label className="text-sm font-medium text-gray-700">
+//                         Dining Hall Names
+//                       </Label>
+//                       <Input
+//                         placeholder="Enter names separated by commas"
+//                         value={dining.names}
+//                         onChange={(e) => updateDiningHall(index, 'names', e.target.value)}
+//                         className="w-full"
+//                       />
+//                       <p className="text-xs text-gray-500">
+//                         e.g., Main Dining Hall
+//                       </p>
+//                     </div>
+
+//                     <div className="space-y-2">
+//                       <Label className="text-sm font-medium text-gray-700">
+//                         Number of Dining Halls
+//                       </Label>
+//                       <Input
+//                         type="number"
+//                         placeholder="Enter number"
+//                         value={dining.numberOfDiningHalls}
+//                         onChange={(e) => updateDiningHall(index, 'numberOfDiningHalls', e.target.value === '' ? '' : Number(e.target.value))}
+//                         className="w-full"
+//                         min="1"
+//                       />
+//                     </div>
+//                   </div>
+//                 </div>
+//               ))}
+//             </div>
+//           )}
+
+//           {selectedFacility.toLowerCase().includes('compound') && (
+//             <div className="space-y-4">
+//               <div className="flex items-center justify-between">
+//                 <Label className="text-sm font-medium text-gray-700">Compounds</Label>
+//                 <Button type="button" onClick={addCompound} variant="outline" size="sm">
+//                   <Plus className="h-4 w-4 mr-1" /> Add Compound
+//                 </Button>
+//               </div>
+//               {compounds.map((compound, index) => (
+//                 <div key={index} className="border rounded-lg p-4 space-y-4">
+//                   <div className="flex items-center justify-between">
+//                     <h4 className="text-sm font-medium">Compound {index + 1}</h4>
+//                     {compounds.length > 1 && (
+//                       <Button
+//                         type="button"
+//                         onClick={() => removeCompound(index)}
+//                         variant="ghost"
+//                         size="sm"
+//                         className="text-red-500 hover:text-red-700"
+//                       >
+//                         <X className="h-4 w-4" />
+//                       </Button>
+//                     )}
+//                   </div>
+//                   <div className="grid grid-cols-2 gap-4">
+//                     <div className="space-y-2">
+//                       <Label className="text-sm font-medium text-gray-700">
+//                         Compound Areas
+//                       </Label>
+//                       <Input
+//                         placeholder="Enter areas separated by commas"
+//                         value={compound.areas}
+//                         onChange={(e) => updateCompound(index, 'areas', e.target.value)}
+//                         className="w-full"
+//                       />
+//                       <p className="text-xs text-gray-500">
+//                         e.g., Lawns, Flowers, Trees
+//                       </p>
+//                     </div>
+
+//                     <div className="space-y-2">
+//                       <Label className="text-sm font-medium text-gray-700">
+//                         Number of Compounds
+//                       </Label>
+//                       <Input
+//                         type="number"
+//                         placeholder="Enter number"
+//                         value={compound.numberOfCompounds}
+//                         onChange={(e) => updateCompound(index, 'numberOfCompounds', e.target.value === '' ? '' : Number(e.target.value))}
+//                         className="w-full"
+//                         min="1"
+//                       />
+//                     </div>
+//                   </div>
+//                 </div>
+//               ))}
+//             </div>
+//           )}
+
+//           {selectedFacility.toLowerCase().includes('office') && (
+//             <div className="space-y-4">
+//               <div className="flex items-center justify-between">
+//                 <Label className="text-sm font-medium text-gray-700">Offices</Label>
+//                 <Button type="button" onClick={addOffice} variant="outline" size="sm">
+//                   <Plus className="h-4 w-4 mr-1" /> Add Office
+//                 </Button>
+//               </div>
+//               {offices.map((office, index) => (
+//                 <div key={index} className="border rounded-lg p-4 space-y-4">
+//                   <div className="flex items-center justify-between">
+//                     <h4 className="text-sm font-medium">Office {index + 1}</h4>
+//                     {offices.length > 1 && (
+//                       <Button
+//                         type="button"
+//                         onClick={() => removeOffice(index)}
+//                         variant="ghost"
+//                         size="sm"
+//                         className="text-red-500 hover:text-red-700"
+//                       >
+//                         <X className="h-4 w-4" />
+//                       </Button>
+//                     )}
+//                   </div>
+//                   <div className="grid grid-cols-2 gap-4">
+//                     <div className="space-y-2">
+//                       <Label className="text-sm font-medium text-gray-700">
+//                         Office Names
+//                       </Label>
+//                       <Input
+//                         placeholder="Enter names separated by commas"
+//                         value={office.names}
+//                         onChange={(e) => updateOffice(index, 'names', e.target.value)}
+//                         className="w-full"
+//                       />
+//                       <p className="text-xs text-gray-500">
+//                         e.g., Principal's Office
+//                       </p>
+//                     </div>
+
+//                     <div className="space-y-2">
+//                       <Label className="text-sm font-medium text-gray-700">
+//                         Number of Offices
+//                       </Label>
+//                       <Input
+//                         type="number"
+//                         placeholder="Enter number"
+//                         value={office.numberOfOffices}
+//                         onChange={(e) => updateOffice(index, 'numberOfOffices', e.target.value === '' ? '' : Number(e.target.value))}
+//                         className="w-full"
+//                         min="1"
+//                       />
+//                     </div>
+//                   </div>
+//                 </div>
+//               ))}
+//             </div>
+//           )}
+
+//           <Button
+//             onClick={handleSubmit}
+//             className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-md transition-colors"
+//           >
+//             Submit Entities
+//           </Button>
+//         </CardContent>
+//       </Card>
+//     </div>
+//   );
+// };
+
+// export default FacilityAddPage;

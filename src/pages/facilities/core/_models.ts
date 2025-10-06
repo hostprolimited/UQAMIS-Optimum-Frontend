@@ -4,6 +4,6 @@ export interface entitiesData {
     grade?: string;
     stream?: string;
     name?: string;
-    total: number;
+    total?: number;
   }>;
 }

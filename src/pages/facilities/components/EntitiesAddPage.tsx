@@ -16,13 +16,13 @@ const FacilityAddPage = () => {
   const { toast } = useToast();
   const [facilities, setFacilities] = useState<Facility[]>([]);
   const [selectedFacility, setSelectedFacility] = useState('');
-  const [classrooms, setClassrooms] = useState([{ grade: '', stream: '', numberOfClasses: '' as number | '' }]);
-  const [laboratories, setLaboratories] = useState([{ labType: '', numberOfLaboratories: '' as number | '' }]);
-  const [toilets, setToilets] = useState([{ toiletType: '', numberOfToilets: '' as number | '' }]);
+  const [classrooms, setClassrooms] = useState([{ name: '' }]);
+  const [laboratories, setLaboratories] = useState([{ name: '' }]);
+  const [toilets, setToilets] = useState([{ name: '' }]);
   const [dormitories, setDormitories] = useState([{ names: '', numberOfDormitories: '' as number | '' }]);
   const [diningHalls, setDiningHalls] = useState([{ names: '', numberOfDiningHalls: '' as number | '' }]);
-  const [compounds, setCompounds] = useState([{ areas: '', numberOfCompounds: '' as number | '' }]);
-  const [offices, setOffices] = useState([{ names: '', numberOfOffices: '' as number | '' }]);
+  const [compounds, setCompounds] = useState([{ name: '' }]);
+  const [offices, setOffices] = useState([{ name: '' }]);
 
   useEffect(() => {
     const fetchFacilities = async () => {
@@ -38,7 +38,7 @@ const FacilityAddPage = () => {
   }, []);
 
   // Functions to manage multiple entries
-  const addClassroom = () => setClassrooms([...classrooms, { grade: '', stream: '', numberOfClasses: '' }]);
+  const addClassroom = () => setClassrooms([...classrooms, { name: '' }]);
   const removeClassroom = (index: number) => setClassrooms(classrooms.filter((_, i) => i !== index));
   const updateClassroom = (index: number, field: string, value: any) => {
     const updated = [...classrooms];
@@ -46,7 +46,7 @@ const FacilityAddPage = () => {
     setClassrooms(updated);
   };
 
-  const addLaboratory = () => setLaboratories([...laboratories, { labType: '', numberOfLaboratories: '' }]);
+  const addLaboratory = () => setLaboratories([...laboratories, { name: '' }]);
   const removeLaboratory = (index: number) => setLaboratories(laboratories.filter((_, i) => i !== index));
   const updateLaboratory = (index: number, field: string, value: any) => {
     const updated = [...laboratories];
@@ -54,7 +54,7 @@ const FacilityAddPage = () => {
     setLaboratories(updated);
   };
 
-  const addToilet = () => setToilets([...toilets, { toiletType: '', numberOfToilets: '' }]);
+  const addToilet = () => setToilets([...toilets, { name: '' }]);
   const removeToilet = (index: number) => setToilets(toilets.filter((_, i) => i !== index));
   const updateToilet = (index: number, field: string, value: any) => {
     const updated = [...toilets];
@@ -78,7 +78,7 @@ const FacilityAddPage = () => {
     setDiningHalls(updated);
   };
 
-  const addCompound = () => setCompounds([...compounds, { areas: '', numberOfCompounds: '' }]);
+  const addCompound = () => setCompounds([...compounds, { name: '' }]);
   const removeCompound = (index: number) => setCompounds(compounds.filter((_, i) => i !== index));
   const updateCompound = (index: number, field: string, value: any) => {
     const updated = [...compounds];
@@ -86,7 +86,7 @@ const FacilityAddPage = () => {
     setCompounds(updated);
   };
 
-  const addOffice = () => setOffices([...offices, { names: '', numberOfOffices: '' }]);
+  const addOffice = () => setOffices([...offices, { name: '' }]);
   const removeOffice = (index: number) => setOffices(offices.filter((_, i) => i !== index));
   const updateOffice = (index: number, field: string, value: any) => {
     const updated = [...offices];
@@ -109,25 +109,21 @@ const FacilityAddPage = () => {
       // Transform data based on facility type
       if (selectedFacility.toLowerCase().includes('classroom')) {
         entities = classrooms
-          .filter(classroom => classroom.grade && classroom.stream && classroom.numberOfClasses)
+          .filter(classroom => classroom.name)
           .map(classroom => ({
-            grade: classroom.grade,
-            stream: classroom.stream,
-            total: classroom.numberOfClasses as number
+            name: classroom.name
           }));
       } else if (selectedFacility.toLowerCase().includes('laboratory') || selectedFacility.toLowerCase().includes('lab')) {
         entities = laboratories
-          .filter(lab => lab.labType && lab.numberOfLaboratories)
+          .filter(lab => lab.name)
           .map(lab => ({
-            name: lab.labType,
-            total: lab.numberOfLaboratories as number
+            name: lab.name
           }));
       } else if (selectedFacility.toLowerCase().includes('toilet')) {
         entities = toilets
-          .filter(toilet => toilet.toiletType && toilet.numberOfToilets)
+          .filter(toilet => toilet.name)
           .map(toilet => ({
-            name: toilet.toiletType,
-            total: toilet.numberOfToilets as number
+            name: toilet.name
           }));
       } else if (selectedFacility.toLowerCase().includes('dormitory') || selectedFacility.toLowerCase().includes('dorm')) {
         entities = dormitories
@@ -145,17 +141,15 @@ const FacilityAddPage = () => {
           }));
       } else if (selectedFacility.toLowerCase().includes('compound')) {
         entities = compounds
-          .filter(compound => compound.areas && compound.numberOfCompounds)
+          .filter(compound => compound.name)
           .map(compound => ({
-            name: compound.areas,
-            total: compound.numberOfCompounds as number
+            name: compound.name
           }));
       } else if (selectedFacility.toLowerCase().includes('office')) {
         entities = offices
-          .filter(office => office.names && office.numberOfOffices)
+          .filter(office => office.name)
           .map(office => ({
-            name: office.names,
-            total: office.numberOfOffices as number
+            name: office.name
           }));
       }
 
@@ -183,13 +177,13 @@ const FacilityAddPage = () => {
 
       // Reset form after successful submission
       setSelectedFacility('');
-      setClassrooms([{ grade: '', stream: '', numberOfClasses: '' }]);
-      setLaboratories([{ labType: '', numberOfLaboratories: '' }]);
-      setToilets([{ toiletType: '', numberOfToilets: '' }]);
+      setClassrooms([{ name: '' }]);
+      setLaboratories([{ name: '' }]);
+      setToilets([{ name: '' }]);
       setDormitories([{ names: '', numberOfDormitories: '' }]);
       setDiningHalls([{ names: '', numberOfDiningHalls: '' }]);
-      setCompounds([{ areas: '', numberOfCompounds: '' }]);
-      setOffices([{ names: '', numberOfOffices: '' }]);
+      setCompounds([{ name: '' }]);
+      setOffices([{ name: '' }]);
 
     } catch (error: any) {
       console.error('Error submitting entities:', error);
@@ -257,58 +251,15 @@ const FacilityAddPage = () => {
                       </Button>
                     )}
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium text-gray-700">
-                        Grade
-                      </Label>
-                      <Select
-                        value={classroom.grade}
-                        onValueChange={(value) => updateClassroom(index, 'grade', value)}
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select a grade" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="PP1">PP1</SelectItem>
-                          <SelectItem value="PP2">PP2</SelectItem>
-                          {Array.from({ length: 12 }, (_, i) => (
-                            <SelectItem key={i + 1} value={`Grade ${i + 1}`}>
-                              Grade {i + 1}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium text-gray-700">
-                        Stream
-                      </Label>
-                      <Input
-                        placeholder="Enter stream name"
-                        value={classroom.stream}
-                        onChange={(e) => updateClassroom(index, 'stream', e.target.value)}
-                        disabled={!classroom.grade}
-                        className="w-full"
-                      />
-                      {!classroom.grade && (
-                        <p className="text-xs text-gray-500">Select a grade first</p>
-                      )}
-                    </div>
-                  </div>
-
                   <div className="space-y-2">
                     <Label className="text-sm font-medium text-gray-700">
-                      Number of Classes
+                      Classroom Name
                     </Label>
                     <Input
-                      type="number"
-                      placeholder="Enter number of classes"
-                      value={classroom.numberOfClasses}
-                      onChange={(e) => updateClassroom(index, 'numberOfClasses', e.target.value === '' ? '' : Number(e.target.value))}
+                      placeholder="Enter classroom name"
+                      value={classroom.name}
+                      onChange={(e) => updateClassroom(index, 'name', e.target.value)}
                       className="w-full"
-                      min="1"
                     />
                   </div>
                 </div>
@@ -340,40 +291,16 @@ const FacilityAddPage = () => {
                       </Button>
                     )}
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium text-gray-700">
-                        Lab Type
-                      </Label>
-                      <Select
-                        value={lab.labType}
-                        onValueChange={(value) => updateLaboratory(index, 'labType', value)}
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select lab type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="chemistry">Chemistry</SelectItem>
-                          <SelectItem value="physics">Physics</SelectItem>
-                          <SelectItem value="biology">Biology</SelectItem>
-                          <SelectItem value="mixed">Mixed</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium text-gray-700">
-                        Number of Laboratories
-                      </Label>
-                      <Input
-                        type="number"
-                        placeholder="Enter number"
-                        value={lab.numberOfLaboratories}
-                        onChange={(e) => updateLaboratory(index, 'numberOfLaboratories', e.target.value === '' ? '' : Number(e.target.value))}
-                        className="w-full"
-                        min="1"
-                      />
-                    </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-gray-700">
+                      Laboratory Name
+                    </Label>
+                    <Input
+                      placeholder="Enter laboratory name"
+                      value={lab.name}
+                      onChange={(e) => updateLaboratory(index, 'name', e.target.value)}
+                      className="w-full"
+                    />
                   </div>
                 </div>
               ))}
@@ -404,41 +331,16 @@ const FacilityAddPage = () => {
                       </Button>
                     )}
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium text-gray-700">
-                        Toilet Type
-                      </Label>
-                      <Select
-                        value={toilet.toiletType}
-                        onValueChange={(value) => updateToilet(index, 'toiletType', value)}
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select toilet type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="boys">Boys</SelectItem>
-                          <SelectItem value="girls">Girls</SelectItem>
-                          <SelectItem value="staff">Staff</SelectItem>
-                          <SelectItem value="disabled">Disabled</SelectItem>
-                          <SelectItem value="mixed">Mixed</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium text-gray-700">
-                        Number of Toilets
-                      </Label>
-                      <Input
-                        type="number"
-                        placeholder="Enter number"
-                        value={toilet.numberOfToilets}
-                        onChange={(e) => updateToilet(index, 'numberOfToilets', e.target.value === '' ? '' : Number(e.target.value))}
-                        className="w-full"
-                        min="1"
-                      />
-                    </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-gray-700">
+                      Toilet Name
+                    </Label>
+                    <Input
+                      placeholder="Enter toilet name"
+                      value={toilet.name}
+                      onChange={(e) => updateToilet(index, 'name', e.target.value)}
+                      className="w-full"
+                    />
                   </div>
                 </div>
               ))}
@@ -587,35 +489,16 @@ const FacilityAddPage = () => {
                       </Button>
                     )}
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium text-gray-700">
-                        Compound Areas
-                      </Label>
-                      <Input
-                        placeholder="Enter areas separated by commas"
-                        value={compound.areas}
-                        onChange={(e) => updateCompound(index, 'areas', e.target.value)}
-                        className="w-full"
-                      />
-                      <p className="text-xs text-gray-500">
-                        e.g., Lawns, Flowers, Trees
-                      </p>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium text-gray-700">
-                        Number of Compounds
-                      </Label>
-                      <Input
-                        type="number"
-                        placeholder="Enter number"
-                        value={compound.numberOfCompounds}
-                        onChange={(e) => updateCompound(index, 'numberOfCompounds', e.target.value === '' ? '' : Number(e.target.value))}
-                        className="w-full"
-                        min="1"
-                      />
-                    </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-gray-700">
+                      Compound Name
+                    </Label>
+                    <Input
+                      placeholder="Enter compound name"
+                      value={compound.name}
+                      onChange={(e) => updateCompound(index, 'name', e.target.value)}
+                      className="w-full"
+                    />
                   </div>
                 </div>
               ))}
@@ -646,35 +529,16 @@ const FacilityAddPage = () => {
                       </Button>
                     )}
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium text-gray-700">
-                        Office Names
-                      </Label>
-                      <Input
-                        placeholder="Enter names separated by commas"
-                        value={office.names}
-                        onChange={(e) => updateOffice(index, 'names', e.target.value)}
-                        className="w-full"
-                      />
-                      <p className="text-xs text-gray-500">
-                        e.g., Principal's Office
-                      </p>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium text-gray-700">
-                        Number of Offices
-                      </Label>
-                      <Input
-                        type="number"
-                        placeholder="Enter number"
-                        value={office.numberOfOffices}
-                        onChange={(e) => updateOffice(index, 'numberOfOffices', e.target.value === '' ? '' : Number(e.target.value))}
-                        className="w-full"
-                        min="1"
-                      />
-                    </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-gray-700">
+                      Office Name
+                    </Label>
+                    <Input
+                      placeholder="Enter office name"
+                      value={office.name}
+                      onChange={(e) => updateOffice(index, 'name', e.target.value)}
+                      className="w-full"
+                    />
                   </div>
                 </div>
               ))}

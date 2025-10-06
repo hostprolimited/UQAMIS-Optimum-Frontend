@@ -34,6 +34,7 @@ import RolesPermissions from "./pages/settings/components/RolesPermissionsPage";
 import TermDates from "./pages/termly_dates/components/TermDatesAddPage";
 import TermDateListPage from "./pages/termly_dates/components/TermDateListPage";
 import LoginPage from "./pages/auth/components/loginPage";
+import IncidentlistPage from "./pages/reports/components/IncidentlistPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -107,7 +108,11 @@ const App = () => (
                     </ProtectedRoute>
                   } />
 
-                  
+                  <Route path="/incidents" element={
+                    <ProtectedRoute page="reports">
+                      <IncidentlistPage />
+                    </ProtectedRoute>
+                  } />
                   
                   {/* Assesments Routes*/}
                   <Route path="/assessments/add" element={

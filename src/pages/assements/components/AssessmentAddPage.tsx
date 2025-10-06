@@ -32,6 +32,7 @@ import {
   TabsTrigger,
 } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
+import { useRole } from '@/contexts/RoleContext';
 
 import { getFacilities, createMaintenanceAssessment, createSafetyAssessment } from "../core/_request";
 import { Facility } from "../core/_model";
@@ -419,6 +420,7 @@ const getFacilitySafetyParts = (facilityType: string): string[] => {
 const AssessmentAddPage: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { currentUser } = useRole();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedFacility, setSelectedFacility] = useState<Facility | null>(null);
   const [facilityParts, setFacilityParts] = useState<string[]>([]);
@@ -432,6 +434,7 @@ const AssessmentAddPage: React.FC = () => {
   const [dormitoryOptions, setDormitoryOptions] = useState<string[]>([]);
   const [officeOptions, setOfficeOptions] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isDraftLoaded, setIsDraftLoaded] = useState(false);
 
   // Safety data
   const [safetyData, setSafetyData] = useState<any[]>([]);
@@ -460,6 +463,60 @@ const AssessmentAddPage: React.FC = () => {
   const [hasOfficeFacility, setHasOfficeFacility] = useState<boolean | null>(null);
   const [selectedOfficeTypes, setSelectedOfficeTypes] = useState<string[]>([]);
   const [officeQuantities, setOfficeQuantities] = useState<{[key: string]: number}>({});
+
+  // Incident reporting state
+  const [isIncidentModalOpen, setIsIncidentModalOpen] = useState(false);
+  const [incidentDescription, setIncidentDescription] = useState('');
+  const [incidentSeverity, setIncidentSeverity] = useState('');
+  const [incidentFiles, setIncidentFiles] = useState<File[]>([]);
+
+  // Initialize form with empty values
+  const facilityForm = useForm<FacilityAssessmentData>({
+    resolver: zodResolver(facilityAssessmentSchema),
+    defaultValues: {
+      institution_id: 1,
+      facility_id: 0,
+      class: '',
+      status: 'pending',
+      details: [],
+      school_feedback: '',
+      agent_feedback: '',
+      files: [],
+      classes: [],
+    }
+  });
+
+  // Draft management
+  const saveDraft = () => {
+    const draftData = {
+      selectedFacility,
+      facilityParts,
+      safetyData,
+      hasToiletFacility,
+      selectedToiletTypes,
+      toiletQuantities,
+      hasLaboratoryFacility,
+      selectedLaboratoryTypes,
+      laboratoryQuantities,
+      hasDiningHallFacility,
+      selectedDiningHallTypes,
+      diningHallQuantities,
+      hasDormitoryFacility,
+      selectedDormitoryTypes,
+      dormitoryQuantities,
+      hasOfficeFacility,
+      selectedOfficeTypes,
+      officeQuantities,
+      formData: facilityForm.getValues(),
+      timestamp: Date.now()
+    };
+    localStorage.setItem('assessmentDraft', JSON.stringify(draftData));
+  };
+
+  const clearDraft = () => {
+    localStorage.removeItem('assessmentDraft');
+    setIsDraftLoaded(false);
+  };
 
   // Fetch facilities and entities data
   useEffect(() => {
@@ -601,6 +658,41 @@ const AssessmentAddPage: React.FC = () => {
   console.log('useEffect completed');
 }, [toast]);
 
+
+// Save draft on state changes
+useEffect(() => {
+  if (isDraftLoaded) return; // Don't save while loading
+  saveDraft();
+}, [
+  selectedFacility,
+  facilityParts,
+  safetyData,
+  hasToiletFacility,
+  selectedToiletTypes,
+  toiletQuantities,
+  hasLaboratoryFacility,
+  selectedLaboratoryTypes,
+  laboratoryQuantities,
+  hasDiningHallFacility,
+  selectedDiningHallTypes,
+  diningHallQuantities,
+  hasDormitoryFacility,
+  selectedDormitoryTypes,
+  dormitoryQuantities,
+  hasOfficeFacility,
+  selectedOfficeTypes,
+  officeQuantities
+]);
+
+// Save draft on form changes
+useEffect(() => {
+  const subscription = facilityForm.watch(() => {
+    if (isDraftLoaded) return;
+    saveDraft();
+  });
+  return () => subscription.unsubscribe();
+}, [facilityForm, isDraftLoaded]);
+
 // Debug: Monitor option changes
 useEffect(() => {
   console.log('realClassOptions changed:', realClassOptions);
@@ -626,21 +718,46 @@ useEffect(() => {
   console.log('officeOptions changed:', officeOptions);
 }, [officeOptions]);
 
-  // Initialize form with empty values
-  const facilityForm = useForm<FacilityAssessmentData>({
-    resolver: zodResolver(facilityAssessmentSchema),
-    defaultValues: {
-      institution_id: 1,
-      facility_id: 0,
-      class: '',
-      status: 'pending',
-      details: [],
-      school_feedback: '',
-      agent_feedback: '',
-      files: [],
-      classes: [],
+
+
+  // Load draft data on component mount
+  useEffect(() => {
+    const draftData = localStorage.getItem('assessmentDraft');
+    if (draftData) {
+      try {
+        const parsed = JSON.parse(draftData);
+        setSelectedFacility(parsed.selectedFacility || null);
+        setFacilityParts(parsed.facilityParts || []);
+        setSafetyData(parsed.safetyData || []);
+        setHasToiletFacility(parsed.hasToiletFacility ?? null);
+        setSelectedToiletTypes(parsed.selectedToiletTypes || []);
+        setToiletQuantities(parsed.toiletQuantities || {});
+        setHasLaboratoryFacility(parsed.hasLaboratoryFacility ?? null);
+        setSelectedLaboratoryTypes(parsed.selectedLaboratoryTypes || []);
+        setLaboratoryQuantities(parsed.laboratoryQuantities || {});
+        setHasDiningHallFacility(parsed.hasDiningHallFacility ?? null);
+        setSelectedDiningHallTypes(parsed.selectedDiningHallTypes || []);
+        setDiningHallQuantities(parsed.diningHallQuantities || {});
+        setHasDormitoryFacility(parsed.hasDormitoryFacility ?? null);
+        setSelectedDormitoryTypes(parsed.selectedDormitoryTypes || []);
+        setDormitoryQuantities(parsed.dormitoryQuantities || {});
+        setHasOfficeFacility(parsed.hasOfficeFacility ?? null);
+        setSelectedOfficeTypes(parsed.selectedOfficeTypes || []);
+        setOfficeQuantities(parsed.officeQuantities || {});
+        if (parsed.formData) {
+          facilityForm.reset(parsed.formData);
+        }
+        setIsDraftLoaded(true);
+        toast({
+          title: 'Draft Loaded',
+          description: 'Your previous unsaved assessment data has been restored.',
+          variant: 'default',
+        });
+      } catch (error) {
+        console.error('Error loading draft:', error);
+      }
     }
-  });
+  }, [facilityForm, toast]);
   
   // Update form when a facility is selected
   useEffect(() => {
@@ -913,9 +1030,11 @@ useEffect(() => {
       setSelectedOfficeTypes([]);
       setOfficeQuantities({});
       setHasOfficeFacility(null);
-      
+
       setSelectedOfficeTypes([]);
       setOfficeQuantities({});
+      // Clear draft after successful submission
+      clearDraft();
     } catch (error: any) {
       // Try to extract backend error message
       let message = 'Failed to submit assessment';
@@ -986,19 +1105,47 @@ const ClassSelect: React.FC<ClassSelectProps> = ({ onChange, value, classOptions
 
   return (
     <div className="container mx-auto py-6">
+      {/* {isDraftLoaded && (
+        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <FileText className="h-5 w-5 text-blue-600" />
+            <div>
+              <p className="text-sm font-medium text-blue-800">Draft Data Loaded</p>
+              <p className="text-xs text-blue-600">Your previous unsaved assessment has been restored</p>
+            </div>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={clearDraft}
+            className="text-blue-600 border-blue-300 hover:bg-blue-100"
+          >
+            Clear Draft
+          </Button>
+        </div>
+      )} */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div className="flex-1 min-w-0">
           <h1 className="text-3xl font-bold truncate">Facility Assessment</h1>
           <p className="text-muted-foreground mt-1">Select a facility type to begin assessment</p>
         </div>
-        <Button
-          variant="outline"
-          onClick={() => navigate('/maintenance/assessment')}
-          className="flex-shrink-0 w-full sm:w-auto mt-2 sm:mt-0"
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Reports
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Button
+            variant="destructive"
+            onClick={() => setIsIncidentModalOpen(true)}
+            className="flex-shrink-0 w-full sm:w-auto mt-2 sm:mt-0 bg-red-600 hover:bg-red-700"
+          >
+            🚨 Report Incident
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => navigate('/maintenance/assessment')}
+            className="flex-shrink-0 w-full sm:w-auto mt-2 sm:mt-0"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Reports
+          </Button>
+        </div>
       </div>
 
   {/* Facility Cards Grid */}
@@ -1769,6 +1916,122 @@ const ClassSelect: React.FC<ClassSelectProps> = ({ onChange, value, classOptions
               </form>
             </Form>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Incident Report Modal */}
+      <Dialog open={isIncidentModalOpen} onOpenChange={setIsIncidentModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <span className="text-red-600">🚨</span>
+              <span>Report Incident</span>
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Auto-filled info */}
+            <div className="bg-gray-50 p-3 rounded-lg space-y-2">
+              <div className="text-sm">
+                <span className="font-medium text-gray-700">School:</span>
+                <span className="ml-2 text-gray-600">{currentUser?.institution?.name || 'N/A'}</span>
+              </div>
+              <div className="text-sm">
+                <span className="font-medium text-gray-700">Admin:</span>
+                <span className="ml-2 text-gray-600">{currentUser?.name || 'N/A'}</span>
+              </div>
+              <div className="text-sm">
+                <span className="font-medium text-gray-700">Timestamp:</span>
+                <span className="ml-2 text-gray-600">{new Date().toLocaleString()}</span>
+              </div>
+            </div>
+
+            {/* Description */}
+            <div className="space-y-2">
+              <Label htmlFor="incident-description" className="text-sm font-medium">
+                Incident Description
+              </Label>
+              <Textarea
+                id="incident-description"
+                placeholder="Describe the incident..."
+                value={incidentDescription}
+                onChange={(e) => setIncidentDescription(e.target.value)}
+                className="min-h-[80px] resize-none"
+              />
+            </div>
+
+            {/* File Upload */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Attach Photo/Document (Optional)</Label>
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-gray-400 transition-colors">
+                <input
+                  type="file"
+                  accept="image/*,.pdf,.doc,.docx"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      setIncidentFiles([file]);
+                    }
+                  }}
+                  className="hidden"
+                  id="incident-file"
+                />
+                <label htmlFor="incident-file" className="cursor-pointer">
+                  <Upload className="mx-auto h-8 w-8 text-gray-400 mb-2" />
+                  <p className="text-sm text-gray-600">
+                    {incidentFiles.length > 0 ? incidentFiles[0].name : 'Click to upload or drag and drop'}
+                  </p>
+                </label>
+              </div>
+            </div>
+
+            {/* Severity */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Severity Level</Label>
+              <Select value={incidentSeverity} onValueChange={setIncidentSeverity}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select severity" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="low">Low</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="high">High</SelectItem>
+                  <SelectItem value="critical">Critical</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Buttons */}
+            <div className="flex gap-2 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsIncidentModalOpen(false)}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={() => {
+                  // Handle incident submission
+                  toast({
+                    title: 'Incident Reported',
+                    description: 'Your incident report has been submitted successfully.',
+                    variant: 'default',
+                  });
+                  setIsIncidentModalOpen(false);
+                  setIncidentDescription('');
+                  setIncidentSeverity('');
+                  setIncidentFiles([]);
+                }}
+                className="flex-1 bg-red-600 hover:bg-red-700"
+                disabled={!incidentDescription.trim() || !incidentSeverity}
+              >
+                Send Alert
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

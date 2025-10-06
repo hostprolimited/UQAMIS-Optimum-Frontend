@@ -30,11 +30,13 @@ import {
   ChevronDown,
   User,
   Lock,
+  AlertCircle,
   Building,
   GraduationCap
 } from 'lucide-react';
 import { LucideIcon } from 'lucide-react';
 import { ChildProcess } from 'child_process';
+import Alert from '@mui/material/Alert';
 
 // Drawer width
 const drawerWidth = 280; // Increased from 240 to 280
@@ -195,6 +197,13 @@ const navigationItems = [
   //   icon: FileText,
   //   page: 'institutions_assessment'
   // },
+
+  {
+    title: 'Incidents',
+    url: '/incidents',
+    icon: AlertCircle,
+    page: 'incidents'
+  },
   {
     title: 'User Management',
     icon: Users,

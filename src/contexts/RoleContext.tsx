@@ -115,6 +115,7 @@ export const RoleProvider: React.FC<RoleProviderProps> = ({ children }) => {
             // 'entities',
             'term_dates',
             'onboard',
+            'incidents',
             'user_management'
           ].includes(page);
         case 'school_admin':
@@ -123,7 +124,9 @@ export const RoleProvider: React.FC<RoleProviderProps> = ({ children }) => {
             'assessment',
             'school_form',
             'entities',
+            'incidents',
             'term_dates',
+            'incidents',
             'institutions_assessment'
           ].includes(page);
         default:
