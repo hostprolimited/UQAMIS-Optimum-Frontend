@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { User, Mail, Shield, Edit, X, Trash2, AlertCircle, Phone, MoreHorizontal } from 'lucide-react';
+import { User, Mail, Shield, Edit, X, Trash2, AlertCircle, Phone, MoreHorizontal, Check, ChevronsUpDown } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Input } from '@/components/ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
+import { cn } from "@/lib/utils";
 import { getUsers, createUser, deleteUser, updateUser } from '../core/_requests';
 import { getInstitutions } from '@/pages/onboarding/core/_requests';
 import { getPermissions } from '../core/_requests';
@@ -60,6 +63,7 @@ const Users = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [openInstitution, setOpenInstitution] = useState(false);
   const { currentUser } = useRole();
   const { toast } = useToast();
 
@@ -218,6 +222,10 @@ const Users = () => {
     if (name === 'subcounty_id') {
       // Reset ward when subcounty changes
       setForm({ ...form, [name]: value, ward_id: '' });
+    } else if (name === 'phone') {
+      // Allow only digits for phone number
+      const numericValue = value.replace(/\D/g, '');
+      setForm({ ...form, [name]: numericValue });
     } else {
       setForm({ ...form, [name]: value });
     }
@@ -248,6 +256,25 @@ const Users = () => {
 
     setIsEditing(true);
     setShowModal(true);
+  };
+
+  const handleToggleStatus = async (user: UserModel) => {
+    const newStatus = user.status === 'Active' ? 'Inactive' : 'Active';
+    try {
+      await updateUser(user.id, { status: newStatus });
+      toast({
+        title: "Success",
+        description: `User ${newStatus.toLowerCase()}d successfully`,
+        variant: "default",
+      });
+      fetchUsers();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to update user status",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleDelete = (user: UserModel) => {
@@ -313,6 +340,13 @@ const Users = () => {
         setSubmitting(false);
         return;
       }
+    }
+
+    // Validation for phone number
+    if (form.phone && !/^07\d{8}$/.test(form.phone)) {
+      setError('Phone number must be a valid Kenyan number: 10 digits starting with 07');
+      setSubmitting(false);
+      return;
     }
 
     try {
@@ -479,7 +513,7 @@ const Users = () => {
    <Phone className="h-4 w-4" />
    <span>Phone Number</span>
  </label>
- <Input name="phone" value={form.phone} onChange={handleChange} placeholder="e.g., +254712345678" disabled={submitting} />
+ <Input name="phone" value={form.phone} onChange={handleChange} placeholder="e.g., 0712345678" disabled={submitting} />
 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">Gender</label>
@@ -500,12 +534,48 @@ const Users = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">Institution (School)</label>
-                  <select name="institution_id" value={form.institution_id || ''} onChange={handleChange} className="w-full border rounded px-2 py-1" disabled={submitting}>
-                    <option value="">Select institution</option>
-                    {institutions.map(inst => (
-                      <option key={inst.id} value={inst.id}>{inst.name}</option>
-                    ))}
-                  </select>
+                  <Popover open={openInstitution} onOpenChange={setOpenInstitution}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={openInstitution}
+                        className="w-full justify-between"
+                        disabled={submitting}
+                      >
+                        {form.institution_id
+                          ? institutions.find((inst) => inst.id === form.institution_id)?.name
+                          : "Select institution..."}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-full p-0">
+                      <Command>
+                        <CommandInput placeholder="Search institutions..." />
+                        <CommandEmpty>No institution found.</CommandEmpty>
+                        <CommandGroup>
+                          {institutions.map((inst) => (
+                            <CommandItem
+                              key={inst.id}
+                              value={inst.name}
+                              onSelect={() => {
+                                setForm({ ...form, institution_id: inst.id });
+                                setOpenInstitution(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  form.institution_id === inst.id ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {inst.name}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
               </div>
 
@@ -711,11 +781,11 @@ const Users = () => {
                             Edit
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            onClick={() => handleDelete(user)}
-                            className="text-destructive cursor-pointer focus:text-destructive focus:bg-destructive/10"
+                            onClick={() => handleToggleStatus(user)}
+                            className="cursor-pointer"
                           >
                             <Trash2 className="h-4 w-4 mr-2" />
-                            Delete
+                            {user.status === 'Active' ? 'Deactivate' : 'Activate'}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>

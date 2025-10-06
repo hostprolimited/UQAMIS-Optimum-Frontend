@@ -80,7 +80,7 @@ export const getUserRole = async (id: number): Promise<Role> => {
 };
 
 // Update role
-export const updateRole = async (id: number, data: { name: string }): Promise<Role> => {
+export const updateRole = async (id: number, data: { name?: string; status?: string }): Promise<Role> => {
   const res = await api.put(Urls.UPDATE_ROLE_URL(id), data);
   return res.data;
 };
@@ -91,7 +91,7 @@ export const removeRole = async (id: number): Promise<void> => {
 };
 
 // Update permission
-export const updatePermission = async (id: number, data: { name: string }): Promise<Permission> => {
+export const updatePermission = async (id: number, data: { name?: string; status?: string }): Promise<Permission> => {
   const res = await api.put(Urls.UPDATE_PERMISSION_URL(id), data);
   return res.data;
 };

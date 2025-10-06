@@ -97,21 +97,14 @@ const headCells: readonly HeadCell[] = [
     numeric: false,
     disablePadding: false,
     label: 'Facility Name',
-    width: '20%',
+    width: '35%',
   },
   {
     id: 'facilityType',
     numeric: false,
     disablePadding: false,
-    label: 'Facility Type',
-    width: '35%',
-  },
-  {
-    id: 'number',
-    numeric: true,
-    disablePadding: false,
-    label: 'Number',
-    width: '15%',
+    label: 'Entity Type',
+    width: '50%',
   },
 ];
 
@@ -292,8 +285,7 @@ const EntitiesListPage = () => {
       const matchesFacility = facilityFilter === 'all' || entity.facilityName.toLowerCase() === facilityFilter.toLowerCase();
       const matchesSearch = searchTerm.toLowerCase() === '' ||
                             entity.facilityName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            entity.facilityType.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            String(entity.number).includes(searchTerm);
+                            entity.facilityType.toLowerCase().includes(searchTerm.toLowerCase());
 
       return matchesFacility && matchesSearch;
     });
@@ -443,7 +435,7 @@ const EntitiesListPage = () => {
               <div className="relative w-full sm:w-[250px]">
                 <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  placeholder="Search by facility, type, or number..."
+                  placeholder="Search by accessory or facility type..."
                   value={searchTerm}
                   onChange={(e) => {
                     setSearchTerm(e.target.value);
@@ -495,7 +487,7 @@ const EntitiesListPage = () => {
                   <TableBody>
                     {loading ? (
                       <TableRow>
-                        <TableCell colSpan={5} align="center" className="py-10">
+                        <TableCell colSpan={4} align="center" className="py-10">
                           <div className="flex justify-center items-center space-x-2">
                             <svg className="animate-spin h-5 w-5 text-primary" viewBox="0 0 24 24">
                               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -507,7 +499,7 @@ const EntitiesListPage = () => {
                       </TableRow>
                     ) : visibleRows.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={5} align="center" className="py-10">
+                        <TableCell colSpan={4} align="center" className="py-10">
                           <div className="flex flex-col items-center space-y-2 text-muted-foreground">
                             <Building className="h-8 w-8" />
                             <p className="font-medium">No entities found</p>
@@ -540,10 +532,9 @@ const EntitiesListPage = () => {
                                 }}
                               />
                             </TableCell>
-                            <TableCell sx={{ width: '20%' }}>{row.facilityName}</TableCell>
-                            <TableCell sx={{ width: '35%' }}>{row.facilityType}</TableCell>
-                            <TableCell align="right" sx={{ width: '15%' }}>{row.number}</TableCell>
-                            <TableCell align="right" sx={{ width: '15%' }}>
+                            <TableCell sx={{ width: '35%' }}>{row.facilityName}</TableCell>
+                            <TableCell sx={{ width: '50%' }}>{row.facilityType}</TableCell>
+                            <TableCell align="right" sx={{ width: '10%' }}>
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                   <IconButton size="small" aria-label="More actions" onClick={(e) => e.stopPropagation()}>
@@ -568,7 +559,7 @@ const EntitiesListPage = () => {
                     )}
                     {emptyRows > 0 && !loading && (
                       <TableRow style={{ height: 53 * emptyRows }}>
-                        <TableCell colSpan={5} />
+                        <TableCell colSpan={4} />
                       </TableRow>
                     )}
                   </TableBody>
