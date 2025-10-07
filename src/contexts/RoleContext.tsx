@@ -74,18 +74,22 @@ export const RoleProvider: React.FC<RoleProviderProps> = ({ children }) => {
   };
 
   const pagePermissions: Record<string, string> = {
-    'overview': 'view_county_dashboard',
+    'overview': 'view_school_dashboard',
     'reports': 'view_school_reports',
     'onboard': 'view_institution',
     'system_safety': 'view_system_safety',
     'review': 'maintenance_review',
     'entities': 'view_institution',
-    'term_dates': 'manage_term_dates',
+    'term_dates': 'view_term_dates',
     'backup': 'manage_backup',
     'user_management': 'manage_users',
     'assessment': 'create_assessment',
     'school_form': 'view_school_metrics',
     'institutions_assessment': 'view_assessments',
+    'incidents': 'view_incidents',
+    'facilities': 'view_facilities',
+    
+    
   };
 
   const hasAccess = (page: string): boolean => {
@@ -126,8 +130,9 @@ export const RoleProvider: React.FC<RoleProviderProps> = ({ children }) => {
             'school_form',
             'entities',
             'incidents',
+            //'incidents',
             'term_dates',
-             'incidents',
+             //'view_incidents',
             'institutions_assessment',
             'user_management'
           ].includes(page);
