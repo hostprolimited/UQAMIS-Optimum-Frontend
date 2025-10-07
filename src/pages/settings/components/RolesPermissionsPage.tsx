@@ -91,12 +91,23 @@ const RolesPermissions = () => {
           getUsers(),
           getPermissions()
         ]);
-        
+
         setUsers(usersResponse.users || []); // Access the users array from the response
         setPermissions(permissionsData.permissions?.map(p => ({ ...p, status: p.status || 'Active' })) || []);
         setRoles(permissionsData.roles?.map(r => ({ ...r, status: r.status || 'Active' })) || []);
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error fetching data:', error);
+        let errorMessage = 'Failed to load data. Please try again.';
+        if (error?.response?.status === 403 || error?.response?.status === 401) {
+          errorMessage = 'You do not have permission to access this data.';
+        } else if (error?.response?.data?.message) {
+          errorMessage = error.response.data.message;
+        }
+        toast({
+          title: 'Error',
+          description: errorMessage,
+          variant: 'destructive',
+        });
         // Set empty arrays as fallback
         setUsers([]);
         setPermissions([]);
@@ -107,7 +118,7 @@ const RolesPermissions = () => {
     };
 
     fetchData();
-  }, []);
+  }, [toast]);
 
   const availableRoles = currentUser?.role === 'agent'
     ? roles.filter(r => r.name === 'school_admin')

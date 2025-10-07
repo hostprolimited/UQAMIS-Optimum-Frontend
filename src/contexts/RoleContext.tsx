@@ -95,17 +95,18 @@ export const RoleProvider: React.FC<RoleProviderProps> = ({ children }) => {
     if (['ministry_admin', 'agent', 'school_admin'].includes(currentUser.role)) {
       switch (currentUser.role) {
         case 'ministry_admin':
-          return [
-            'overview',
-            'reports',
-            'onboard',
-            'system_safety',
-            'review',
-            // 'entities',
-            'term_dates',
-            'backup',
-            'user_management'
-          ].includes(page);
+           return [
+             'overview',
+             'reports',
+             'onboard',
+             'system_safety',
+             'review',
+             // 'entities',
+             'term_dates',
+             'backup',
+             'user_management',
+             'incidents'
+           ].includes(page);
 
         case 'agent':
           return [
@@ -126,7 +127,7 @@ export const RoleProvider: React.FC<RoleProviderProps> = ({ children }) => {
             'entities',
             'incidents',
             'term_dates',
-            // 'incidents',
+             'incidents',
             'institutions_assessment',
             'user_management'
           ].includes(page);

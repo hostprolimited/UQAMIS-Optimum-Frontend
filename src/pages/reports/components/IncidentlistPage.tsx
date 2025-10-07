@@ -23,6 +23,7 @@ import { Search, AlertTriangle, Clock, CheckCircle, User, MoreHorizontal, Edit }
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { getIncidents, updateIncident } from '../core/requests';
 import { Incident, IncidentListResponse } from '../core/_models';
+import { useRole } from '@/contexts/RoleContext';
 
 // Helper function to format relative time
 const getRelativeTime = (dateString: string): string => {
@@ -169,8 +170,8 @@ interface EnhancedTableProps {
   rowCount: number;
 }
 
-function EnhancedTableHead(props: EnhancedTableProps) {
-  const { order, orderBy, onRequestSort } = props;
+function EnhancedTableHead(props: EnhancedTableProps & { filteredHeadCells: HeadCell[] }) {
+  const { order, orderBy, onRequestSort, filteredHeadCells } = props;
   const createSortHandler =
     (property: string) => (event: React.MouseEvent<unknown>) => {
       onRequestSort(event, property);
@@ -179,7 +180,7 @@ function EnhancedTableHead(props: EnhancedTableProps) {
   return (
     <TableHead className="bg-muted/50">
       <TableRow>
-        {headCells.map((headCell) => (
+        {filteredHeadCells.map((headCell) => (
           <TableCell
             key={headCell.id}
             align={headCell.numeric ? 'right' : 'left'}
@@ -276,6 +277,7 @@ function EnhancedTableToolbar(props: EnhancedTableToolbarProps) {
 
 const IncidentListPage = () => {
   const { toast } = useToast();
+  const { currentUser } = useRole();
   const [incidents, setIncidents] = React.useState<Incident[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [order, setOrder] = React.useState<Order>('desc');
@@ -295,9 +297,15 @@ const IncidentListPage = () => {
         setIncidents(response.incidents.data);
       } catch (error: any) {
         console.error('Error fetching incidents:', error);
+        let errorMessage = 'Failed to load incidents. Please try again.';
+        if (error?.response?.status === 403 || error?.response?.status === 401) {
+          errorMessage = 'You do not have permission to view incidents.';
+        } else if (error?.response?.data?.message) {
+          errorMessage = error.response.data.message;
+        }
         toast({
           title: 'Error',
-          description: 'Failed to load incidents. Please try again.',
+          description: errorMessage,
           variant: 'destructive',
         });
         setIncidents([]);
@@ -389,6 +397,11 @@ const IncidentListPage = () => {
     }
   };
 
+  // Filter head cells based on user role - hide school name for school admins
+  const filteredHeadCells = headCells.filter(cell =>
+    cell.id !== 'schoolName' || (currentUser?.role === 'agent' || currentUser?.role === 'ministry_admin')
+  );
+
 
   return (
     <div className="space-y-6">
@@ -431,11 +444,12 @@ const IncidentListPage = () => {
                     orderBy={orderBy}
                     onRequestSort={handleRequestSort}
                     rowCount={filteredData.length}
+                    filteredHeadCells={filteredHeadCells}
                   />
                   <TableBody>
                     {loading ? (
                       <TableRow>
-                        <TableCell colSpan={5} align="center" className="py-10">
+                        <TableCell colSpan={filteredHeadCells.length} align="center" className="py-10">
                           <div className="flex justify-center items-center space-x-2">
                             <svg className="animate-spin h-5 w-5 text-primary" viewBox="0 0 24 24">
                               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -447,7 +461,7 @@ const IncidentListPage = () => {
                       </TableRow>
                     ) : visibleRows.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={5} align="center" className="py-10">
+                        <TableCell colSpan={filteredHeadCells.length} align="center" className="py-10">
                           <div className="flex flex-col items-center space-y-2 text-muted-foreground">
                             <AlertTriangle className="h-8 w-8" />
                             <p className="font-medium">No incidents found</p>
@@ -470,13 +484,15 @@ const IncidentListPage = () => {
                                 : row.incident_description}
                             </div>
                           </TableCell>
-                          <TableCell sx={{ width: '25%' }}>
-                            <div className="font-medium">{row.institution.name}</div>
-                            <div className="text-sm text-muted-foreground flex items-center">
-                              <User className="h-3 w-3 mr-1" />
-                              {row.submitted_by.name}
-                            </div>
-                          </TableCell>
+                          {(currentUser?.role === 'agent' || currentUser?.role === 'ministry_admin') && (
+                            <TableCell sx={{ width: '25%' }}>
+                              <div className="font-medium">{row.institution.name}</div>
+                              <div className="text-sm text-muted-foreground flex items-center">
+                                <User className="h-3 w-3 mr-1" />
+                                {row.submitted_by.name}
+                              </div>
+                            </TableCell>
+                          )}
                           <TableCell sx={{ width: '15%' }}>
                             <span>{getRelativeTime(row.created_at)}</span>
                           </TableCell>
@@ -530,7 +546,7 @@ const IncidentListPage = () => {
                     )}
                     {emptyRows > 0 && !loading && (
                       <TableRow style={{ height: 53 * emptyRows }}>
-                        <TableCell colSpan={5} />
+                        <TableCell colSpan={filteredHeadCells.length} />
                       </TableRow>
                     )}
                   </TableBody>

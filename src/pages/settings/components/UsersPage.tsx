@@ -34,13 +34,14 @@ const subcounties = data.find((t) => t.name === 'subcounties').data;
 const wards = data.find((t) => t.name === 'station').data;
 
 // School Admin Users Component
-const SchoolAdminUsers: React.FC<{ schoolRoles: any[] }> = ({ schoolRoles }) => {
+const SchoolAdminUsers: React.FC = () => {
   const [users, setUsers] = useState<UserModel[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', phone: '', gender: '', role: '', password: '' });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [roles, setRoles] = useState<any[]>([]);
   const { currentUser } = useRole();
   const { toast } = useToast();
 
@@ -58,15 +59,49 @@ const SchoolAdminUsers: React.FC<{ schoolRoles: any[] }> = ({ schoolRoles }) => 
       } else {
         setUsers([]);
       }
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Error fetching users:', error);
+      let errorMessage = 'Failed to load users.';
+      if (error?.response?.status === 403 || error?.response?.status === 401) {
+        errorMessage = 'You do not have permission to view users.';
+      } else if (error?.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
       setUsers([]);
     } finally {
       setLoading(false);
     }
   };
 
+  const fetchRoles = async () => {
+    try {
+      const data = await getPermissions();
+      setRoles(data.roles?.map(r => ({ ...r, status: r.status || 'Active' })) || []);
+    } catch (error: any) {
+      console.error('Error fetching roles:', error);
+      let errorMessage = 'Failed to load roles.';
+      if (error?.response?.status === 403 || error?.response?.status === 401) {
+        errorMessage = 'You do not have permission to view roles.';
+      } else if (error?.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+      setRoles([]);
+    }
+  };
+
   useEffect(() => {
     fetchSchoolUsers();
+    fetchRoles();
   }, [currentUser?.institution_id]);
 
   const handleOpenModal = () => {
@@ -268,7 +303,7 @@ const SchoolAdminUsers: React.FC<{ schoolRoles: any[] }> = ({ schoolRoles }) => 
                     <label className="block text-sm font-medium mb-1">Role <span className="text-destructive">*</span></label>
                     <select name="role" value={form.role} onChange={handleChange} className="w-full border rounded px-2 py-1" required disabled={submitting}>
                       <option value="">Select role</option>
-                      {schoolRoles.map(role => (
+                      {roles.map(role => (
                         <option key={role.id} value={role.name}>
                           {formatRole(role.name)}
                         </option>
@@ -400,21 +435,10 @@ const Users = () => {
   const { currentUser } = useRole();
   const { toast } = useToast();
 
-  // School-level roles for school admins
-  const schoolRoles = [
-    { id: 1, name: 'deputy_principal' },
-    { id: 2, name: 'head_of_infrastructure' },
-    { id: 3, name: 'accountant' },
-    { id: 4, name: 'librarian' },
-    { id: 5, name: 'laboratory_technician' },
-    { id: 6, name: 'security_guard' },
-    { id: 7, name: 'cleaner' },
-    { id: 8, name: 'teacher' },
-  ];
 
   // If current user is school admin, show school admin interface
   if (currentUser?.role === 'school_admin') {
-    return <SchoolAdminUsers schoolRoles={schoolRoles} />;
+    return <SchoolAdminUsers />;
   }
 
   const fetchUsers = async () => {
@@ -694,7 +718,7 @@ const Users = () => {
 
     // Validation for phone number
     if (form.phone && !/^07\d{8}$/.test(form.phone)) {
-      setError('Phone number must be a valid Kenyan number: 10 digits starting with 07');
+      setError('Phone number must be a valid 10 digits ');
       setSubmitting(false);
       return;
     }
@@ -704,7 +728,7 @@ const Users = () => {
         // Handle update
         const updateData = { ...form };
         if (!updateData.password) {
-          delete updateData.password; // Don't send empty password
+          delete updateData.password;
         }
         // Map subcounty_id to subcounty name and ward_id to ward name
         if (updateData.subcounty_id) {
@@ -858,13 +882,13 @@ const Users = () => {
               {/* Second Row */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Phone Number */}
-<div>
- <label className="block text-sm font-medium mb-1 flex items-center space-x-2">
-   <Phone className="h-4 w-4" />
-   <span>Phone Number</span>
- </label>
- <Input name="phone" value={form.phone} onChange={handleChange} placeholder="e.g., 0712345678" disabled={submitting} />
-</div>
+              <div>
+              <label className="block text-sm font-medium mb-1 flex items-center space-x-2">
+                <Phone className="h-4 w-4" />
+                <span>Phone Number</span>
+              </label>
+              <Input name="phone" value={form.phone} onChange={handleChange} placeholder="e.g., 0712345678" disabled={submitting} />
+              </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">Gender</label>
                   <select name="gender" value={form.gender} onChange={handleChange} className="w-full border rounded px-2 py-1" disabled={submitting}>
