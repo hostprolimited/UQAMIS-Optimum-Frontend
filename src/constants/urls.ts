@@ -76,7 +76,12 @@ export const Urls = {
   UPDATE_PERMISSION_URL: (id: number) => `/permissions/${id}`,
   DELETE_PERMISSION_URL: (id: number) => `/permissions/${id}`,
 
-  
+  // Incidents Endpoints
+  CREATE_INCIDENT_URL: '/incidents/create',
+  GET_INCIDENTS_URL: '/incidents/list',
+  GET_INCIDENT_BY_ID_URL: (id: number) => `/incidents/${id}`,
+  UPDATE_INCIDENT_URL: (id: number) => `/incidents/${id}`,
+  DELETE_INCIDENT_URL: (id: number) => `/incidents/${id}`,
   // Roles Management Endpoints
   GET_ROLES_URL: '/roles/list',
   CREATE_ROLE_URL: 'roles/create',

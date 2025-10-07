@@ -31,7 +31,6 @@ import {
   deletePermission,
 } from '../core/_requests';
 import { User, Role, Permission } from '../core/_models';
-import { RolePermission } from '../core/_types';
 import { useRole } from '@/contexts/RoleContext';
 import { useToast } from "@/components/ui/use-toast";
 import { Toaster } from "@/components/ui/toaster";
@@ -45,30 +44,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 
-// Permission items for the add role modal
-type PermissionItem = {
-  id: string;
-  label: string;
-  type?: "checkbox" | "radio";
-  group?: string;
-};
-
-const PERMISSIONS: PermissionItem[] = [
-  { id: "export_buttons", label: "View export to buttons (csv/excel/print/pdf) on tables", group: "Others" },
-
-  { id: "view_user", label: "View user", group: "User" },
-  { id: "add_user", label: "Add user", group: "User" },
-  { id: "edit_user", label: "Edit user", group: "User" },
-  { id: "delete_user", label: "Delete user", group: "User" },
-
-  { id: "view_role", label: "View role", group: "Roles" },
-  { id: "add_role", label: "Add Role", group: "Roles" },
-  { id: "edit_role", label: "Edit Role", group: "Roles" },
-  { id: "delete_role", label: "Delete role", group: "Roles" },
-];
-
-const GROUP_ORDER = ["Others", "User", "Roles"];
-
 // Simple icon for permission matrix
 const PermissionIcon = ({ hasPermission }: { hasPermission: boolean }) => (
   hasPermission ? (
@@ -78,69 +53,6 @@ const PermissionIcon = ({ hasPermission }: { hasPermission: boolean }) => (
   )
 );
 
-const rolePermissions: RolePermission[] = [
-  {
-    role: 'admin',
-    name: 'National Admin',
-    description: 'Full system access with national oversight',
-    icon: Shield,
-    color: 'text-destructive',
-    users: 1,
-    permissions: {
-      overview: { national: true, county: true, school: true },
-      onboard: { create: true, edit: true, delete: true },
-      assessment: { create: true, review: true, approve: true },
-      reports: { view: true, export: true, generate: true },
-      userManagement: { create: true, edit: true, delete: true, assign: true },
-      systemSafety: { view: true, configure: true },
-      backup: { create: true, restore: true, schedule: true }
-    }
-  },
-  {
-    role: 'county_admin',
-    name: 'County Admin',
-    description: 'County-level management and oversight',
-    icon: Users,
-    color: 'text-warning',
-    users: 47,
-    permissions: {
-      overview: { national: false, county: true, school: true },
-      onboard: { create: true, edit: true, delete: false },
-      assessment: { create: true, review: true, approve: true },
-      reports: { view: true, export: true, generate: true },
-      userManagement: { create: true, edit: true, delete: false, assign: false },
-      systemSafety: { view: true, configure: false },
-      backup: { create: false, restore: false, schedule: false }
-    }
-  },
-  {
-    role: 'school_admin',
-    name: 'School Admin',
-    description: 'School-level assessment and reporting',
-    icon: School,
-    color: 'text-success',
-    users: 1248,
-    permissions: {
-      overview: { national: false, county: false, school: true },
-      onboard: { create: false, edit: false, delete: false },
-      assessment: { create: true, review: false, approve: false },
-      reports: { view: true, export: true, generate: false },
-      userManagement: { create: false, edit: false, delete: false, assign: false },
-      systemSafety: { view: false, configure: false },
-      backup: { create: false, restore: false, schedule: false }
-    }
-  }
-];
-
-const permissionLabels = {
-  overview: 'Dashboard Overview',
-  onboard: 'School Onboarding',
-  assessment: 'Quality Assessment',
-  reports: 'Reports & Analytics',
-  userManagement: 'User Management',
-  systemSafety: 'System Safety',
-  backup: 'Backup & Recovery'
-};
 
 const RolesPermissions = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -161,8 +73,6 @@ const RolesPermissions = () => {
   const [creatingPermission, setCreatingPermission] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [newRoleName, setNewRoleName] = useState('');
-  const [rolePermissions, setRolePermissions] = useState<Record<string, boolean>>({});
-  const [radioSelections, setRadioSelections] = useState<Record<string, string | null>>({});
   const [roleStats, setRoleStats] = useState({
     totalRoles: 0,
     totalPermissions: 0,
@@ -391,12 +301,6 @@ const RolesPermissions = () => {
   };
 
   const openAddRoleModal = () => {
-    // Initialize permissions state
-    const initPermissions: Record<string, boolean> = {};
-    PERMISSIONS.forEach((p) => {
-      initPermissions[p.id] = false;
-    });
-    setRolePermissions(initPermissions);
     setNewRoleName('');
     setShowAddRoleModal(true);
   };
@@ -869,14 +773,14 @@ const RolesPermissions = () => {
 
       {/* Add Role Modal */}
       <Dialog open={showAddRoleModal} onOpenChange={setShowAddRoleModal}>
-        <DialogContent className="max-w-5xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Add Role</DialogTitle>
             <DialogDescription>
-              Create a new role and assign permissions to it.
+              Create a new role.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-6">
+          <div className="space-y-4">
             <div>
               <Label htmlFor="roleName" className="text-sm font-medium text-gray-600">Role Name:*</Label>
               <Input
@@ -888,81 +792,6 @@ const RolesPermissions = () => {
               />
             </div>
 
-            <div className="pt-6">
-              {/* <h3 className="text-sm font-medium text-gray-500">Permissions:</h3> */}
-
-              <div className="mt-4 space-y-8">
-                {GROUP_ORDER.map((group) => {
-                  const groupPerms = PERMISSIONS.filter((p) => p.group === group);
-                  if (groupPerms.length === 0) return null;
-
-                  const allChecked = groupPerms.filter(p => p.type !== "radio").every(p => rolePermissions[p.id]);
-
-                  return (
-                    <section key={group} className="pb-4">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <h4 className="text-lg font-medium text-gray-600">{group}</h4>
-                        </div>
-                        <div className="flex items-center space-x-4">
-                          <label className="inline-flex items-center text-sm text-gray-500">
-                            <Checkbox
-                              checked={allChecked}
-                              onCheckedChange={(checked) => {
-                                const newPermissions = { ...rolePermissions };
-                                groupPerms.filter(p => p.type !== "radio").forEach((p) => {
-                                  newPermissions[p.id] = !!checked;
-                                });
-                                setRolePermissions(newPermissions);
-                              }}
-                              className="mr-2 h-4 w-4 rounded border-gray-300"
-                            />
-                            <span className="select-none">Select all</span>
-                          </label>
-                        </div>
-                      </div>
-
-                      <hr className="my-3 border-t border-gray-200" />
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {groupPerms.map((p) => {
-                          if (p.type === "radio") {
-                            return (
-                              <div key={p.id} className="flex items-center space-x-3">
-                                <label className="inline-flex items-center text-sm text-gray-600">
-                                  <input
-                                    type="radio"
-                                    name={`radio-${group}`}
-                                    checked={radioSelections[group] === p.id}
-                                    onChange={() => setRadioSelections(prev => ({ ...prev, [group]: p.id }))}
-                                    className="mr-3 h-4 w-4"
-                                  />
-                                  <span>{p.label}</span>
-                                </label>
-                              </div>
-                            );
-                          }
-
-                          return (
-                            <div key={p.id} className="flex items-center space-x-3">
-                              <label className="inline-flex items-center text-sm text-gray-600">
-                                <Checkbox
-                                  checked={!!rolePermissions[p.id]}
-                                  onCheckedChange={(checked) => setRolePermissions(prev => ({ ...prev, [p.id]: !!checked }))}
-                                  className="mr-3 h-4 w-4 rounded border-gray-300"
-                                />
-                                <span>{p.label}</span>
-                              </label>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </section>
-                  );
-                })}
-              </div>
-            </div>
-
             <DialogFooter>
               <Button
                 type="button"
@@ -970,8 +799,6 @@ const RolesPermissions = () => {
                 onClick={() => {
                   setShowAddRoleModal(false);
                   setNewRoleName('');
-                  setRolePermissions({});
-                  setRadioSelections({});
                 }}
               >
                 Cancel
@@ -1003,8 +830,6 @@ const RolesPermissions = () => {
                     // Reset and close
                     setShowAddRoleModal(false);
                     setNewRoleName('');
-                    setRolePermissions({});
-                    setRadioSelections({});
                   } catch (error: any) {
                     console.error('Error creating role:', error);
                     toast({

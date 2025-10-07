@@ -19,20 +19,25 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Search, AlertTriangle, Clock, CheckCircle, User } from 'lucide-react';
+import { Search, AlertTriangle, Clock, CheckCircle, User, MoreHorizontal, Edit } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { getIncidents, updateIncident } from '../core/requests';
+import { Incident, IncidentListResponse } from '../core/_models';
 
-// Types for incidents
-interface Incident {
-  id: string;
-  type: string;
-  schoolName: string;
-  time: string;
-  severity: 'Low' | 'Medium' | 'High' | 'Critical';
-  status: 'New' | 'Responding' | 'Resolved';
-  description: string;
-  reportedBy: string;
-  timestamp: Date;
-}
+// Helper function to format relative time
+const getRelativeTime = (dateString: string): string => {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffInMs = now.getTime() - date.getTime();
+  const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
+  const diffInHours = Math.floor(diffInMinutes / 60);
+  const diffInDays = Math.floor(diffInHours / 24);
+
+  if (diffInMinutes < 1) return 'Just now';
+  if (diffInMinutes < 60) return `${diffInMinutes} mins ago`;
+  if (diffInHours < 24) return `${diffInHours} hours ago`;
+  return `${diffInDays} days ago`;
+};
 
 function descendingComparator<T>(a: T, b: T, orderBy: keyof T) {
   if (b[orderBy] < a[orderBy]) {
@@ -46,21 +51,74 @@ function descendingComparator<T>(a: T, b: T, orderBy: keyof T) {
 
 type Order = 'asc' | 'desc';
 
-function getComparator<Key extends keyof any>(
+function getComparator(
   order: Order,
-  orderBy: Key,
-): (
-  a: { [key in Key]: number | string | Date },
-  b: { [key in Key]: number | string | Date },
-) => number {
+  orderBy: string,
+): (a: Incident, b: Incident) => number {
   return order === 'desc'
-    ? (a, b) => descendingComparator(a, b, orderBy)
-    : (a, b) => -descendingComparator(a, b, orderBy);
+    ? (a, b) => {
+        let aValue: any, bValue: any;
+
+        switch (orderBy) {
+          case 'facility':
+            aValue = a.facility.name;
+            bValue = b.facility.name;
+            break;
+          case 'schoolName':
+            aValue = a.institution.name;
+            bValue = b.institution.name;
+            break;
+          case 'time':
+            aValue = new Date(a.created_at);
+            bValue = new Date(b.created_at);
+            break;
+          case 'severity':
+            aValue = a.severity_level;
+            bValue = b.severity_level;
+            break;
+          default:
+            aValue = a.created_at;
+            bValue = b.created_at;
+        }
+
+        if (bValue < aValue) return -1;
+        if (bValue > aValue) return 1;
+        return 0;
+      }
+    : (a, b) => {
+        let aValue: any, bValue: any;
+
+        switch (orderBy) {
+          case 'facility':
+            aValue = a.facility.name;
+            bValue = b.facility.name;
+            break;
+          case 'schoolName':
+            aValue = a.institution.name;
+            bValue = b.institution.name;
+            break;
+          case 'time':
+            aValue = new Date(a.created_at);
+            bValue = new Date(b.created_at);
+            break;
+          case 'severity':
+            aValue = a.severity_level;
+            bValue = b.severity_level;
+            break;
+          default:
+            aValue = a.created_at;
+            bValue = b.created_at;
+        }
+
+        if (aValue < bValue) return -1;
+        if (aValue > bValue) return 1;
+        return 0;
+      };
 }
 
 interface HeadCell {
   disablePadding: boolean;
-  id: keyof Incident;
+  id: string;
   label: string;
   numeric: boolean;
   width?: string;
@@ -68,11 +126,11 @@ interface HeadCell {
 
 const headCells: readonly HeadCell[] = [
   {
-    id: 'type',
+    id: 'facility',
     numeric: false,
     disablePadding: false,
-    label: 'Type',
-    width: '15%',
+    label: 'Facility',
+    width: '20%',
   },
   {
     id: 'schoolName',
@@ -96,16 +154,16 @@ const headCells: readonly HeadCell[] = [
     width: '15%',
   },
   {
-    id: 'status',
+    id: 'actions',
     numeric: false,
     disablePadding: false,
-    label: 'Status',
+    label: 'Actions',
     width: '15%',
   },
 ];
 
 interface EnhancedTableProps {
-  onRequestSort: (event: React.MouseEvent<unknown>, property: keyof Incident) => void;
+  onRequestSort: (event: React.MouseEvent<unknown>, property: string) => void;
   order: Order;
   orderBy: string;
   rowCount: number;
@@ -114,7 +172,7 @@ interface EnhancedTableProps {
 function EnhancedTableHead(props: EnhancedTableProps) {
   const { order, orderBy, onRequestSort } = props;
   const createSortHandler =
-    (property: keyof Incident) => (event: React.MouseEvent<unknown>) => {
+    (property: string) => (event: React.MouseEvent<unknown>) => {
       onRequestSort(event, property);
     };
 
@@ -153,12 +211,10 @@ interface EnhancedTableToolbarProps {
   onSearchChange: (value: string) => void;
   severityFilter: string;
   onSeverityFilterChange: (value: string) => void;
-  statusFilter: string;
-  onStatusFilterChange: (value: string) => void;
 }
 
 function EnhancedTableToolbar(props: EnhancedTableToolbarProps) {
-  const { searchTerm, onSearchChange, severityFilter, onSeverityFilterChange, statusFilter, onStatusFilterChange } = props;
+  const { searchTerm, onSearchChange, severityFilter, onSeverityFilterChange } = props;
 
   return (
     <Toolbar
@@ -205,26 +261,13 @@ function EnhancedTableToolbar(props: EnhancedTableToolbarProps) {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Severities</SelectItem>
-              <SelectItem value="Low">Low</SelectItem>
-              <SelectItem value="Medium">Medium</SelectItem>
-              <SelectItem value="High">High</SelectItem>
-              <SelectItem value="Critical">Critical</SelectItem>
+              <SelectItem value="low">Low</SelectItem>
+              <SelectItem value="medium">Medium</SelectItem>
+              <SelectItem value="high">High</SelectItem>
+              <SelectItem value="critical">Critical</SelectItem>
             </SelectContent>
           </Select>
 
-          {/* Status Filter */}
-          <Select value={statusFilter} onValueChange={onStatusFilterChange}>
-            <SelectTrigger className="w-full sm:w-[150px] h-10">
-              <Clock className="h-4 w-4 mr-2 text-primary/80" />
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="New">New</SelectItem>
-              <SelectItem value="Responding">Responding</SelectItem>
-              <SelectItem value="Resolved">Resolved</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
       </div>
     </Toolbar>
@@ -236,109 +279,80 @@ const IncidentListPage = () => {
   const [incidents, setIncidents] = React.useState<Incident[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [order, setOrder] = React.useState<Order>('desc');
-  const [orderBy, setOrderBy] = React.useState<keyof Incident>('timestamp');
+  const [orderBy, setOrderBy] = React.useState<string>('created_at');
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(10);
   const [searchTerm, setSearchTerm] = React.useState<string>('');
   const [severityFilter, setSeverityFilter] = React.useState<string>('all');
-  const [statusFilter, setStatusFilter] = React.useState<string>('all');
+  const [updatingIncident, setUpdatingIncident] = React.useState<string | null>(null);
 
-  // Mock data for incidents
+  // Fetch incidents from API
   React.useEffect(() => {
-    const mockIncidents: Incident[] = [
-      {
-        id: '1',
-        type: 'Fire',
-        schoolName: 'Kawangware Primary',
-        time: '2 mins ago',
-        severity: 'High',
-        status: 'New',
-        description: 'Small fire reported in the chemistry lab',
-        reportedBy: 'John Doe',
-        timestamp: new Date(Date.now() - 2 * 60 * 1000),
-      },
-      {
-        id: '2',
-        type: 'Injury',
-        schoolName: 'Mwiki Secondary',
-        time: '30 mins ago',
-        severity: 'Medium',
-        status: 'Responding',
-        description: 'Student injured during sports activity',
-        reportedBy: 'Jane Smith',
-        timestamp: new Date(Date.now() - 30 * 60 * 1000),
-      },
-      {
-        id: '3',
-        type: 'Gas Leak',
-        schoolName: 'Kibera School',
-        time: '10 mins ago',
-        severity: 'Critical',
-        status: 'Resolved',
-        description: 'Gas leak detected in the science laboratory',
-        reportedBy: 'Mike Johnson',
-        timestamp: new Date(Date.now() - 10 * 60 * 1000),
-      },
-      {
-        id: '4',
-        type: 'Electrical',
-        schoolName: 'Westlands Academy',
-        time: '1 hour ago',
-        severity: 'High',
-        status: 'New',
-        description: 'Electrical fault in the main building',
-        reportedBy: 'Sarah Wilson',
-        timestamp: new Date(Date.now() - 60 * 60 * 1000),
-      },
-      {
-        id: '5',
-        type: 'Flooding',
-        schoolName: 'River Road Primary',
-        time: '45 mins ago',
-        severity: 'Medium',
-        status: 'Responding',
-        description: 'Water leakage in the basement',
-        reportedBy: 'David Brown',
-        timestamp: new Date(Date.now() - 45 * 60 * 1000),
-      },
-      {
-        id: '6',
-        type: 'Medical',
-        schoolName: 'Nairobi Central School',
-        time: '15 mins ago',
-        severity: 'Low',
-        status: 'Resolved',
-        description: 'Student feeling unwell in class',
-        reportedBy: 'Emma Davis',
-        timestamp: new Date(Date.now() - 15 * 60 * 1000),
-      },
-    ];
+    const fetchIncidents = async () => {
+      try {
+        setLoading(true);
+        const response: IncidentListResponse = await getIncidents();
+        setIncidents(response.incidents.data);
+      } catch (error: any) {
+        console.error('Error fetching incidents:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load incidents. Please try again.',
+          variant: 'destructive',
+        });
+        setIncidents([]);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    // Simulate API call delay
-    setTimeout(() => {
-      setIncidents(mockIncidents);
-      setLoading(false);
-    }, 1000);
-  }, []);
+    fetchIncidents();
+  }, [toast]);
+
+  // Handle incident status update
+  const handleUpdateIncidentStatus = async (incidentId: number, newSeverity: string) => {
+    try {
+      setUpdatingIncident(incidentId.toString());
+      await updateIncident(incidentId, { severity_level: newSeverity });
+      toast({
+        title: 'Success',
+        description: 'Incident severity updated successfully.',
+        variant: 'default',
+      });
+
+      // Refresh incidents list
+      const response: IncidentListResponse = await getIncidents();
+      setIncidents(response.incidents.data);
+    } catch (error: any) {
+      console.error('Error updating incident:', error);
+      toast({
+        title: 'Error',
+        description: error?.response?.data?.message || 'Failed to update incident.',
+        variant: 'destructive',
+      });
+    } finally {
+      setUpdatingIncident(null);
+    }
+  };
 
   const filteredData = React.useMemo(() => {
     return incidents.filter((incident) => {
       const matchesSearch = searchTerm.toLowerCase() === '' ||
-                            incident.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            incident.schoolName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            incident.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            incident.reportedBy.toLowerCase().includes(searchTerm.toLowerCase());
+                            incident.facility.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            incident.institution.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            incident.incident_description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            incident.submitted_by.name.toLowerCase().includes(searchTerm.toLowerCase());
 
-      const matchesSeverity = severityFilter === 'all' || incident.severity === severityFilter;
-      const matchesStatus = statusFilter === 'all' || incident.status === statusFilter;
+      const matchesSeverity = severityFilter === 'all' ||
+                             incident.severity_level.toLowerCase() === severityFilter.toLowerCase();
 
-      return matchesSearch && matchesSeverity && matchesStatus;
+      return matchesSearch && matchesSeverity;
     });
-  }, [incidents, searchTerm, severityFilter, statusFilter]);
+  }, [incidents, searchTerm, severityFilter]);
 
   const handleRequestSort = (
     event: React.MouseEvent<unknown>,
-    property: keyof Incident,
+    property: string,
   ) => {
     const isAsc = orderBy === property && order === 'asc';
     setOrder(isAsc ? 'desc' : 'asc');
@@ -366,20 +380,11 @@ const IncidentListPage = () => {
   );
 
   const getSeverityColor = (severity: string) => {
-    switch (severity) {
-      case 'Low': return 'bg-green-100 text-green-800';
-      case 'Medium': return 'bg-yellow-100 text-yellow-800';
-      case 'High': return 'bg-orange-100 text-orange-800';
-      case 'Critical': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'New': return 'bg-blue-100 text-blue-800';
-      case 'Responding': return 'bg-purple-100 text-purple-800';
-      case 'Resolved': return 'bg-green-100 text-green-800';
+    switch (severity.toLowerCase()) {
+      case 'low': return 'bg-green-100 text-green-800';
+      case 'medium': return 'bg-yellow-100 text-yellow-800';
+      case 'high': return 'bg-orange-100 text-orange-800';
+      case 'critical': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -414,8 +419,6 @@ const IncidentListPage = () => {
                 onSearchChange={setSearchTerm}
                 severityFilter={severityFilter}
                 onSeverityFilterChange={setSeverityFilter}
-                statusFilter={statusFilter}
-                onStatusFilterChange={setStatusFilter}
               />
               <TableContainer>
                 <Table
@@ -459,28 +462,68 @@ const IncidentListPage = () => {
                           key={row.id}
                           sx={{ cursor: 'pointer', '&:hover': { backgroundColor: alpha('#f5f5f5', 0.7) } }}
                         >
-                          <TableCell sx={{ width: '15%' }}>
-                            <span>{row.type}</span>
+                          <TableCell sx={{ width: '20%' }}>
+                            <div className="font-medium">{row.facility.name}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {row.incident_description.length > 50
+                                ? `${row.incident_description.substring(0, 50)}...`
+                                : row.incident_description}
+                            </div>
                           </TableCell>
                           <TableCell sx={{ width: '25%' }}>
-                            <div className="font-medium">{row.schoolName}</div>
+                            <div className="font-medium">{row.institution.name}</div>
                             <div className="text-sm text-muted-foreground flex items-center">
                               <User className="h-3 w-3 mr-1" />
-                              {row.reportedBy}
+                              {row.submitted_by.name}
                             </div>
                           </TableCell>
                           <TableCell sx={{ width: '15%' }}>
-                            <span>{row.time}</span>
+                            <span>{getRelativeTime(row.created_at)}</span>
                           </TableCell>
                           <TableCell sx={{ width: '15%' }}>
-                            <Badge className={getSeverityColor(row.severity)}>
-                              {row.severity}
+                            <Badge className={getSeverityColor(row.severity_level)}>
+                              {row.severity_level.charAt(0).toUpperCase() + row.severity_level.slice(1)}
                             </Badge>
                           </TableCell>
                           <TableCell sx={{ width: '15%' }}>
-                            <Badge className={getStatusColor(row.status)}>
-                              {row.status}
-                            </Badge>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 w-8 p-0"
+                                  disabled={updatingIncident === row.id.toString()}
+                                >
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-40">
+                                <DropdownMenuItem
+                                  onClick={() => handleUpdateIncidentStatus(row.id, 'low')}
+                                  disabled={updatingIncident === row.id.toString() || row.severity_level === 'low'}
+                                >
+                                  Set Low Priority
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleUpdateIncidentStatus(row.id, 'medium')}
+                                  disabled={updatingIncident === row.id.toString() || row.severity_level === 'medium'}
+                                >
+                                  Set Medium Priority
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleUpdateIncidentStatus(row.id, 'high')}
+                                  disabled={updatingIncident === row.id.toString() || row.severity_level === 'high'}
+                                >
+                                  Set High Priority
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleUpdateIncidentStatus(row.id, 'critical')}
+                                  disabled={updatingIncident === row.id.toString() || row.severity_level === 'critical'}
+                                >
+                                  Set Critical Priority
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </TableCell>
                         </TableRow>
                       ))

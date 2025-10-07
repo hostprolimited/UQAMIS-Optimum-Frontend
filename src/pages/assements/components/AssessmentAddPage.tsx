@@ -38,6 +38,8 @@ import { getFacilities, createMaintenanceAssessment, createSafetyAssessment } fr
 import { Facility } from "../core/_model";
 import { getSchoolEntities } from '../../facilities/core/_requests';
 import ClassSafetyForm from './SafetyFormPage';
+import { createIncident } from '../../reports/core/requests';
+import { CreateIncidentInput } from '../../reports/core/_models';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
@@ -371,9 +373,7 @@ const facilityAssessmentSchema = z.object({
   status: z.enum(['pending', 'in_progress', 'completed']).default('pending'),
   details: z.array(z.object({
     part_of_building: z.string(),
-    assessment_status: z.enum(['Urgent Attention', 'Attention Required', 'Good'], {
-      required_error: 'Please select a condition'
-    })
+    assessment_status: z.enum(['Urgent Attention', 'Attention Required', 'Good']).optional()
   })),
   school_feedback: z.string().min(1, 'School feedback is required'),
   agent_feedback: z.string().optional(),
@@ -415,6 +415,16 @@ const getFacilitySafetyParts = (facilityType: string): string[] => {
     return [];
   }
   return parts || [];
+};
+
+// Helper function to convert file to base64
+const fileToBase64 = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = error => reject(error);
+  });
 };
 
 const AssessmentAddPage: React.FC = () => {
@@ -469,6 +479,8 @@ const AssessmentAddPage: React.FC = () => {
   const [incidentDescription, setIncidentDescription] = useState('');
   const [incidentSeverity, setIncidentSeverity] = useState('');
   const [incidentFiles, setIncidentFiles] = useState<File[]>([]);
+  const [selectedIncidentFacility, setSelectedIncidentFacility] = useState<string>('');
+  const [isSubmittingIncident, setIsSubmittingIncident] = useState(false);
 
   // Initialize form with empty values
   const facilityForm = useForm<FacilityAssessmentData>({
@@ -858,10 +870,27 @@ useEffect(() => {
       const isDormitoryFacility = facilityType === 'dormitory';
       const isOfficeFacility = facilityType === 'office';
 
+      // Validation: Check if all maintenance details are marked
+      const allMaintenanceMarked = data.details.every(detail => detail.assessment_status !== undefined);
+      if (!allMaintenanceMarked) {
+        toast({
+          title: 'Validation Error',
+          description: 'Please mark all maintenance assessment areas before submitting.',
+          variant: 'destructive',
+        });
+        return;
+      }
 
-
-
-
+      // Validation: Check if all safety details are marked
+      const allSafetyMarked = safetyData.every(item => item.attentionRequired || item.good);
+      if (!allSafetyMarked) {
+        toast({
+          title: 'Validation Error',
+          description: 'Please mark all safety assessment areas before submitting.',
+          variant: 'destructive',
+        });
+        return;
+      }
 
       let maintenanceSubmitted = false;
       let safetySubmitted = false;
@@ -887,10 +916,7 @@ useEffect(() => {
            facility_id: data.facility_id,
            entity: isClassFacility ? (data.classes || []) :
                    isToiletFacility ? selectedToiletTypes :
-                   isLaboratoryFacility ? selectedLaboratoryTypes :
-                   isDiningHallFacility ? selectedDiningHallTypes :
-                   isDormitoryFacility ? selectedDormitoryTypes :
-                   isOfficeFacility ? selectedOfficeTypes : [],
+                   [],
            status: 'pending' as 'pending',
            details: data.details.map(detail => ({
              part_of_building: detail.part_of_building,
@@ -947,10 +973,7 @@ useEffect(() => {
           facility_id: data.facility_id,
           entity: isClassFacility ? (data.classes || []) :
                   isToiletFacility ? selectedToiletTypes :
-                  isLaboratoryFacility ? selectedLaboratoryTypes :
-                  isDiningHallFacility ? selectedDiningHallTypes :
-                  isDormitoryFacility ? selectedDormitoryTypes :
-                  isOfficeFacility ? selectedOfficeTypes : [],
+                  [],
           status: 'pending' as 'pending',
           details: safetyData.map(item => ({
             part_of_building: item.part,
@@ -1065,7 +1088,7 @@ const ClassSelect: React.FC<ClassSelectProps> = ({ onChange, value, classOptions
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button variant="outline" className="w-full justify-between">
-          {value.length > 0 ? `${value.length} selected` : "Select classes..."}
+          {value.length > 0 ? value.join(', ') : <em>Select classes...</em>}
           <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
@@ -1946,6 +1969,23 @@ const ClassSelect: React.FC<ClassSelectProps> = ({ onChange, value, classOptions
               </div>
             </div>
 
+            {/* Facility Selection */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Related Facility</Label>
+              <Select value={selectedIncidentFacility} onValueChange={setSelectedIncidentFacility}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select facility" />
+                </SelectTrigger>
+                <SelectContent>
+                  {facilities.map((facility) => (
+                    <SelectItem key={facility.id} value={facility.id.toString()}>
+                      {facility.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             {/* Description */}
             <div className="space-y-2">
               <Label htmlFor="incident-description" className="text-sm font-medium">
@@ -2008,27 +2048,65 @@ const ClassSelect: React.FC<ClassSelectProps> = ({ onChange, value, classOptions
                 variant="outline"
                 onClick={() => setIsIncidentModalOpen(false)}
                 className="flex-1"
+                disabled={isSubmittingIncident}
               >
                 Cancel
               </Button>
               <Button
                 type="button"
-                onClick={() => {
-                  // Handle incident submission
-                  toast({
-                    title: 'Incident Reported',
-                    description: 'Your incident report has been submitted successfully.',
-                    variant: 'default',
-                  });
-                  setIsIncidentModalOpen(false);
-                  setIncidentDescription('');
-                  setIncidentSeverity('');
-                  setIncidentFiles([]);
+                onClick={async () => {
+                  if (!incidentDescription.trim() || !incidentSeverity || !selectedIncidentFacility) {
+                    toast({
+                      title: 'Validation Error',
+                      description: 'Please fill in all required fields.',
+                      variant: 'destructive',
+                    });
+                    return;
+                  }
+
+                  setIsSubmittingIncident(true);
+                  try {
+                    let attachmentBase64 = '';
+                    if (incidentFiles.length > 0) {
+                      attachmentBase64 = await fileToBase64(incidentFiles[0]);
+                    }
+
+                    const incidentData: CreateIncidentInput = {
+                      incident_description: incidentDescription,
+                      facility_id: selectedIncidentFacility,
+                      severity_level: incidentSeverity,
+                      attachment: attachmentBase64,
+                    };
+
+                    await createIncident(incidentData);
+
+                    toast({
+                      title: 'Incident Reported',
+                      description: 'Your incident report has been submitted successfully.',
+                      variant: 'default',
+                    });
+
+                    // Reset form
+                    setIsIncidentModalOpen(false);
+                    setIncidentDescription('');
+                    setIncidentSeverity('');
+                    setIncidentFiles([]);
+                    setSelectedIncidentFacility('');
+                  } catch (error: any) {
+                    console.error('Error creating incident:', error);
+                    toast({
+                      title: 'Error',
+                      description: error?.response?.data?.message || error?.message || 'Failed to submit incident report.',
+                      variant: 'destructive',
+                    });
+                  } finally {
+                    setIsSubmittingIncident(false);
+                  }
                 }}
                 className="flex-1 bg-red-600 hover:bg-red-700"
-                disabled={!incidentDescription.trim() || !incidentSeverity}
+                disabled={!incidentDescription.trim() || !incidentSeverity || !selectedIncidentFacility || isSubmittingIncident}
               >
-                Send Alert
+                {isSubmittingIncident ? 'Sending...' : 'Send Alert'}
               </Button>
             </div>
           </div>

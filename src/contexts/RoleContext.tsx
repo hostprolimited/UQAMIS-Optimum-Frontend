@@ -126,8 +126,9 @@ export const RoleProvider: React.FC<RoleProviderProps> = ({ children }) => {
             'entities',
             'incidents',
             'term_dates',
-            'incidents',
-            'institutions_assessment'
+            // 'incidents',
+            'institutions_assessment',
+            'user_management'
           ].includes(page);
         default:
           return false;

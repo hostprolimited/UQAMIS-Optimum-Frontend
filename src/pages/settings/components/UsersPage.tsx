@@ -33,6 +33,339 @@ const counties = data.find((t) => t.name === 'counties').data;
 const subcounties = data.find((t) => t.name === 'subcounties').data;
 const wards = data.find((t) => t.name === 'station').data;
 
+// School Admin Users Component
+const SchoolAdminUsers: React.FC<{ schoolRoles: any[] }> = ({ schoolRoles }) => {
+  const [users, setUsers] = useState<UserModel[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [form, setForm] = useState({ name: '', email: '', phone: '', gender: '', role: '', password: '' });
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { currentUser } = useRole();
+  const { toast } = useToast();
+
+  const fetchSchoolUsers = async () => {
+    setLoading(true);
+    try {
+      const data = await getUsers();
+      if (Array.isArray(data)) {
+        // Filter users by institution_id
+        const schoolUsers = data.filter(user => user.institution_id === currentUser?.institution_id);
+        setUsers(schoolUsers);
+      } else if (data && typeof data === 'object' && 'users' in data && Array.isArray((data as { users: UserModel[] }).users)) {
+        const schoolUsers = (data as { users: UserModel[] }).users.filter(user => user.institution_id === currentUser?.institution_id);
+        setUsers(schoolUsers);
+      } else {
+        setUsers([]);
+      }
+    } catch (error) {
+      setUsers([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchSchoolUsers();
+  }, [currentUser?.institution_id]);
+
+  const handleOpenModal = () => {
+    setForm({ name: '', email: '', phone: '', gender: '', role: '', password: '' });
+    setError(null);
+    setShowModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setError(null);
+    setForm({ name: '', email: '', phone: '', gender: '', role: '', password: '' });
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    if (name === 'phone') {
+      const numericValue = value.replace(/\D/g, '');
+      setForm({ ...form, [name]: numericValue });
+    } else {
+      setForm({ ...form, [name]: value });
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    setError(null);
+
+    // Validation for phone number
+    if (form.phone && !/^07\d{8}$/.test(form.phone)) {
+      setError('Phone number must be a valid Kenyan number: 10 digits starting with 07');
+      setSubmitting(false);
+      return;
+    }
+
+    try {
+      const createData = {
+        ...form,
+        institution_id: currentUser?.institution_id,
+      };
+      await createUser(createData);
+      toast({
+        title: "Success",
+        description: "User created successfully",
+        variant: "default",
+      });
+      setShowModal(false);
+      fetchSchoolUsers();
+    } catch (err: any) {
+      const errorResponse = err?.response?.data;
+      if (errorResponse?.errors) {
+        const validationErrors = Object.entries(errorResponse.errors)
+          .map(([field, messages]) => `${field}: ${(messages as string[]).join(', ')}`)
+          .join('\n');
+        toast({
+          title: "Validation Error",
+          description: validationErrors,
+          variant: "destructive",
+        });
+        setError(validationErrors);
+      } else {
+        const errorMessage = errorResponse?.message || 'Failed to create user';
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+        });
+        setError(errorMessage);
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const formatRole = (role: string) => {
+    return role.split('_').map(word =>
+      word.charAt(0).toUpperCase() + word.slice(1)
+    ).join(' ');
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'Active':
+        return <Badge className="bg-success text-success-foreground">Active</Badge>;
+      case 'Inactive':
+        return <Badge className="bg-muted text-muted-foreground">Inactive</Badge>;
+      case 'Suspended':
+        return <Badge className="bg-destructive text-destructive-foreground">Suspended</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+
+  return (
+    <>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">School Staff Management</h1>
+            <p className="text-muted-foreground">
+              Manage staff members for {currentUser?.institution?.name || 'your school'}
+            </p>
+          </div>
+          <Button className="bg-primary hover:bg-primary-hover text-primary-foreground" onClick={handleOpenModal}>
+            <User className="h-4 w-4 mr-2" />
+            Add Staff Member
+          </Button>
+        </div>
+
+        {/* Statistics Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 my-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Staff</CardTitle>
+              <User className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{users.length}</div>
+              <p className="text-xs text-muted-foreground">
+                School staff members
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Teachers</CardTitle>
+              <User className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {users.filter(user => user.role === 'teacher').length}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Teaching staff
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Active Staff</CardTitle>
+              <User className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {users.filter(user => user.status === 'Active').length}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Currently active staff
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Modal for creating staff */}
+        {showModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+            <div className="bg-white rounded-lg shadow-lg w-full p-6 relative" style={{ maxWidth: '500px' }}>
+              <button className="absolute top-2 right-2 text-muted-foreground" onClick={handleCloseModal}>
+                <X className="h-5 w-5" />
+              </button>
+              <h2 className="text-xl font-bold mb-4">Add Staff Member</h2>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {/* First Row */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Name <span className="text-destructive">*</span></label>
+                    <Input name="name" value={form.name} onChange={handleChange} required disabled={submitting} />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Email <span className="text-destructive">*</span></label>
+                    <Input name="email" type="email" value={form.email} onChange={handleChange} required disabled={submitting} />
+                  </div>
+                </div>
+
+                {/* Second Row */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1 flex items-center space-x-2">
+                      <Phone className="h-4 w-4" />
+                      <span>Phone Number</span>
+                    </label>
+                    <Input name="phone" value={form.phone} onChange={handleChange} placeholder="e.g., 0712345678" disabled={submitting} />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Gender</label>
+                    <select name="gender" value={form.gender} onChange={handleChange} className="w-full border rounded px-2 py-1" disabled={submitting}>
+                      <option value="">Select gender</option>
+                      <option value="male">Male</option>
+                      <option value="female">Female</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Third Row */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Role <span className="text-destructive">*</span></label>
+                    <select name="role" value={form.role} onChange={handleChange} className="w-full border rounded px-2 py-1" required disabled={submitting}>
+                      <option value="">Select role</option>
+                      {schoolRoles.map(role => (
+                        <option key={role.id} value={role.name}>
+                          {formatRole(role.name)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Password <span className="text-destructive">*</span></label>
+                    <Input name="password" type="password" value={form.password} onChange={handleChange} required disabled={submitting} />
+                  </div>
+                </div>
+
+                {error && <div className="text-destructive text-sm">{error}</div>}
+                <div className="flex justify-end">
+                  <Button type="button" variant="outline" className="mr-2" onClick={handleCloseModal} disabled={submitting}>Cancel</Button>
+                  <Button type="submit" disabled={submitting} className="bg-primary text-primary-foreground">
+                    {submitting ? 'Creating...' : 'Create Staff Member'}
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Staff Table */}
+        <Card>
+          <CardHeader>
+            <CardTitle>School Staff</CardTitle>
+            <CardDescription>
+              View and manage staff members at your school
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Staff Member</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Last Login</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center">Loading...</TableCell>
+                  </TableRow>
+                ) : users.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center">No staff members found.</TableCell>
+                  </TableRow>
+                ) : (
+                  users.map((user) => (
+                    <TableRow key={user.id} className="hover:bg-muted/50">
+                      <TableCell>
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
+                            <User className="h-5 w-5 text-primary-foreground" />
+                          </div>
+                          <div>
+                            <div className="font-semibold">{user.name}</div>
+                            <div className="text-sm text-muted-foreground flex items-center">
+                              <Mail className="h-3 w-3 mr-1" />
+                              {user.email}
+                            </div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className="bg-muted text-muted-foreground">
+                          {formatRole(user.role || '')}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {getStatusBadge(user.status || '')}
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">
+                          {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : '-'}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {user.lastLogin ? new Date(user.lastLogin).toLocaleTimeString() : ''}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
+      <Toaster />
+    </>
+  );
+};
+
 // Utility functions
 function getSubCountiesByCountyId(county_id) {
   return subcounties
@@ -66,6 +399,23 @@ const Users = () => {
   const [openInstitution, setOpenInstitution] = useState(false);
   const { currentUser } = useRole();
   const { toast } = useToast();
+
+  // School-level roles for school admins
+  const schoolRoles = [
+    { id: 1, name: 'deputy_principal' },
+    { id: 2, name: 'head_of_infrastructure' },
+    { id: 3, name: 'accountant' },
+    { id: 4, name: 'librarian' },
+    { id: 5, name: 'laboratory_technician' },
+    { id: 6, name: 'security_guard' },
+    { id: 7, name: 'cleaner' },
+    { id: 8, name: 'teacher' },
+  ];
+
+  // If current user is school admin, show school admin interface
+  if (currentUser?.role === 'school_admin') {
+    return <SchoolAdminUsers schoolRoles={schoolRoles} />;
+  }
 
   const fetchUsers = async () => {
     setLoading(true);
