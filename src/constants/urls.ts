@@ -80,7 +80,7 @@ export const Urls = {
   CREATE_INCIDENT_URL: '/incidents/create',
   GET_INCIDENTS_URL: '/incidents/list',
   GET_INCIDENT_BY_ID_URL: (id: number) => `/incidents/${id}`,
-  UPDATE_INCIDENT_URL: (id: number) => `/incidents/${id}`,
+  UPDATE_INCIDENT_URL: (id: number) => `/incidents/update/{id}`,
   DELETE_INCIDENT_URL: (id: number) => `/incidents/${id}`,
 
   // Roles Management Endpoints

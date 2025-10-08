@@ -421,7 +421,7 @@ const Users = () => {
   const [users, setUsers] = useState<UserModel[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [form, setForm] = useState<CreateUserInput & { subcounty_id?: string; ward_id?: string }>({ name: '', email: '', password: '', phone: '', role: '', county_code: '' });
+  const [form, setForm] = useState<CreateUserInput & { subcounty_ids?: string[]; ward_ids?: string[] }>({ name: '', email: '', password: '', phone: '', role: '', county_code: '', subcounty_ids: [], ward_ids: [] });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [institutions, setInstitutions] = useState<any[]>([]);
@@ -434,6 +434,7 @@ const Users = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [openInstitution, setOpenInstitution] = useState(false);
+  const [institutionSearch, setInstitutionSearch] = useState('');
   const { currentUser } = useRole();
   const { toast } = useToast();
 
@@ -525,14 +526,16 @@ const Users = () => {
     fetchRoles();
   }, []);
 
-  // Fetch wards when subcounty changes
-  useEffect(() => {
-    if (form.subcounty_id) {
-      fetchWards(form.subcounty_id);
-    } else {
-      setWards([]);
-    }
-  }, [form.subcounty_id]);
+  // Fetch wards when subcounties change
+   useEffect(() => {
+     if (form.subcounty_ids && form.subcounty_ids.length > 0) {
+       // For now, fetch wards for the first selected subcounty
+       // In a real implementation, you might want to fetch wards for all selected subcounties
+       fetchWards(form.subcounty_ids[0]);
+     } else {
+       setWards([]);
+     }
+   }, [form.subcounty_ids]);
 
   const formatRole = (role: string) => {
     return role.split('_').map(word => 
@@ -572,7 +575,7 @@ const Users = () => {
   );
 
   const handleOpenModal = () => {
-    setForm({ name: '', email: '', password: '', phone: '', role: '', county_code: '' });
+    setForm({ name: '', email: '', password: '', phone: '', role: '', county_code: '', subcounty_ids: [], ward_ids: [] });
     setError(null);
     setShowModal(true);
 
@@ -587,7 +590,7 @@ const Users = () => {
     setError(null);
     setIsEditing(false);
     setSelectedUser(null);
-    setForm({ name: '', email: '', password: '', phone: '', role: '', county_code: '' });
+    setForm({ name: '', email: '', password: '', phone: '', role: '', county_code: '', subcounty_ids: [], ward_ids: [] });
     setSubcounties([]);
     setWards([]);
   };
@@ -595,9 +598,9 @@ const Users = () => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
 
-    if (name === 'subcounty_id') {
-      // Reset ward when subcounty changes
-      setForm({ ...form, [name]: value, ward_id: '' });
+    if (name === 'subcounty_ids') {
+      // Reset wards when subcounties change
+      setForm({ ...form, [name]: value ? [value] : [], ward_ids: [] });
     } else if (name === 'role') {
       // Reset institution when role changes to non-school_admin
       if (value !== 'school_admin') {
@@ -623,8 +626,8 @@ const Users = () => {
       role: user.role || '',
       gender: user.gender,
       institution_id: user.institution_id,
-      subcounty_id: (user as any).subcounty_id,
-      ward_id: (user as any).ward_id,
+      subcounty_ids: (user as any).subcounty_id ? [(user as any).subcounty_id] : [],
+      ward_ids: (user as any).ward_id ? [(user as any).ward_id] : [],
       county_code: (user as any).county_code || '',
       password: '' // Password is optional for updates
     });
@@ -702,19 +705,8 @@ const Users = () => {
     setSubmitting(true);
     setError(null);
 
-    // Validation for subcounty and ward when current user is agent
-    if (currentUser?.role === 'agent') {
-      if (!form.subcounty_id) {
-        setError('Subcounty is required');
-        setSubmitting(false);
-        return;
-      }
-      if (!form.ward_id) {
-        setError('Ward is required');
-        setSubmitting(false);
-        return;
-      }
-    }
+    // Validation for subcounty and ward when current user is agent (now optional)
+    // No validation needed as they are optional
 
     // Validation for county_code when current user is ministry_admin
     if (currentUser?.role === 'ministry_admin') {
@@ -746,16 +738,16 @@ const Users = () => {
         if (!updateData.password) {
           delete updateData.password;
         }
-        // Map subcounty_id to subcounty name and ward_id to ward name
-        if (updateData.subcounty_id) {
-          const selectedSubcounty = subcounties.find(s => s.id === updateData.subcounty_id);
+        // Map subcounty_ids to subcounty name and ward_ids to ward name (take first if multiple)
+        if (updateData.subcounty_ids && updateData.subcounty_ids.length > 0) {
+          const selectedSubcounty = subcounties.find(s => s.id === updateData.subcounty_ids[0]);
           updateData.subcounty = selectedSubcounty ? selectedSubcounty.name : '';
-          delete updateData.subcounty_id;
+          delete (updateData as any).subcounty_ids;
         }
-        if (updateData.ward_id) {
-          const selectedWard = wards.find(w => w.id === updateData.ward_id);
+        if (updateData.ward_ids && updateData.ward_ids.length > 0) {
+          const selectedWard = wards.find(w => w.id === updateData.ward_ids[0]);
           updateData.ward = selectedWard ? selectedWard.name : '';
-          delete updateData.ward_id;
+          delete (updateData as any).ward_ids;
         }
         await updateUser(selectedUser.id, updateData);
         toast({
@@ -766,16 +758,16 @@ const Users = () => {
       } else {
         // Handle create
         const createData = { ...form };
-        // Map subcounty_id to subcounty name and ward_id to ward name
-        if (createData.subcounty_id) {
-          const selectedSubcounty = subcounties.find(s => s.id === createData.subcounty_id);
+        // Map subcounty_ids to subcounty name and ward_ids to ward name (take first if multiple)
+        if (createData.subcounty_ids && createData.subcounty_ids.length > 0) {
+          const selectedSubcounty = subcounties.find(s => s.id === createData.subcounty_ids[0]);
           createData.subcounty = selectedSubcounty ? selectedSubcounty.name : '';
-          delete createData.subcounty_id;
+          delete (createData as any).subcounty_ids;
         }
-        if (createData.ward_id) {
-          const selectedWard = wards.find(w => w.id === createData.ward_id);
+        if (createData.ward_ids && createData.ward_ids.length > 0) {
+          const selectedWard = wards.find(w => w.id === createData.ward_ids[0]);
           createData.ward = selectedWard ? selectedWard.name : '';
-          delete createData.ward_id;
+          delete (createData as any).ward_ids;
         }
         await createUser(createData);
         toast({
@@ -942,28 +934,48 @@ const Users = () => {
                       </PopoverTrigger>
                       <PopoverContent className="w-full p-0">
                         <Command>
-                          <CommandInput placeholder="Search institutions..." />
+                          <CommandInput
+                            placeholder="Search institutions..."
+                            value={institutionSearch}
+                            onValueChange={setInstitutionSearch}
+                          />
                           <CommandEmpty>No institution found.</CommandEmpty>
                           <CommandGroup>
-                            {institutions.map((inst) => (
-                              <CommandItem
-                                key={inst.id}
-                                value={inst.name}
-                                onSelect={() => {
-                                  setForm({ ...form, institution_id: inst.id });
-                                  setOpenInstitution(false);
-                                }}
-                              >
-                                <Check
-                                  className={cn(
-                                    "mr-2 h-4 w-4",
-                                    form.institution_id === inst.id ? "opacity-100" : "opacity-0"
-                                  )}
-                                />
-                                {inst.name}
-                              </CommandItem>
-                            ))}
+                            {institutions
+                              .sort((a, b) => a.name.localeCompare(b.name))
+                              .filter((inst) =>
+                                institutionSearch === '' ||
+                                inst.name.toLowerCase().includes(institutionSearch.toLowerCase())
+                              )
+                              .slice(0, 10)
+                              .map((inst) => (
+                                <CommandItem
+                                  key={inst.id}
+                                  value={inst.name}
+                                  onSelect={() => {
+                                    setForm({ ...form, institution_id: inst.id });
+                                    setOpenInstitution(false);
+                                    setInstitutionSearch('');
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      form.institution_id === inst.id ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  {inst.name}
+                                </CommandItem>
+                              ))}
                           </CommandGroup>
+                          {institutions.length > 10 && (
+                            <div className="p-2 text-xs text-muted-foreground border-t">
+                              {institutionSearch === ''
+                                // ? "Showing first 10 institutions. Type to search more."
+                                // : `Showing first 10 matches for "${institutionSearch}". Refine search for better results.`
+                              }
+                            </div>
+                          )}
                         </Command>
                       </PopoverContent>
                     </Popover>
@@ -993,20 +1005,60 @@ const Users = () => {
                 {/* Subcounty field for agents */}
                 {currentUser?.role === 'agent' && (
                   <div>
-                    <label className="block text-sm font-medium mb-1">Subcounty <span className="text-destructive">*</span></label>
-                    <select
-                      name="subcounty_id"
-                      value={form.subcounty_id || ''}
-                      onChange={handleChange}
-                      className="w-full border rounded px-2 py-1"
-                      disabled={submitting}
-                      required
-                    >
-                      <option value="">Select subcounty</option>
-                      {subcounties.map(subcounty => (
-                        <option key={subcounty.id} value={subcounty.id}>{subcounty.name}</option>
-                      ))}
-                    </select>
+                    <label className="block text-sm font-medium mb-1">Subcounty (Optional)</label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          className="w-full justify-between"
+                          disabled={submitting}
+                        >
+                          {form.subcounty_ids && form.subcounty_ids.length > 0
+                            ? (() => {
+                                const selectedNames = form.subcounty_ids.map(id => subcounties.find(s => s.id === id)?.name).filter(Boolean);
+                                if (selectedNames.length <= 2) {
+                                  return selectedNames.join(', ');
+                                } else {
+                                  return `${selectedNames.slice(0, 2).join(', ')} and ${selectedNames.length - 2} more`;
+                                }
+                              })()
+                            : "Select subcounties..."}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-full p-0">
+                        <Command>
+                          <CommandInput placeholder="Search subcounties..." />
+                          <CommandEmpty>No subcounty found.</CommandEmpty>
+                          <CommandGroup>
+                            {subcounties.map((subcounty) => {
+                              const isSelected = form.subcounty_ids?.includes(subcounty.id) || false;
+                              return (
+                                <CommandItem
+                                  key={subcounty.id}
+                                  value={subcounty.name}
+                                  onSelect={() => {
+                                    const newValues = isSelected
+                                      ? (form.subcounty_ids?.filter(id => id !== subcounty.id) || [])
+                                      : [...(form.subcounty_ids || []), subcounty.id];
+                                    setForm(prev => ({ ...prev, subcounty_ids: newValues, ward_ids: [] }));
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      isSelected ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  {subcounty.name}
+                                </CommandItem>
+                              );
+                            })}
+                          </CommandGroup>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                   </div>
                 )}
 
@@ -1029,23 +1081,63 @@ const Users = () => {
               </div>
 
               {/* Fifth Row - Ward field for agents (only show if subcounty is selected) */}
-              {currentUser?.role === 'agent' && form.subcounty_id && (
+              {currentUser?.role === 'agent' && form.subcounty_ids && form.subcounty_ids.length > 0 && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium mb-1">Ward <span className="text-destructive">*</span></label>
-                    <select
-                      name="ward_id"
-                      value={form.ward_id || ''}
-                      onChange={handleChange}
-                      className="w-full border rounded px-2 py-1"
-                      disabled={submitting || !form.subcounty_id}
-                      required
-                    >
-                      <option value="">Select ward</option>
-                      {wards.map(ward => (
-                        <option key={ward.id} value={ward.id}>{ward.name}</option>
-                      ))}
-                    </select>
+                    <label className="block text-sm font-medium mb-1">Ward (Optional)</label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          className="w-full justify-between"
+                          disabled={submitting}
+                        >
+                          {form.ward_ids && form.ward_ids.length > 0
+                            ? (() => {
+                                const selectedNames = form.ward_ids.map(id => wards.find(w => w.id === id)?.name).filter(Boolean);
+                                if (selectedNames.length <= 2) {
+                                  return selectedNames.join(', ');
+                                } else {
+                                  return `${selectedNames.slice(0, 2).join(', ')} and ${selectedNames.length - 2} more`;
+                                }
+                              })()
+                            : "Select wards..."}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-full p-0">
+                        <Command>
+                          <CommandInput placeholder="Search wards..." />
+                          <CommandEmpty>No ward found.</CommandEmpty>
+                          <CommandGroup>
+                            {wards.map((ward) => {
+                              const isSelected = form.ward_ids?.includes(ward.id) || false;
+                              return (
+                                <CommandItem
+                                  key={ward.id}
+                                  value={ward.name}
+                                  onSelect={() => {
+                                    const newValues = isSelected
+                                      ? (form.ward_ids?.filter(id => id !== ward.id) || [])
+                                      : [...(form.ward_ids || []), ward.id];
+                                    setForm(prev => ({ ...prev, ward_ids: newValues }));
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      isSelected ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  {ward.name}
+                                </CommandItem>
+                              );
+                            })}
+                          </CommandGroup>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                   </div>
                   {/* Empty div to maintain grid layout */}
                   <div></div>

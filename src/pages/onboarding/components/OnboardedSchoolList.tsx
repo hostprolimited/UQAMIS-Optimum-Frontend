@@ -27,6 +27,9 @@ interface Institution {
   total_students?: number;
   created_at?: string;
   updated_at?: string;
+  total_submitted_assessments?: number;
+  total_entities_for_assessment?: number;
+  assessment_completion_percentage?: string;
 }
 
 const OnboardedSchoolList: React.FC = () => {
@@ -200,17 +203,20 @@ const OnboardedSchoolList: React.FC = () => {
               <TableHead>Type</TableHead>
               <TableHead>Gender</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Total Assessments</TableHead>
+              <TableHead>Total Entities</TableHead>
+              <TableHead>Completion %</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center">Loading...</TableCell>
+                <TableCell colSpan={11} className="text-center">Loading...</TableCell>
               </TableRow>
             ) : sortedInstitutions.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center">No institutions found.</TableCell>
+                <TableCell colSpan={11} className="text-center">No institutions found.</TableCell>
               </TableRow>
             ) : (
               visibleInstitutions.map(inst => (
@@ -228,6 +234,19 @@ const OnboardedSchoolList: React.FC = () => {
                   <TableCell>{inst.type}</TableCell>
                   <TableCell>{inst.gender_based}</TableCell>
                   <TableCell>{inst.status}</TableCell>
+                  <TableCell className="text-center">{inst.total_submitted_assessments || 0}</TableCell>
+                  <TableCell className="text-center">{inst.total_entities_for_assessment || 0}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div
+                          className="bg-blue-600 h-2 rounded-full"
+                          style={{ width: `${parseFloat(inst.assessment_completion_percentage || '0')}%` }}
+                        ></div>
+                      </div>
+                      <span className="text-sm font-medium">{parseFloat(inst.assessment_completion_percentage || '0').toFixed(1)}%</span>
+                    </div>
+                  </TableCell>
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
