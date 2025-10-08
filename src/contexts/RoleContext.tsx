@@ -129,7 +129,7 @@ export const RoleProvider: React.FC<RoleProviderProps> = ({ children }) => {
             'assessment',
             'school_form',
             'entities',
-            'incidents',
+            // 'incidents',
             //'incidents',
             'term_dates',
              //'view_incidents',

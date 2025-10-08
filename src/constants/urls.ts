@@ -82,11 +82,13 @@ export const Urls = {
   GET_INCIDENT_BY_ID_URL: (id: number) => `/incidents/${id}`,
   UPDATE_INCIDENT_URL: (id: number) => `/incidents/${id}`,
   DELETE_INCIDENT_URL: (id: number) => `/incidents/${id}`,
+
   // Roles Management Endpoints
   GET_ROLES_URL: '/roles/list',
   CREATE_ROLE_URL: 'roles/create',
   GET_USER_ROLE: (id: number) => `/users/role/${id}`,
   ASSIGN_USER_ROLE_URL: (id: number) => `/users/assign-role/${id}`,
+  CHANGE_USER_STATUS: (id: number) => `/users/toggle-status/${id}`,
   UPDATE_ROLE_URL: (id: number) => `/update-role/${id}`,
   DELETE_ROLE_URL: (id: number) => `/roles/${id}`,
   

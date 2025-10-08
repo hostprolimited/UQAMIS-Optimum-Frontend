@@ -123,7 +123,7 @@ const OnboardedSchoolList: React.FC = () => {
   };
 
   // Dummy export handlers (replace with real export logic as needed)
-  const handleExport = (type: 'pdf' | 'excel' | 'docs') => {
+  const handleExport = (type: 'pdf' | 'excel') => {
     MySwal.fire('Export', `Exporting as ${type.toUpperCase()} (not implemented)`, 'info');
   };
 
@@ -142,16 +142,23 @@ const OnboardedSchoolList: React.FC = () => {
           <Button className="bg-primary text-primary-foreground flex items-center" onClick={() => navigate('/onboard')}>
             <Plus className="h-4 w-4 mr-1" /> Onboard School
           </Button>
-          <div className="relative">
-            <Button variant="outline" className="flex items-center" id="export-dropdown">
-              <Download className="h-4 w-4 mr-1" /> Export
-            </Button>
-            <div className="absolute right-0 mt-2 w-32 bg-white border rounded shadow z-10 hidden group-hover:block" style={{ minWidth: 120 }}>
-              <button className="block w-full text-left px-4 py-2 hover:bg-muted" onClick={() => handleExport('pdf')}>PDF</button>
-              <button className="block w-full text-left px-4 py-2 hover:bg-muted" onClick={() => handleExport('excel')}>Excel</button>
-              <button className="block w-full text-left px-4 py-2 hover:bg-muted" onClick={() => handleExport('docs')}>Docs</button>
-            </div>
-          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="flex items-center">
+                <Download className="h-4 w-4 mr-1" /> Export
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => handleExport('pdf')}>
+                <Download className="h-4 w-4 mr-2" />
+                Export as PDF
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport('excel')}>
+                <Download className="h-4 w-4 mr-2" />
+                Export as Excel
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 

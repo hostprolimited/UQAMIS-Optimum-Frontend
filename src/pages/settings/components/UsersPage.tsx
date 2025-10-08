@@ -20,6 +20,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
 import { getUsers, createUser, deleteUser, updateUser } from '../core/_requests';
+import { Urls } from '@/constants/urls';
 import { getInstitutions } from '@/pages/onboarding/core/_requests';
 import { getPermissions } from '../core/_requests';
 import { User as UserModel, CreateUserInput } from '../core/_models';
@@ -27,6 +28,7 @@ import { useRole } from '@/contexts/RoleContext';
 import { useToast } from "@/components/ui/use-toast";
 import { Toaster } from "@/components/ui/toaster";
 import data from '@/constants/data.json';
+import api from '@/utils/api';
 
 // Extract counties, subcounties, and wards from JSON
 const counties = data.find((t) => t.name === 'counties').data;
@@ -642,7 +644,7 @@ const Users = () => {
   const handleToggleStatus = async (user: UserModel) => {
     const newStatus = user.status === 'Active' ? 'Inactive' : 'Active';
     try {
-      await updateUser(user.id, { status: newStatus });
+      await api.patch(Urls.CHANGE_USER_STATUS(user.id));
       toast({
         title: "Success",
         description: `User ${newStatus.toLowerCase()}d successfully`,

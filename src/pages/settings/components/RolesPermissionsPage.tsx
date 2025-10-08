@@ -34,6 +34,8 @@ import { User, Role, Permission } from '../core/_models';
 import { useRole } from '@/contexts/RoleContext';
 import { useToast } from "@/components/ui/use-toast";
 import { Toaster } from "@/components/ui/toaster";
+import { Urls } from '@/constants/urls';
+import api from '@/utils/api';
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -181,10 +183,10 @@ const RolesPermissions = () => {
 
   const handleToggleRoleStatus = async (id: number, newStatus: string) => {
     try {
-      await updateRole(id, { status: newStatus });
+      await api.patch(Urls.CHANGE_USER_STATUS(id));
       toast({
         title: "Success",
-        description: `Role ${newStatus.toLowerCase()} successfully`,
+        description: `Role ${newStatus.toLowerCase()}d successfully`,
         variant: "default",
       });
       const permissionsData = await getPermissions();
@@ -193,7 +195,7 @@ const RolesPermissions = () => {
       console.error('Error updating role status:', error);
       toast({
         title: "Error",
-        description: error.message || "Failed to update role status",
+        description: error.response?.data?.message || "Failed to update role status",
         variant: "destructive",
       });
     }
@@ -225,10 +227,10 @@ const RolesPermissions = () => {
 
   const handleTogglePermissionStatus = async (id: number, newStatus: string) => {
     try {
-      await updatePermission(id, { status: newStatus });
+      await api.patch(Urls.CHANGE_USER_STATUS(id));
       toast({
         title: "Success",
-        description: `Permission ${newStatus.toLowerCase()} successfully`,
+        description: `Permission ${newStatus.toLowerCase()}d successfully`,
         variant: "default",
       });
       const permissionsData = await getPermissions();
@@ -237,7 +239,7 @@ const RolesPermissions = () => {
       console.error('Error updating permission status:', error);
       toast({
         title: "Error",
-        description: error.message || "Failed to update permission status",
+        description: error.response?.data?.message || "Failed to update permission status",
         variant: "destructive",
       });
     }
