@@ -596,6 +596,13 @@ const Users = () => {
     if (name === 'subcounty_id') {
       // Reset ward when subcounty changes
       setForm({ ...form, [name]: value, ward_id: '' });
+    } else if (name === 'role') {
+      // Reset institution when role changes to non-school_admin
+      if (value !== 'school_admin') {
+        setForm({ ...form, [name]: value, institution_id: undefined });
+      } else {
+        setForm({ ...form, [name]: value });
+      }
     } else if (name === 'phone') {
       // Allow only digits for phone number
       const numericValue = value.replace(/\D/g, '');
@@ -714,6 +721,13 @@ const Users = () => {
         setSubmitting(false);
         return;
       }
+    }
+
+    // Validation for institution when role is school_admin
+    if (form.role === 'school_admin' && !form.institution_id) {
+      setError('Institution is required when role is School Admin');
+      setSubmitting(false);
+      return;
     }
 
     // Validation for phone number
@@ -906,51 +920,53 @@ const Users = () => {
                   <label className="block text-sm font-medium mb-1">Password <span className="text-destructive">*</span></label>
                   <Input name="password" type="password" value={form.password} onChange={handleChange} required disabled={submitting} />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Institution (School)</label>
-                  <Popover open={openInstitution} onOpenChange={setOpenInstitution}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        aria-expanded={openInstitution}
-                        className="w-full justify-between"
-                        disabled={submitting}
-                      >
-                        {form.institution_id
-                          ? institutions.find((inst) => inst.id === form.institution_id)?.name
-                          : "Select institution..."}
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-full p-0">
-                      <Command>
-                        <CommandInput placeholder="Search institutions..." />
-                        <CommandEmpty>No institution found.</CommandEmpty>
-                        <CommandGroup>
-                          {institutions.map((inst) => (
-                            <CommandItem
-                              key={inst.id}
-                              value={inst.name}
-                              onSelect={() => {
-                                setForm({ ...form, institution_id: inst.id });
-                                setOpenInstitution(false);
-                              }}
-                            >
-                              <Check
-                                className={cn(
-                                  "mr-2 h-4 w-4",
-                                  form.institution_id === inst.id ? "opacity-100" : "opacity-0"
-                                )}
-                              />
-                              {inst.name}
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-                </div>
+                {form.role === 'school_admin' && (
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Institution (School) <span className="text-destructive">*</span></label>
+                    <Popover open={openInstitution} onOpenChange={setOpenInstitution}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={openInstitution}
+                          className="w-full justify-between"
+                          disabled={submitting}
+                        >
+                          {form.institution_id
+                            ? institutions.find((inst) => inst.id === form.institution_id)?.name
+                            : "Select institution..."}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-full p-0">
+                        <Command>
+                          <CommandInput placeholder="Search institutions..." />
+                          <CommandEmpty>No institution found.</CommandEmpty>
+                          <CommandGroup>
+                            {institutions.map((inst) => (
+                              <CommandItem
+                                key={inst.id}
+                                value={inst.name}
+                                onSelect={() => {
+                                  setForm({ ...form, institution_id: inst.id });
+                                  setOpenInstitution(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    form.institution_id === inst.id ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                {inst.name}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                )}
               </div>
 
               {/* Fourth Row */}

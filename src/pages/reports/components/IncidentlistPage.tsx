@@ -19,8 +19,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Search, AlertTriangle, Clock, CheckCircle, User, MoreHorizontal, Edit } from 'lucide-react';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Search, AlertTriangle, Clock, CheckCircle, User, MoreHorizontal, Edit, Trash2, X } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { getIncidents, updateIncident } from '../core/requests';
 import { Incident, IncidentListResponse } from '../core/_models';
 import { useRole } from '@/contexts/RoleContext';
@@ -65,6 +65,10 @@ function getComparator(
             aValue = a.facility.name;
             bValue = b.facility.name;
             break;
+          case 'description':
+            aValue = a.incident_description;
+            bValue = b.incident_description;
+            break;
           case 'schoolName':
             aValue = a.institution.name;
             bValue = b.institution.name;
@@ -93,6 +97,10 @@ function getComparator(
           case 'facility':
             aValue = a.facility.name;
             bValue = b.facility.name;
+            break;
+          case 'description':
+            aValue = a.incident_description;
+            bValue = b.incident_description;
             break;
           case 'schoolName':
             aValue = a.institution.name;
@@ -131,6 +139,13 @@ const headCells: readonly HeadCell[] = [
     numeric: false,
     disablePadding: false,
     label: 'Facility',
+    width: '15%',
+  },
+  {
+    id: 'description',
+    numeric: false,
+    disablePadding: false,
+    label: 'Description',
     width: '20%',
   },
   {
@@ -138,7 +153,7 @@ const headCells: readonly HeadCell[] = [
     numeric: false,
     disablePadding: false,
     label: 'School Name',
-    width: '25%',
+    width: '20%',
   },
   {
     id: 'time',
@@ -287,6 +302,13 @@ const IncidentListPage = () => {
   const [searchTerm, setSearchTerm] = React.useState<string>('');
   const [severityFilter, setSeverityFilter] = React.useState<string>('all');
   const [updatingIncident, setUpdatingIncident] = React.useState<string | null>(null);
+  const [editingIncident, setEditingIncident] = React.useState<Incident | null>(null);
+  const [showEditModal, setShowEditModal] = React.useState(false);
+  const [editForm, setEditForm] = React.useState({
+    incident_description: '',
+    severity_level: '',
+    facility_id: ''
+  });
 
   // Fetch incidents from API
   React.useEffect(() => {
@@ -327,6 +349,74 @@ const IncidentListPage = () => {
         description: 'Incident severity updated successfully.',
         variant: 'default',
       });
+
+      // Refresh incidents list
+      const response: IncidentListResponse = await getIncidents();
+      setIncidents(response.incidents.data);
+    } catch (error: any) {
+      console.error('Error updating incident:', error);
+      toast({
+        title: 'Error',
+        description: error?.response?.data?.message || 'Failed to update incident.',
+        variant: 'destructive',
+      });
+    } finally {
+      setUpdatingIncident(null);
+    }
+  };
+
+  // Handle edit incident
+  const handleEditIncident = (incident: Incident) => {
+    setEditingIncident(incident);
+    setEditForm({
+      incident_description: incident.incident_description,
+      severity_level: incident.severity_level,
+      facility_id: incident.facility.id.toString()
+    });
+    setShowEditModal(true);
+  };
+
+  // Handle delete incident
+  const handleDeleteIncident = async (incidentId: number) => {
+    if (window.confirm('Are you sure you want to delete this incident? This action cannot be undone.')) {
+      try {
+        // Note: Assuming there's a deleteIncident function, if not, this will need to be implemented
+        toast({
+          title: 'Feature Coming Soon',
+          description: 'Delete incident functionality will be available soon.',
+          variant: 'default',
+        });
+      } catch (error: any) {
+        console.error('Error deleting incident:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to delete incident.',
+          variant: 'destructive',
+        });
+      }
+    }
+  };
+
+  // Handle update incident
+  const handleUpdateIncident = async () => {
+    if (!editingIncident) return;
+
+    try {
+      setUpdatingIncident(editingIncident.id.toString());
+      await updateIncident(editingIncident.id, {
+        incident_description: editForm.incident_description,
+        severity_level: editForm.severity_level,
+        facility_id: editForm.facility_id
+      });
+
+      toast({
+        title: 'Success',
+        description: 'Incident updated successfully.',
+        variant: 'default',
+      });
+
+      setShowEditModal(false);
+      setEditingIncident(null);
 
       // Refresh incidents list
       const response: IncidentListResponse = await getIncidents();
@@ -449,7 +539,7 @@ const IncidentListPage = () => {
                   <TableBody>
                     {loading ? (
                       <TableRow>
-                        <TableCell colSpan={filteredHeadCells.length} align="center" className="py-10">
+                        <TableCell colSpan={6} align="center" className="py-10">
                           <div className="flex justify-center items-center space-x-2">
                             <svg className="animate-spin h-5 w-5 text-primary" viewBox="0 0 24 24">
                               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -461,7 +551,7 @@ const IncidentListPage = () => {
                       </TableRow>
                     ) : visibleRows.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={filteredHeadCells.length} align="center" className="py-10">
+                        <TableCell colSpan={6} align="center" className="py-10">
                           <div className="flex flex-col items-center space-y-2 text-muted-foreground">
                             <AlertTriangle className="h-8 w-8" />
                             <p className="font-medium">No incidents found</p>
@@ -476,21 +566,19 @@ const IncidentListPage = () => {
                           key={row.id}
                           sx={{ cursor: 'pointer', '&:hover': { backgroundColor: alpha('#f5f5f5', 0.7) } }}
                         >
-                          <TableCell sx={{ width: '20%' }}>
+                          <TableCell sx={{ width: '15%' }}>
                             <div className="font-medium">{row.facility.name}</div>
-                            <div className="text-sm text-muted-foreground">
-                              {row.incident_description.length > 50
-                                ? `${row.incident_description.substring(0, 50)}...`
+                          </TableCell>
+                          <TableCell sx={{ width: '20%' }}>
+                            <div className="text-sm">
+                              {row.incident_description.length > 80
+                                ? `${row.incident_description.substring(0, 80)}...`
                                 : row.incident_description}
                             </div>
                           </TableCell>
                           {(currentUser?.role === 'agent' || currentUser?.role === 'ministry_admin') && (
-                            <TableCell sx={{ width: '25%' }}>
+                            <TableCell sx={{ width: '20%' }}>
                               <div className="font-medium">{row.institution.name}</div>
-                              <div className="text-sm text-muted-foreground flex items-center">
-                                <User className="h-3 w-3 mr-1" />
-                                {row.submitted_by.name}
-                              </div>
                             </TableCell>
                           )}
                           <TableCell sx={{ width: '15%' }}>
@@ -515,28 +603,18 @@ const IncidentListPage = () => {
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" className="w-40">
                                 <DropdownMenuItem
-                                  onClick={() => handleUpdateIncidentStatus(row.id, 'low')}
-                                  disabled={updatingIncident === row.id.toString() || row.severity_level === 'low'}
+                                  onClick={() => handleEditIncident(row)}
+                                  className="text-blue-600"
                                 >
-                                  Set Low Priority
+                                  <Edit className="h-4 w-4 mr-2" />
+                                  Edit Incident
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
-                                  onClick={() => handleUpdateIncidentStatus(row.id, 'medium')}
-                                  disabled={updatingIncident === row.id.toString() || row.severity_level === 'medium'}
+                                  onClick={() => handleDeleteIncident(row.id)}
+                                  className="text-red-600"
                                 >
-                                  Set Medium Priority
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => handleUpdateIncidentStatus(row.id, 'high')}
-                                  disabled={updatingIncident === row.id.toString() || row.severity_level === 'high'}
-                                >
-                                  Set High Priority
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => handleUpdateIncidentStatus(row.id, 'critical')}
-                                  disabled={updatingIncident === row.id.toString() || row.severity_level === 'critical'}
-                                >
-                                  Set Critical Priority
+                                  <X className="h-4 w-4 mr-2" />
+                                  Delete Incident
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
@@ -546,7 +624,7 @@ const IncidentListPage = () => {
                     )}
                     {emptyRows > 0 && !loading && (
                       <TableRow style={{ height: 53 * emptyRows }}>
-                        <TableCell colSpan={filteredHeadCells.length} />
+                        <TableCell colSpan={6} />
                       </TableRow>
                     )}
                   </TableBody>
@@ -565,6 +643,62 @@ const IncidentListPage = () => {
           </Box>
         </CardContent>
       </Card>
+
+      {/* Edit Incident Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-lg shadow-lg w-full p-6 relative" style={{ maxWidth: '500px' }}>
+            <button className="absolute top-2 right-2 text-muted-foreground" onClick={() => setShowEditModal(false)}>
+              <X className="h-5 w-5" />
+            </button>
+            <h2 className="text-xl font-bold mb-4">Edit Incident</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Description</label>
+                <textarea
+                  value={editForm.incident_description}
+                  onChange={(e) => setEditForm({ ...editForm, incident_description: e.target.value })}
+                  placeholder="Describe the incident..."
+                  className="w-full border rounded px-3 py-2 min-h-[80px] resize-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Severity Level</label>
+                <select
+                  value={editForm.severity_level}
+                  onChange={(e) => setEditForm({ ...editForm, severity_level: e.target.value })}
+                  className="w-full border rounded px-3 py-2"
+                >
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                  <option value="critical">Critical</option>
+                </select>
+              </div>
+
+              <div className="flex gap-2 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowEditModal(false)}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleUpdateIncident}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700"
+                  disabled={updatingIncident === editingIncident?.id.toString()}
+                >
+                  {updatingIncident === editingIncident?.id.toString() ? 'Updating...' : 'Update Incident'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
