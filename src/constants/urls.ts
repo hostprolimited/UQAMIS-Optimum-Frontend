@@ -38,15 +38,22 @@ export const Urls = {
   UPDATE_MAINTENANCE_REPORT_URL: (id: number) => `/maintenance/${id}`,
   DELETE_MAINTENANCE_REPORT_URL: (id: number) => `/maintenance/${id}`,
   MAINTENANCE_ASSESSMENT: '/maintenance/create',
-  AGENT_REVIEW_MAINTENANCE_ASSESSMENT: (id: number) => `/maintenance/review/${id}`,
+  
 
-  //safety Endpoints
+  // Assessment Review
+  AGENT_REVIEW_MAINTENANCE_ASSESSMENT: (id: number) => `/maintenance/review/${id}`,
+  AGENT_REVIEW_SAFETY_ASSESSMENT: (id: number) => `/safety/review/${id}`,
+  UPDATE_REVIEW_STATUS: (id: number) => `/maintenance/assessment/${id}`,
+  GOOGLE_PLACES_AUTOCOMPLETE: '/institutions/google-places/autocomplete',
+  GOOGLE_PLACES_DETAILS: '/institutions/google-places/details',
+
+  // Safety Endpoints
   CREATE_SAFETY_REPORT_URL: '/safety/create',
   GET_SAFETY_REPORT_URL: '/safety/list',
   GET_SAFETY_REPORT_BY_ID_URL: (id: number) => `/safety/${id}`,
   UPDATE_SAFETY_REPORT_URL: (id: number) => `/safety/${id}`,
   DELETE_SAFETY_REPORT_URL: (id: number) => `/safety/${id}`,
-  AGENT_REVIEW_SAFETY_ASSESSMENT: (id: number) => `/safety/review/${id}`,
+  
 
   // Termly Dates Endpoints
   CREATE_TERM_DATES_URL: '/settings/term-dates/create',

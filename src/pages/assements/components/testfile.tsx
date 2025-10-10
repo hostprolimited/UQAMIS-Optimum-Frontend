@@ -1,696 +1,711 @@
-// import React, { useState, useEffect } from 'react';
-// import { Plus, X } from 'lucide-react';
-// import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-// import { Input } from '@/components/ui/input';
-// import { Textarea } from '@/components/ui/textarea';
-// import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-// import { Button } from '@/components/ui/button';
-// import { Label } from '@/components/ui/label';
-// import { useToast } from '@/hooks/use-toast';
-// import { getFacilities } from '../../assements/core/_request';
-// import { Facility } from '../../assements/core/_model';
-// import { createSchoolEntities } from '../core/_requests';
-// import { entitiesData } from '../core/_models';
+// import React, { useEffect, useState } from "react";
+// import { useParams, useNavigate } from "react-router-dom";
+// import Swal from "sweetalert2";
+// import withReactContent from "sweetalert2-react-content";
+// import { ArrowLeft, FileText, Building2, AlertTriangle, CheckCircle, Clock, MoreHorizontal, Edit, Trash2 } from "lucide-react";
+// import { ColumnDef } from "@tanstack/react-table";
 
-// const FacilityAddPage = () => {
+// import { Button } from "@/components/ui/button";
+// import { Badge } from "@/components/ui/badge";
+// import {
+//   Dialog,
+//   DialogTrigger,
+//   DialogContent,
+//   DialogHeader,
+//   DialogFooter,
+//   DialogTitle,
+//   DialogDescription,
+// } from "@/components/ui/dialog";
+// import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+// import { Label } from "@/components/ui/label";
+// import { Textarea } from "@/components/ui/textarea";
+// import { Input } from "@/components/ui/input";
+// import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+// import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+// import { DataTable } from "@/components/ui/data-table";
+// import { useToast } from "@/hooks/use-toast";
+
+// import { getMaintenanceReports, agentReviewMaintenanceReport, getFacilities, getSafetyReports, agentReviewSafetyReport, updateAssessment, deleteAssessment } from "../core/_request";
+// import { Facility } from "../core/_model";
+
+// // --- Types ---
+// interface AssessmentDetail {
+//   part_of_building: string;
+//   assessment_status: string;
+//   score?: number;
+// }
+
+// interface FacilityAssessment {
+//   id: string;
+//   institutionName: string;
+//   facilityType: string;
+//   entity: string[];
+//   assessmentDate: string;
+//   urgentItems: number;
+//   attentionItems: number;
+//   goodItems: number;
+//   totalItems: number;
+//   averageCondition: "excellent" | "good" | "needs-attention" | "urgent_attention";
+//   completionStatus: "completed" | "in-progress" | "pending";
+//   status: string;
+//   agent_feedback?: string;
+//   school_feedback?: string;
+//   totalScorePercentage?: number;
+//   created_at?: string;
+//   details?: AssessmentDetail[];
+// }
+
+// // Mapping helper
+// const mapMaintenanceReport = (report: any, facilityIdToName: Record<string, string>): FacilityAssessment => ({
+//   id: report.id?.toString() ?? "",
+//   institutionName: report.institution_name || report.school_name || "School",
+//   entity: report.entity ? JSON.parse(report.entity) : [],
+//   facilityType: facilityIdToName[report.facility_id?.toString()] || report.facility_type || report.facility_id?.toString() || "",
+//   assessmentDate: report.assessment_date ?? report.date ?? "",
+//   urgentItems: report.urgent_items ?? 0,
+//   attentionItems: report.attention_items ?? 0,
+//   goodItems: report.good_items ?? 0,
+//   totalItems: report.total_items ?? 0,
+//   averageCondition: report.average_condition ?? "good",
+//   completionStatus: report.completion_status ?? "pending",
+//   status: report.status ?? "pending",
+//   agent_feedback: report.agent_feedback,
+//   school_feedback: report.school_feedback,
+//   totalScorePercentage: report.total_score_percentage,
+//   created_at: report.created_at,
+//   details: report.details ?? [],
+// });
+
+// const AssessmentViewPage: React.FC = () => {
+//   const { id } = useParams<{ id: string }>();
+//   const navigate = useNavigate();
 //   const { toast } = useToast();
-//   const [facilities, setFacilities] = useState<Facility[]>([]);
-//   const [selectedFacility, setSelectedFacility] = useState('');
-//   const [classrooms, setClassrooms] = useState([{ grade: '', stream: '', numberOfClasses: '' as number | '' }]);
-//   const [laboratories, setLaboratories] = useState([{ labType: '', numberOfLaboratories: '' as number | '' }]);
-//   const [toilets, setToilets] = useState([{ toiletType: '', numberOfToilets: '' as number | '' }]);
-//   const [dormitories, setDormitories] = useState([{ names: '', numberOfDormitories: '' as number | '' }]);
-//   const [diningHalls, setDiningHalls] = useState([{ names: '', numberOfDiningHalls: '' as number | '' }]);
-//   const [compounds, setCompounds] = useState([{ areas: '', numberOfCompounds: '' as number | '' }]);
-//   const [offices, setOffices] = useState([{ names: '', numberOfOffices: '' as number | '' }]);
 
+//   const [assessment, setAssessment] = useState<FacilityAssessment | null>(null);
+//   const [allAssessments, setAllAssessments] = useState<FacilityAssessment[]>([]);
+//   const [safetyAssessments, setSafetyAssessments] = useState<FacilityAssessment[]>([]);
+//   const [facilityIdToName, setFacilityIdToName] = useState<Record<string, string>>({});
+//   const [loading, setLoading] = useState(true);
+//   const [assessmentType, setAssessmentType] = useState<'maintenance' | 'safety' | ''>('');
+//   const [selectedFacility, setSelectedFacility] = useState<string>('');
+//   const [selectedEntity, setSelectedEntity] = useState<string>('');
+//   const [selectedAssessment, setSelectedAssessment] = useState<FacilityAssessment | null>(null);
+
+//   // Review modal
+//   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+//   const [reviewForm, setReviewForm] = useState({
+//     status: '',
+//     priority: '',
+//     remarks: '',
+//     recommendedAction: '',
+//   });
+
+//   // Edit modal
+//   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+//   const [editingDetail, setEditingDetail] = useState<AssessmentDetail | null>(null);
+//   const [editForm, setEditForm] = useState({
+//     part_of_building: '',
+//     assessment_status: '',
+//   });
+
+//   const MySwal = withReactContent(Swal);
+
+//   // Fetch assessment and facilities
 //   useEffect(() => {
-//     const fetchFacilities = async () => {
+//     const fetchData = async () => {
 //       try {
-//         const response = await getFacilities();
-//         setFacilities(response.data || []);
+//         setLoading(true);
+
+//         // Fetch facilities for mapping
+//         const facilitiesRes = await getFacilities();
+//         const facilities: Facility[] = facilitiesRes?.data || [];
+//         const idToName = facilities.reduce((acc, f) => {
+//           acc[f.id.toString()] = f.name;
+//           return acc;
+//         }, {} as Record<string, string>);
+//         setFacilityIdToName(idToName);
+
+//         // Fetch assessments and find the one for this institution
+//         if (id) {
+//           // Fetch maintenance
+//           const maintenanceRes = await getMaintenanceReports();
+//           const maintenanceData = maintenanceRes?.data || [];
+//           const institutionMaintenance = maintenanceData.filter((report: any) => report.institution_id == parseInt(id));
+//           const mappedMaintenance = institutionMaintenance.map(report => mapMaintenanceReport(report, idToName));
+//           setAllAssessments(mappedMaintenance);
+
+//           // Fetch safety
+//           const safetyRes = await getSafetyReports();
+//           const safetyData = safetyRes?.data || [];
+//           const institutionSafety = safetyData.filter((report: any) => report.institution_id == parseInt(id));
+//           const mappedSafety = institutionSafety.map(report => mapMaintenanceReport(report, idToName));
+//           setSafetyAssessments(mappedSafety);
+
+//           // Take the most recent maintenance assessment for cards
+//           if (mappedMaintenance.length > 0) {
+//             const latestAssessment = mappedMaintenance.sort((a, b) =>
+//               new Date(b.created_at || b.assessmentDate).getTime() - new Date(a.created_at || a.assessmentDate).getTime()
+//             )[0];
+//             setAssessment(latestAssessment);
+//           }
+//         }
 //       } catch (error) {
-//         console.error('Error fetching facilities:', error);
-//         setFacilities([]);
+//         toast({ title: "Error", description: "Failed to load assessment", variant: "destructive" });
+//       } finally {
+//         setLoading(false);
 //       }
 //     };
-//     fetchFacilities();
-//   }, []);
 
-//   // Functions to manage multiple entries
-//   const addClassroom = () => setClassrooms([...classrooms, { grade: '', stream: '', numberOfClasses: '' }]);
-//   const removeClassroom = (index: number) => setClassrooms(classrooms.filter((_, i) => i !== index));
-//   const updateClassroom = (index: number, field: string, value: any) => {
-//     const updated = [...classrooms];
-//     updated[index] = { ...updated[index], [field]: value };
-//     setClassrooms(updated);
+//     fetchData();
+//   }, [id, toast]);
+
+//   useEffect(() => {
+//     setSelectedFacility('');
+//     setSelectedEntity('');
+//     setSelectedAssessment(null);
+//   }, [assessmentType]);
+
+//   useEffect(() => {
+//     if (assessmentType && selectedFacility && selectedEntity) {
+//       const assessments = assessmentType === 'maintenance' ? allAssessments : safetyAssessments;
+//       const ass = assessments.find(a => a.facilityType === selectedFacility && a.entity.includes(selectedEntity));
+//       setSelectedAssessment(ass || null);
+//     } else {
+//       setSelectedAssessment(null);
+//     }
+//   }, [assessmentType, selectedFacility, selectedEntity, allAssessments, safetyAssessments]);
+
+//   // Helpers for badges
+//   function getAverageConditionBadge(condition?: FacilityAssessment["averageCondition"]) {
+//     const conditionConfig: Record<string, { label: string; className: string }> = {
+//       excellent: { label: "Excellent", className: "bg-green-100 text-green-800" },
+//       good: { label: "Good", className: "bg-blue-100 text-blue-800" },
+//       attention: { label: "Needs Attention", className: "bg-yellow-100 text-yellow-800" },
+//       urgent_attention: { label: "Critical", className: "bg-red-100 text-red-800" },
+//     };
+//     if (!condition) return <Badge className="bg-gray-100 text-gray-800">-</Badge>;
+//     const config = conditionConfig[condition];
+//     if (!config) return <Badge className="bg-gray-100 text-gray-800">Unknown</Badge>;
+//     return <Badge className={config.className}>{config.label}</Badge>;
+//   }
+
+//   function getStatusBadge(status?: string) {
+//     const statusConfig: Record<string, { label: string; className: string }> = {
+//       pending: { label: "Pending", className: "bg-gray-100 text-gray-800" },
+//       reviewed: { label: "Reviewed", className: "bg-blue-100 text-blue-800" },
+//       approved: { label: "Approved", className: "bg-green-100 text-green-800" },
+//       rejected: { label: "Rejected", className: "bg-red-100 text-red-800" },
+//     };
+//     if (!status) return <Badge className="bg-gray-100 text-gray-800">-</Badge>;
+//     const config = statusConfig[status];
+//     if (!config) return <Badge className="bg-gray-100 text-gray-800">{status}</Badge>;
+//     return <Badge className={config.className}>{config.label}</Badge>;
+//   }
+
+//   // Review actions
+//   const handleReview = () => {
+//     setReviewForm({ status: '', priority: '', remarks: '', recommendedAction: '' });
+//     setIsReviewModalOpen(true);
 //   };
 
-//   const addLaboratory = () => setLaboratories([...laboratories, { labType: '', numberOfLaboratories: '' }]);
-//   const removeLaboratory = (index: number) => setLaboratories(laboratories.filter((_, i) => i !== index));
-//   const updateLaboratory = (index: number, field: string, value: any) => {
-//     const updated = [...laboratories];
-//     updated[index] = { ...updated[index], [field]: value };
-//     setLaboratories(updated);
+//   // Edit actions
+//   const handleEditDetail = (detail: AssessmentDetail) => {
+//     setEditingDetail(detail);
+//     setEditForm({
+//       part_of_building: detail.part_of_building,
+//       assessment_status: detail.assessment_status,
+//     });
+//     setIsEditModalOpen(true);
 //   };
 
-//   const addToilet = () => setToilets([...toilets, { toiletType: '', numberOfToilets: '' }]);
-//   const removeToilet = (index: number) => setToilets(toilets.filter((_, i) => i !== index));
-//   const updateToilet = (index: number, field: string, value: any) => {
-//     const updated = [...toilets];
-//     updated[index] = { ...updated[index], [field]: value };
-//     setToilets(updated);
-//   };
+//   const handleEditSubmit = async () => {
+//     if (!editingDetail || !selectedAssessment) return;
 
-//   const addDormitory = () => setDormitories([...dormitories, { names: '', numberOfDormitories: '' }]);
-//   const removeDormitory = (index: number) => setDormitories(dormitories.filter((_, i) => i !== index));
-//   const updateDormitory = (index: number, field: string, value: any) => {
-//     const updated = [...dormitories];
-//     updated[index] = { ...updated[index], [field]: value };
-//     setDormitories(updated);
-//   };
-
-//   const addDiningHall = () => setDiningHalls([...diningHalls, { names: '', numberOfDiningHalls: '' }]);
-//   const removeDiningHall = (index: number) => setDiningHalls(diningHalls.filter((_, i) => i !== index));
-//   const updateDiningHall = (index: number, field: string, value: any) => {
-//     const updated = [...diningHalls];
-//     updated[index] = { ...updated[index], [field]: value };
-//     setDiningHalls(updated);
-//   };
-
-//   const addCompound = () => setCompounds([...compounds, { areas: '', numberOfCompounds: '' }]);
-//   const removeCompound = (index: number) => setCompounds(compounds.filter((_, i) => i !== index));
-//   const updateCompound = (index: number, field: string, value: any) => {
-//     const updated = [...compounds];
-//     updated[index] = { ...updated[index], [field]: value };
-//     setCompounds(updated);
-//   };
-
-//   const addOffice = () => setOffices([...offices, { names: '', numberOfOffices: '' }]);
-//   const removeOffice = (index: number) => setOffices(offices.filter((_, i) => i !== index));
-//   const updateOffice = (index: number, field: string, value: any) => {
-//     const updated = [...offices];
-//     updated[index] = { ...updated[index], [field]: value };
-//     setOffices(updated);
-//   };
-
-//   const handleSubmit = async () => {
 //     try {
-//       // Find the selected facility ID
-//       const selectedFacilityData = facilities.find(f => f.name === selectedFacility);
-//       if (!selectedFacilityData) {
-//         console.error('Selected facility not found');
-//         return;
-//       }
+//       // Update the details array
+//       const updatedDetails = selectedAssessment.details?.map(d =>
+//         d.part_of_building === editingDetail.part_of_building
+//           ? { ...d, part_of_building: editForm.part_of_building, assessment_status: editForm.assessment_status }
+//           : d
+//       ) || [];
 
-//       const facilityId = selectedFacilityData.id;
-//       let entities: entitiesData['entities'] = [];
-
-//       // Transform data based on facility type
-//       if (selectedFacility.toLowerCase().includes('classroom')) {
-//         entities = classrooms
-//           .filter(classroom => classroom.grade && classroom.stream && classroom.numberOfClasses)
-//           .map(classroom => ({
-//             grade: classroom.grade,
-//             stream: classroom.stream,
-//             total: classroom.numberOfClasses as number
-//           }));
-//       } else if (selectedFacility.toLowerCase().includes('laboratory') || selectedFacility.toLowerCase().includes('lab')) {
-//         entities = laboratories
-//           .filter(lab => lab.labType && lab.numberOfLaboratories)
-//           .map(lab => ({
-//             name: lab.labType,
-//             total: lab.numberOfLaboratories as number
-//           }));
-//       } else if (selectedFacility.toLowerCase().includes('toilet')) {
-//         entities = toilets
-//           .filter(toilet => toilet.toiletType && toilet.numberOfToilets)
-//           .map(toilet => ({
-//             name: toilet.toiletType,
-//             total: toilet.numberOfToilets as number
-//           }));
-//       } else if (selectedFacility.toLowerCase().includes('dormitory') || selectedFacility.toLowerCase().includes('dorm')) {
-//         entities = dormitories
-//           .filter(dorm => dorm.names && dorm.numberOfDormitories)
-//           .map(dorm => ({
-//             name: dorm.names,
-//             total: dorm.numberOfDormitories as number
-//           }));
-//       } else if (selectedFacility.toLowerCase().includes('dining')) {
-//         entities = diningHalls
-//           .filter(dining => dining.names && dining.numberOfDiningHalls)
-//           .map(dining => ({
-//             name: dining.names,
-//             total: dining.numberOfDiningHalls as number
-//           }));
-//       } else if (selectedFacility.toLowerCase().includes('compound')) {
-//         entities = compounds
-//           .filter(compound => compound.areas && compound.numberOfCompounds)
-//           .map(compound => ({
-//             name: compound.areas,
-//             total: compound.numberOfCompounds as number
-//           }));
-//       } else if (selectedFacility.toLowerCase().includes('office')) {
-//         entities = offices
-//           .filter(office => office.names && office.numberOfOffices)
-//           .map(office => ({
-//             name: office.names,
-//             total: office.numberOfOffices as number
-//           }));
-//       }
-
-//       if (entities.length === 0) {
-//         console.error('No valid entities to submit');
-//         return;
-//       }
-
-//       const payload: entitiesData = {
-//         facility_id: facilityId,
-//         entities: entities
-//       };
-
-//       console.log('Submitting payload:', payload);
-
-//       const response = await createSchoolEntities(payload);
-//       console.log('API Response:', response);
-
-//       // Show success toast
-//       toast({
-//         title: 'Success',
-//         description: `Entities for ${selectedFacility} have been created successfully!`,
-//         variant: 'default',
+//       await updateAssessment(parseInt(selectedAssessment.id), {
+//         status: selectedAssessment.status as any,
+//         school_feedback: selectedAssessment.school_feedback || '',
+//         agent_feedback: selectedAssessment.agent_feedback || '',
+//         entity: selectedAssessment.entity,
+//         details: updatedDetails.map(d => ({
+//           part_of_building: d.part_of_building,
+//           assessment_status: d.assessment_status as any,
+//         })),
 //       });
 
-//       // Reset form after successful submission
-//       setSelectedFacility('');
-//       setClassrooms([{ grade: '', stream: '', numberOfClasses: '' }]);
-//       setLaboratories([{ labType: '', numberOfLaboratories: '' }]);
-//       setToilets([{ toiletType: '', numberOfToilets: '' }]);
-//       setDormitories([{ names: '', numberOfDormitories: '' }]);
-//       setDiningHalls([{ names: '', numberOfDiningHalls: '' }]);
-//       setCompounds([{ areas: '', numberOfCompounds: '' }]);
-//       setOffices([{ names: '', numberOfOffices: '' }]);
-
-//     } catch (error: any) {
-//       console.error('Error submitting entities:', error);
-
-//       // Show error toast
-//       toast({
-//         title: 'Error',
-//         description: error?.response?.data?.message || 'Failed to create entities. Please try again.',
-//         variant: 'destructive',
-//       });
+//       toast({ title: "Success", description: "Detail updated successfully" });
+//       setIsEditModalOpen(false);
+//       // Refresh data
+//       window.location.reload();
+//     } catch (error) {
+//       toast({ title: "Error", description: "Failed to update detail", variant: "destructive" });
 //     }
 //   };
 
-//   return (
-//     <div className="container mx-auto p-4 bg-white">
-//       <Card className="w-full max-w-lg shadow-lg border-0 mx-auto">
-//         <CardHeader className="text-center">
-//           <CardTitle className="text-2xl font-bold text-gray-800">Add Entities</CardTitle>
-//           <p className="text-sm text-gray-600">Enter the details for the new facility</p>
-//         </CardHeader>
-//         <CardContent className="space-y-6">
-//           <div className="space-y-2">
-//             <Label htmlFor="facility" className="text-sm font-medium text-gray-700">
-//               Facility
-//             </Label>
-//             <Select value={selectedFacility} onValueChange={setSelectedFacility}>
-//               <SelectTrigger className="w-full">
-//                 <SelectValue placeholder="Select a facility" />
-//               </SelectTrigger>
-//               <SelectContent>
-//                 {facilities.map((facility) => (
-//                   <SelectItem key={facility.id} value={facility.name}>
-//                     {facility.name}
-//                   </SelectItem>
-//                 ))}
-//               </SelectContent>
-//             </Select>
-//             <p className="text-xs text-gray-500">
-//               Select the facility type to add specific details
-//             </p>
-//           </div>
+//   const handleDeleteAssessment = async (id: string) => {
+//     if (!window.confirm('Are you sure you want to delete this assessment?')) return;
 
-//           {/* Conditional fields based on facility type */}
-//           {selectedFacility.toLowerCase().includes('classroom') && (
-//             <div className="space-y-4">
-//               <div className="flex items-center justify-between">
-//                 <Label className="text-sm font-medium text-gray-700">Classrooms</Label>
-//                 <Button type="button" onClick={addClassroom} variant="outline" size="sm">
-//                   <Plus className="h-4 w-4 mr-1" /> Add Classroom
-//                 </Button>
-//               </div>
-//               {classrooms.map((classroom, index) => (
-//                 <div key={index} className="border rounded-lg p-4 space-y-4">
-//                   <div className="flex items-center justify-between">
-//                     <h4 className="text-sm font-medium">Classroom {index + 1}</h4>
-//                     {classrooms.length > 1 && (
-//                       <Button
-//                         type="button"
-//                         onClick={() => removeClassroom(index)}
-//                         variant="ghost"
-//                         size="sm"
-//                         className="text-red-500 hover:text-red-700"
-//                       >
-//                         <X className="h-4 w-4" />
-//                       </Button>
-//                     )}
-//                   </div>
-//                   <div className="grid grid-cols-2 gap-4">
-//                     <div className="space-y-2">
-//                       <Label className="text-sm font-medium text-gray-700">
-//                         Grade
-//                       </Label>
-//                       <Select
-//                         value={classroom.grade}
-//                         onValueChange={(value) => updateClassroom(index, 'grade', value)}
-//                       >
-//                         <SelectTrigger className="w-full">
-//                           <SelectValue placeholder="Select a grade" />
-//                         </SelectTrigger>
-//                         <SelectContent>
-//                           <SelectItem value="PP1">PP1</SelectItem>
-//                           <SelectItem value="PP2">PP2</SelectItem>
-//                           {Array.from({ length: 12 }, (_, i) => (
-//                             <SelectItem key={i + 1} value={`Grade ${i + 1}`}>
-//                               Grade {i + 1}
-//                             </SelectItem>
-//                           ))}
-//                         </SelectContent>
-//                       </Select>
-//                     </div>
+//     try {
+//       await deleteAssessment(parseInt(id));
+//       toast({ title: "Success", description: "Assessment deleted successfully" });
+//       navigate(-1); // Go back
+//     } catch (error) {
+//       toast({ title: "Error", description: "Failed to delete assessment", variant: "destructive" });
+//     }
+//   };
 
-//                     <div className="space-y-2">
-//                       <Label className="text-sm font-medium text-gray-700">
-//                         Stream
-//                       </Label>
-//                       <Input
-//                         placeholder="Enter stream name"
-//                         value={classroom.stream}
-//                         onChange={(e) => updateClassroom(index, 'stream', e.target.value)}
-//                         disabled={!classroom.grade}
-//                         className="w-full"
-//                       />
-//                       {!classroom.grade && (
-//                         <p className="text-xs text-gray-500">Select a grade first</p>
-//                       )}
-//                     </div>
-//                   </div>
+//   const handleReviewSubmit = async () => {
+//     if (!reviewForm.status || !reviewForm.remarks || !reviewForm.recommendedAction) {
+//       toast({ title: "Error", description: "Status, remarks, and recommended action are required", variant: "destructive" });
+//       return;
+//     }
+//     try {
+//       const data = {
+//         review_decision: reviewForm.status as "approved" | "rejected" | "requires_clarification",
+//         review_remarks: reviewForm.remarks,
+//         recommended_action: reviewForm.recommendedAction,
+//         priority: reviewForm.priority as "low" | "medium" | "high" | "urgent" | undefined,
+//       };
+//       const reviewFunction = assessmentType === 'maintenance' ? agentReviewMaintenanceReport : agentReviewSafetyReport;
+//       await reviewFunction(parseInt(selectedAssessment!.id), data);
+//       toast({ title: "Success", description: "Review submitted successfully" });
+//       setIsReviewModalOpen(false);
+//       // Refresh assessment data
+//       window.location.reload();
+//     } catch (error) {
+//       toast({ title: "Error", description: "Failed to submit review", variant: "destructive" });
+//     }
+//   };
 
-//                   <div className="space-y-2">
-//                     <Label className="text-sm font-medium text-gray-700">
-//                       Number of Classes
-//                     </Label>
-//                     <Input
-//                       type="number"
-//                       placeholder="Enter number of classes"
-//                       value={classroom.numberOfClasses}
-//                       onChange={(e) => updateClassroom(index, 'numberOfClasses', e.target.value === '' ? '' : Number(e.target.value))}
-//                       className="w-full"
-//                       min="1"
-//                     />
-//                   </div>
-//                 </div>
-//               ))}
-//             </div>
-//           )}
+//   if (loading) {
+//     return (
+//       <div className="flex items-center justify-center min-h-screen">
+//         <div className="text-center">
+//           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+//           <p>Loading assessment...</p>
+//         </div>
+//       </div>
+//     );
+//   }
 
-//           {(selectedFacility.toLowerCase().includes('laboratory') || selectedFacility.toLowerCase().includes('lab')) && (
-//             <div className="space-y-4">
-//               <div className="flex items-center justify-between">
-//                 <Label className="text-sm font-medium text-gray-700">Laboratories</Label>
-//                 <Button type="button" onClick={addLaboratory} variant="outline" size="sm">
-//                   <Plus className="h-4 w-4 mr-1" /> Add Laboratory
-//                 </Button>
-//               </div>
-//               {laboratories.map((lab, index) => (
-//                 <div key={index} className="border rounded-lg p-4 space-y-4">
-//                   <div className="flex items-center justify-between">
-//                     <h4 className="text-sm font-medium">Laboratory {index + 1}</h4>
-//                     {laboratories.length > 1 && (
-//                       <Button
-//                         type="button"
-//                         onClick={() => removeLaboratory(index)}
-//                         variant="ghost"
-//                         size="sm"
-//                         className="text-red-500 hover:text-red-700"
-//                       >
-//                         <X className="h-4 w-4" />
-//                       </Button>
-//                     )}
-//                   </div>
-//                   <div className="grid grid-cols-2 gap-4">
-//                     <div className="space-y-2">
-//                       <Label className="text-sm font-medium text-gray-700">
-//                         Lab Type
-//                       </Label>
-//                       <Select
-//                         value={lab.labType}
-//                         onValueChange={(value) => updateLaboratory(index, 'labType', value)}
-//                       >
-//                         <SelectTrigger className="w-full">
-//                           <SelectValue placeholder="Select lab type" />
-//                         </SelectTrigger>
-//                         <SelectContent>
-//                           <SelectItem value="chemistry">Chemistry</SelectItem>
-//                           <SelectItem value="physics">Physics</SelectItem>
-//                           <SelectItem value="biology">Biology</SelectItem>
-//                           <SelectItem value="mixed">Mixed</SelectItem>
-//                         </SelectContent>
-//                       </Select>
-//                     </div>
-
-//                     <div className="space-y-2">
-//                       <Label className="text-sm font-medium text-gray-700">
-//                         Number of Laboratories
-//                       </Label>
-//                       <Input
-//                         type="number"
-//                         placeholder="Enter number"
-//                         value={lab.numberOfLaboratories}
-//                         onChange={(e) => updateLaboratory(index, 'numberOfLaboratories', e.target.value === '' ? '' : Number(e.target.value))}
-//                         className="w-full"
-//                         min="1"
-//                       />
-//                     </div>
-//                   </div>
-//                 </div>
-//               ))}
-//             </div>
-//           )}
-
-//           {selectedFacility.toLowerCase().includes('toilet') && (
-//             <div className="space-y-4">
-//               <div className="flex items-center justify-between">
-//                 <Label className="text-sm font-medium text-gray-700">Toilets</Label>
-//                 <Button type="button" onClick={addToilet} variant="outline" size="sm">
-//                   <Plus className="h-4 w-4 mr-1" /> Add Toilet
-//                 </Button>
-//               </div>
-//               {toilets.map((toilet, index) => (
-//                 <div key={index} className="border rounded-lg p-4 space-y-4">
-//                   <div className="flex items-center justify-between">
-//                     <h4 className="text-sm font-medium">Toilet {index + 1}</h4>
-//                     {toilets.length > 1 && (
-//                       <Button
-//                         type="button"
-//                         onClick={() => removeToilet(index)}
-//                         variant="ghost"
-//                         size="sm"
-//                         className="text-red-500 hover:text-red-700"
-//                       >
-//                         <X className="h-4 w-4" />
-//                       </Button>
-//                     )}
-//                   </div>
-//                   <div className="grid grid-cols-2 gap-4">
-//                     <div className="space-y-2">
-//                       <Label className="text-sm font-medium text-gray-700">
-//                         Toilet Type
-//                       </Label>
-//                       <Select
-//                         value={toilet.toiletType}
-//                         onValueChange={(value) => updateToilet(index, 'toiletType', value)}
-//                       >
-//                         <SelectTrigger className="w-full">
-//                           <SelectValue placeholder="Select toilet type" />
-//                         </SelectTrigger>
-//                         <SelectContent>
-//                           <SelectItem value="boys">Boys</SelectItem>
-//                           <SelectItem value="girls">Girls</SelectItem>
-//                           <SelectItem value="staff">Staff</SelectItem>
-//                           <SelectItem value="disabled">Disabled</SelectItem>
-//                           <SelectItem value="mixed">Mixed</SelectItem>
-//                         </SelectContent>
-//                       </Select>
-//                     </div>
-
-//                     <div className="space-y-2">
-//                       <Label className="text-sm font-medium text-gray-700">
-//                         Number of Toilets
-//                       </Label>
-//                       <Input
-//                         type="number"
-//                         placeholder="Enter number"
-//                         value={toilet.numberOfToilets}
-//                         onChange={(e) => updateToilet(index, 'numberOfToilets', e.target.value === '' ? '' : Number(e.target.value))}
-//                         className="w-full"
-//                         min="1"
-//                       />
-//                     </div>
-//                   </div>
-//                 </div>
-//               ))}
-//             </div>
-//           )}
-
-//           {(selectedFacility.toLowerCase().includes('dormitory') || selectedFacility.toLowerCase().includes('dorm')) && (
-//             <div className="space-y-4">
-//               <div className="flex items-center justify-between">
-//                 <Label className="text-sm font-medium text-gray-700">Dormitories</Label>
-//                 <Button type="button" onClick={addDormitory} variant="outline" size="sm">
-//                   <Plus className="h-4 w-4 mr-1" /> Add Dormitory
-//                 </Button>
-//               </div>
-//               {dormitories.map((dorm, index) => (
-//                 <div key={index} className="border rounded-lg p-4 space-y-4">
-//                   <div className="flex items-center justify-between">
-//                     <h4 className="text-sm font-medium">Dormitory {index + 1}</h4>
-//                     {dormitories.length > 1 && (
-//                       <Button
-//                         type="button"
-//                         onClick={() => removeDormitory(index)}
-//                         variant="ghost"
-//                         size="sm"
-//                         className="text-red-500 hover:text-red-700"
-//                       >
-//                         <X className="h-4 w-4" />
-//                       </Button>
-//                     )}
-//                   </div>
-//                   <div className="grid grid-cols-2 gap-4">
-//                     <div className="space-y-2">
-//                       <Label className="text-sm font-medium text-gray-700">
-//                         Dormitory Names
-//                       </Label>
-//                       <Input
-//                         placeholder="Enter names separated by commas"
-//                         value={dorm.names}
-//                         onChange={(e) => updateDormitory(index, 'names', e.target.value)}
-//                         className="w-full"
-//                       />
-//                       <p className="text-xs text-gray-500">
-//                         e.g., Dorm A, Dorm B
-//                       </p>
-//                     </div>
-
-//                     <div className="space-y-2">
-//                       <Label className="text-sm font-medium text-gray-700">
-//                         Number of Dormitories
-//                       </Label>
-//                       <Input
-//                         type="number"
-//                         placeholder="Enter number"
-//                         value={dorm.numberOfDormitories}
-//                         onChange={(e) => updateDormitory(index, 'numberOfDormitories', e.target.value === '' ? '' : Number(e.target.value))}
-//                         className="w-full"
-//                         min="1"
-//                       />
-//                     </div>
-//                   </div>
-//                 </div>
-//               ))}
-//             </div>
-//           )}
-
-//           {selectedFacility.toLowerCase().includes('dining') && (
-//             <div className="space-y-4">
-//               <div className="flex items-center justify-between">
-//                 <Label className="text-sm font-medium text-gray-700">Dining Halls</Label>
-//                 <Button type="button" onClick={addDiningHall} variant="outline" size="sm">
-//                   <Plus className="h-4 w-4 mr-1" /> Add Dining Hall
-//                 </Button>
-//               </div>
-//               {diningHalls.map((dining, index) => (
-//                 <div key={index} className="border rounded-lg p-4 space-y-4">
-//                   <div className="flex items-center justify-between">
-//                     <h4 className="text-sm font-medium">Dining Hall {index + 1}</h4>
-//                     {diningHalls.length > 1 && (
-//                       <Button
-//                         type="button"
-//                         onClick={() => removeDiningHall(index)}
-//                         variant="ghost"
-//                         size="sm"
-//                         className="text-red-500 hover:text-red-700"
-//                       >
-//                         <X className="h-4 w-4" />
-//                       </Button>
-//                     )}
-//                   </div>
-//                   <div className="grid grid-cols-2 gap-4">
-//                     <div className="space-y-2">
-//                       <Label className="text-sm font-medium text-gray-700">
-//                         Dining Hall Names
-//                       </Label>
-//                       <Input
-//                         placeholder="Enter names separated by commas"
-//                         value={dining.names}
-//                         onChange={(e) => updateDiningHall(index, 'names', e.target.value)}
-//                         className="w-full"
-//                       />
-//                       <p className="text-xs text-gray-500">
-//                         e.g., Main Dining Hall
-//                       </p>
-//                     </div>
-
-//                     <div className="space-y-2">
-//                       <Label className="text-sm font-medium text-gray-700">
-//                         Number of Dining Halls
-//                       </Label>
-//                       <Input
-//                         type="number"
-//                         placeholder="Enter number"
-//                         value={dining.numberOfDiningHalls}
-//                         onChange={(e) => updateDiningHall(index, 'numberOfDiningHalls', e.target.value === '' ? '' : Number(e.target.value))}
-//                         className="w-full"
-//                         min="1"
-//                       />
-//                     </div>
-//                   </div>
-//                 </div>
-//               ))}
-//             </div>
-//           )}
-
-//           {selectedFacility.toLowerCase().includes('compound') && (
-//             <div className="space-y-4">
-//               <div className="flex items-center justify-between">
-//                 <Label className="text-sm font-medium text-gray-700">Compounds</Label>
-//                 <Button type="button" onClick={addCompound} variant="outline" size="sm">
-//                   <Plus className="h-4 w-4 mr-1" /> Add Compound
-//                 </Button>
-//               </div>
-//               {compounds.map((compound, index) => (
-//                 <div key={index} className="border rounded-lg p-4 space-y-4">
-//                   <div className="flex items-center justify-between">
-//                     <h4 className="text-sm font-medium">Compound {index + 1}</h4>
-//                     {compounds.length > 1 && (
-//                       <Button
-//                         type="button"
-//                         onClick={() => removeCompound(index)}
-//                         variant="ghost"
-//                         size="sm"
-//                         className="text-red-500 hover:text-red-700"
-//                       >
-//                         <X className="h-4 w-4" />
-//                       </Button>
-//                     )}
-//                   </div>
-//                   <div className="grid grid-cols-2 gap-4">
-//                     <div className="space-y-2">
-//                       <Label className="text-sm font-medium text-gray-700">
-//                         Compound Areas
-//                       </Label>
-//                       <Input
-//                         placeholder="Enter areas separated by commas"
-//                         value={compound.areas}
-//                         onChange={(e) => updateCompound(index, 'areas', e.target.value)}
-//                         className="w-full"
-//                       />
-//                       <p className="text-xs text-gray-500">
-//                         e.g., Lawns, Flowers, Trees
-//                       </p>
-//                     </div>
-
-//                     <div className="space-y-2">
-//                       <Label className="text-sm font-medium text-gray-700">
-//                         Number of Compounds
-//                       </Label>
-//                       <Input
-//                         type="number"
-//                         placeholder="Enter number"
-//                         value={compound.numberOfCompounds}
-//                         onChange={(e) => updateCompound(index, 'numberOfCompounds', e.target.value === '' ? '' : Number(e.target.value))}
-//                         className="w-full"
-//                         min="1"
-//                       />
-//                     </div>
-//                   </div>
-//                 </div>
-//               ))}
-//             </div>
-//           )}
-
-//           {selectedFacility.toLowerCase().includes('office') && (
-//             <div className="space-y-4">
-//               <div className="flex items-center justify-between">
-//                 <Label className="text-sm font-medium text-gray-700">Offices</Label>
-//                 <Button type="button" onClick={addOffice} variant="outline" size="sm">
-//                   <Plus className="h-4 w-4 mr-1" /> Add Office
-//                 </Button>
-//               </div>
-//               {offices.map((office, index) => (
-//                 <div key={index} className="border rounded-lg p-4 space-y-4">
-//                   <div className="flex items-center justify-between">
-//                     <h4 className="text-sm font-medium">Office {index + 1}</h4>
-//                     {offices.length > 1 && (
-//                       <Button
-//                         type="button"
-//                         onClick={() => removeOffice(index)}
-//                         variant="ghost"
-//                         size="sm"
-//                         className="text-red-500 hover:text-red-700"
-//                       >
-//                         <X className="h-4 w-4" />
-//                       </Button>
-//                     )}
-//                   </div>
-//                   <div className="grid grid-cols-2 gap-4">
-//                     <div className="space-y-2">
-//                       <Label className="text-sm font-medium text-gray-700">
-//                         Office Names
-//                       </Label>
-//                       <Input
-//                         placeholder="Enter names separated by commas"
-//                         value={office.names}
-//                         onChange={(e) => updateOffice(index, 'names', e.target.value)}
-//                         className="w-full"
-//                       />
-//                       <p className="text-xs text-gray-500">
-//                         e.g., Principal's Office
-//                       </p>
-//                     </div>
-
-//                     <div className="space-y-2">
-//                       <Label className="text-sm font-medium text-gray-700">
-//                         Number of Offices
-//                       </Label>
-//                       <Input
-//                         type="number"
-//                         placeholder="Enter number"
-//                         value={office.numberOfOffices}
-//                         onChange={(e) => updateOffice(index, 'numberOfOffices', e.target.value === '' ? '' : Number(e.target.value))}
-//                         className="w-full"
-//                         min="1"
-//                       />
-//                     </div>
-//                   </div>
-//                 </div>
-//               ))}
-//             </div>
-//           )}
-
-//           <Button
-//             onClick={handleSubmit}
-//             className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-md transition-colors"
-//           >
-//             Submit Entities
+//   if (!assessment) {
+//     return (
+//       <div className="flex items-center justify-center min-h-screen">
+//         <div className="text-center">
+//           <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+//           <h2 className="text-xl font-semibold mb-2">Assessment Not Found</h2>
+//           <p className="text-gray-600 mb-4">The requested assessment could not be found.</p>
+//           <Button onClick={() => navigate(-1)}>
+//             <ArrowLeft className="mr-2 h-4 w-4" />
+//             Go Back
 //           </Button>
-//         </CardContent>
-//       </Card>
+//         </div>
+//       </div>
+//     );
+//   }
+
+//   const tableData = selectedAssessment ? selectedAssessment.details?.map(detail => ({
+//     ...detail,
+//     facilityType: selectedAssessment.facilityType,
+//     school_feedback: selectedAssessment.school_feedback,
+//     agent_feedback: selectedAssessment.agent_feedback,
+//     entity: selectedAssessment.entity,
+//   })) || [] : [];
+
+//   const columns: ColumnDef<typeof tableData[0]>[] = [
+//     {
+//       accessorKey: "part_of_building",
+//       header: "Part of Building",
+//     },
+//     {
+//       accessorKey: "facilityType",
+//       header: "Facility Type",
+//     },
+//     {
+//       accessorKey: "entity",
+//       header: "Entity",
+//       cell: ({ row }) => {
+//         const entityArray = row.getValue("entity") as string[] || [];
+//         const displayText = entityArray.length > 0 ? entityArray.join(", ") : "N/A";
+//         return <div className="font-medium max-w-[250px] truncate" title={displayText}>{displayText}</div>;
+//       },
+//     },
+//     {
+//       accessorKey: "assessment_status",
+//       header: "Condition",
+//       cell: ({ row }) => {
+//         const status = row.getValue("assessment_status") as string;
+//         return (
+//           <Badge
+//             className={
+//               status === 'Urgent Attention'
+//                 ? 'bg-red-100 text-red-800'
+//                 : status === 'Attention Required'
+//                 ? 'bg-yellow-100 text-yellow-800'
+//                 : 'bg-green-100 text-green-800'
+//             }
+//           >
+//             {status}
+//           </Badge>
+//         );
+//       },
+//     },
+//     {
+//       accessorKey: "score",
+//       header: "Score",
+//       cell: ({ row }) => row.getValue("score") ?? '-',
+//     },
+//     {
+//       accessorKey: "school_feedback",
+//       header: "School Feedback",
+//       cell: ({ row }) => row.getValue("school_feedback") || '-',
+//     },
+//     {
+//       accessorKey: "agent_feedback",
+//       header: "Agent Feedback",
+//       cell: ({ row }) => row.getValue("agent_feedback") || '-',
+//     },
+//     {
+//       id: "actions",
+//       header: "Actions",
+//       cell: ({ row }) => {
+//         const detail = row.original;
+//         return (
+//           <DropdownMenu>
+//             <DropdownMenuTrigger asChild>
+//               <Button variant="ghost" className="h-8 w-8 p-0">
+//                 <span className="sr-only">Open menu</span>
+//                 <MoreHorizontal className="h-4 w-4" />
+//               </Button>
+//             </DropdownMenuTrigger>
+//             <DropdownMenuContent align="end">
+//               <DropdownMenuItem onClick={() => handleEditDetail(detail)}>
+//                 <Edit className="mr-2 h-4 w-4" />
+//                 Edit
+//               </DropdownMenuItem>
+//               {/* <DropdownMenuItem onClick={() => handleDeleteAssessment(selectedAssessment!.id)} className="text-destructive">
+//                 <Trash2 className="mr-2 h-4 w-4" />
+//                 Delete Assessment
+//               </DropdownMenuItem> */}
+//             </DropdownMenuContent>
+//           </DropdownMenu>
+//         );
+//       },
+//     },
+//   ];
+
+//   return (
+//     <div className="container mx-auto py-6 max-w-6xl">
+//       {/* Header */}
+//       <div className="flex items-center justify-between mb-6">
+//         <div>
+//           <h1 className="text-3xl font-bold">Assessment Review</h1>
+//           <p className="text-muted-foreground">Review assessments for {assessment.institutionName}</p>
+//         </div>
+//         <Button variant="outline" onClick={() => navigate(-1)}>
+//           <ArrowLeft className="mr-2 h-4 w-4" />
+//           Back
+//         </Button>
+//       </div>
+
+//       {/* Assessment Overview */}
+//       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
+//         {/* <Card>
+//           <CardHeader className="pb-3">
+//             <CardTitle className="text-lg flex items-center gap-2">
+//               <Building2 className="h-5 w-5" />
+//               Facility Information
+//             </CardTitle>
+//           </CardHeader>
+//           <CardContent className="space-y-3">
+//             <div>
+//               <span className="font-medium">School:</span> {assessment.institutionName}
+//             </div>
+//             <div>
+//               <span className="font-medium">Facility Type:</span> {assessment.facilityType}
+//             </div>
+//             <div>
+//               <span className="font-medium">Entity:</span> {assessment.entity.length > 0 ? assessment.entity.join(", ") : "N/A"}
+//             </div>
+//             <div>
+//               <span className="font-medium">Assessment Date:</span> {new Date(assessment.assessmentDate).toLocaleDateString()}
+//             </div>
+//             <div>
+//               <span className="font-medium">Status:</span> {getStatusBadge(assessment.status)}
+//             </div>
+//           </CardContent>
+//         </Card>
+
+//         <Card>
+//           <CardHeader className="pb-3">
+//             <CardTitle className="text-lg flex items-center gap-2">
+//               <CheckCircle className="h-5 w-5" />
+//               Assessment Summary
+//             </CardTitle>
+//           </CardHeader>
+//           <CardContent className="space-y-3">
+//             <div>
+//               <span className="font-medium">Overall Condition:</span> {getAverageConditionBadge(assessment.averageCondition)}
+//             </div>
+//             <div>
+//               <span className="font-medium">Score:</span> {assessment.totalScorePercentage ?? 0}%
+//             </div>
+//             <div className="grid grid-cols-3 gap-2 text-sm">
+//               <div className="text-center">
+//                 <div className="font-bold text-red-600">{assessment.urgentItems}</div>
+//                 <div>Urgent</div>
+//               </div>
+//               <div className="text-center">
+//                 <div className="font-bold text-yellow-600">{assessment.attentionItems}</div>
+//                 <div>Attention</div>
+//               </div>
+//               <div className="text-center">
+//                 <div className="font-bold text-green-600">{assessment.goodItems}</div>
+//                 <div>Good</div>
+//               </div>
+//             </div>
+//           </CardContent>
+//         </Card> */}
+
+//       </div>
+
+//       {/* Assessment Selection */}
+//       <div className="mt-6">
+//         <Card>
+//           <CardHeader>
+//             <CardTitle>Select Assessment To Review</CardTitle>
+//             <CardDescription>
+//               Choose assessment type, facility type, and specific entity to review
+//             </CardDescription>
+//           </CardHeader>
+//           <CardContent>
+//             <div className="flex items-end gap-4">
+//               <div className="flex-1">
+//                 <Label htmlFor="assessment-type">Assessment Type</Label>
+//                 <Select value={assessmentType} onValueChange={(value: 'maintenance' | 'safety') => setAssessmentType(value)}>
+//                   <SelectTrigger>
+//                     <SelectValue placeholder="Select assessment type" />
+//                   </SelectTrigger>
+//                   <SelectContent>
+//                     <SelectItem value="maintenance">Maintenance</SelectItem>
+//                     <SelectItem value="safety">Safety</SelectItem>
+//                   </SelectContent>
+//                 </Select>
+//               </div>
+//               {assessmentType && (
+//                 <div className="flex-1">
+//                   <Label htmlFor="facility-type">Facility Type</Label>
+//                   <Select value={selectedFacility} onValueChange={(value) => { setSelectedFacility(value); setSelectedEntity(''); }}>
+//                     <SelectTrigger>
+//                       <SelectValue placeholder="Select facility" />
+//                     </SelectTrigger>
+//                     <SelectContent>
+//                       {[...new Set((assessmentType === 'maintenance' ? allAssessments : safetyAssessments).map(a => a.facilityType))].map(facility => (
+//                         <SelectItem key={facility} value={facility}>{facility}</SelectItem>
+//                       ))}
+//                     </SelectContent>
+//                   </Select>
+//                 </div>
+//               )}
+//               {assessmentType && selectedFacility && (
+//                 <div className="flex-1">
+//                   <Label htmlFor="entity-type">Entity</Label>
+//                   <Select value={selectedEntity} onValueChange={setSelectedEntity}>
+//                     <SelectTrigger>
+//                       <SelectValue placeholder="Select entity" />
+//                     </SelectTrigger>
+//                     <SelectContent>
+//                       {[...new Set(
+//                         (assessmentType === 'maintenance' ? allAssessments : safetyAssessments)
+//                           .filter(a => a.facilityType === selectedFacility)
+//                           .flatMap(a => a.entity)
+//                       )].map(entity => (
+//                         <SelectItem key={entity} value={entity}>{entity}</SelectItem>
+//                       ))}
+//                     </SelectContent>
+//                   </Select>
+//                 </div>
+//               )}
+//               {selectedAssessment && selectedEntity && (
+//                 <Button onClick={handleReview} disabled={selectedAssessment.status === 'approved' || selectedAssessment.status === 'rejected'}>
+//                   {selectedAssessment.status === 'approved' || selectedAssessment.status === 'rejected' ? 'Reviewed' : 'Review'}
+//                 </Button>
+//               )}
+//             </div>
+//           </CardContent>
+//         </Card>
+//       </div>
+
+//       {/* Assessment Details */}
+//       {selectedAssessment && (
+//         <Card className="mb-6">
+//           <CardHeader>
+//             <CardTitle>{assessmentType === 'maintenance' ? 'Maintenance' : 'Safety'} Details - {selectedEntity}</CardTitle>
+//           </CardHeader>
+//           <CardContent>
+//             <DataTable columns={columns} data={tableData} searchKey="part_of_building" />
+//           </CardContent>
+//         </Card>
+//       )}
+
+//       {/* Edit Detail Modal */}
+//       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+//         <DialogContent className="sm:max-w-[425px]">
+//           <DialogHeader>
+//             <DialogTitle>Edit Assessment Detail</DialogTitle>
+//             <DialogDescription>
+//               Update the assessment detail below.
+//             </DialogDescription>
+//           </DialogHeader>
+//           <div className="space-y-4">
+//             <div>
+//               <Label htmlFor="part_of_building">Part of Building</Label>
+//               <Input
+//                 id="part_of_building"
+//                 value={editForm.part_of_building}
+//                 onChange={(e) => setEditForm(prev => ({ ...prev, part_of_building: e.target.value }))}
+//               />
+//             </div>
+//             <div>
+//               <Label htmlFor="assessment_status">Condition</Label>
+//               <Select value={editForm.assessment_status} onValueChange={(value) => setEditForm(prev => ({ ...prev, assessment_status: value }))}>
+//                 <SelectTrigger>
+//                   <SelectValue placeholder="Select condition" />
+//                 </SelectTrigger>
+//                 <SelectContent>
+//                   <SelectItem value="Good">Good</SelectItem>
+//                   <SelectItem value="Attention Required">Attention Required</SelectItem>
+//                   <SelectItem value="Urgent Attention">Urgent Attention</SelectItem>
+//                 </SelectContent>
+//               </Select>
+//             </div>
+//           </div>
+//           <DialogFooter>
+//             <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
+//               Cancel
+//             </Button>
+//             <Button onClick={handleEditSubmit}>
+//               Save Changes
+//             </Button>
+//           </DialogFooter>
+//         </DialogContent>
+//       </Dialog>
+
+//       {/* Review Modal */}
+//       <Dialog open={isReviewModalOpen} onOpenChange={setIsReviewModalOpen}>
+//         <DialogContent className="max-w-2xl">
+//           <DialogHeader>
+//             <DialogTitle>Review {assessmentType} Assessment - {selectedAssessment?.institutionName} ({selectedEntity})</DialogTitle>
+//             <DialogDescription>
+//               Review the {assessmentType} assessment for {selectedEntity} and provide your decision.
+//             </DialogDescription>
+//           </DialogHeader>
+
+//           <div className="space-y-6">
+//             {/* Assessment Summary */}
+//             <div className="bg-gray-50 p-4 rounded-lg">
+//               <h4 className="font-medium mb-3">Assessment Summary</h4>
+//               <div className="grid grid-cols-2 gap-4 text-sm">
+//                 <div>
+//                   <span className="font-medium">Facility:</span> {selectedAssessment?.facilityType}
+//                 </div>
+//                 <div>
+//                   <span className="font-medium">Entity:</span> {selectedEntity}
+//                 </div>
+//                 <div>
+//                   <span className="font-medium">Overall Condition:</span> {selectedAssessment ? getAverageConditionBadge(selectedAssessment.averageCondition) : ''}
+//                 </div>
+//                 <div>
+//                   <span className="font-medium">Urgent Items:</span> {selectedAssessment?.urgentItems}
+//                 </div>
+//                 <div>
+//                   <span className="font-medium">Score:</span> {selectedAssessment?.totalScorePercentage ?? 0}%
+//                 </div>
+//               </div>
+
+//               {selectedAssessment?.school_feedback && (
+//                 <div className="mt-3">
+//                   <span className="font-medium">School Admin Remarks:</span>
+//                   <p className="text-sm text-gray-600 mt-1">{selectedAssessment.school_feedback}</p>
+//                 </div>
+//               )}
+//             </div>
+
+//             {/* Review Form */}
+//             <div className="space-y-4">
+//               <div>
+//                 <Label htmlFor="review-status">Review Decision *</Label>
+//                 <Select value={reviewForm.status} onValueChange={(value) => setReviewForm(prev => ({ ...prev, status: value }))}>
+//                   <SelectTrigger>
+//                     <SelectValue placeholder="Select review decision" />
+//                   </SelectTrigger>
+//                   <SelectContent>
+//                     <SelectItem value="approved">Approve</SelectItem>
+//                     <SelectItem value="rejected">Reject</SelectItem>
+//                     <SelectItem value="requires_clarification">Requires Clarification</SelectItem>
+//                   </SelectContent>
+//                 </Select>
+//               </div>
+
+//               <div>
+//                 <Label htmlFor="priority">Priority Level</Label>
+//                 <Select value={reviewForm.priority} onValueChange={(value) => setReviewForm(prev => ({ ...prev, priority: value }))}>
+//                   <SelectTrigger>
+//                     <SelectValue placeholder="Select priority level" />
+//                   </SelectTrigger>
+//                   <SelectContent>
+//                     <SelectItem value="low">Low</SelectItem>
+//                     <SelectItem value="medium">Medium</SelectItem>
+//                     <SelectItem value="high">High</SelectItem>
+//                     <SelectItem value="urgent">Urgent</SelectItem>
+//                   </SelectContent>
+//                 </Select>
+//               </div>
+
+//               <div>
+//                 <Label htmlFor="review-remarks">Review Remarks *</Label>
+//                 <Textarea
+//                   id="review-remarks"
+//                   placeholder="Enter your review comments and observations..."
+//                   value={reviewForm.remarks}
+//                   onChange={(e) => setReviewForm(prev => ({ ...prev, remarks: e.target.value }))}
+//                   rows={4}
+//                 />
+//               </div>
+
+//               <div>
+//                 <Label htmlFor="recommended-action">Recommended Action *</Label>
+//                 <Textarea
+//                   id="recommended-action"
+//                   placeholder="Specify recommended actions or next steps..."
+//                   value={reviewForm.recommendedAction}
+//                   onChange={(e) => setReviewForm(prev => ({ ...prev, recommendedAction: e.target.value }))}
+//                   rows={3}
+//                 />
+//               </div>
+//             </div>
+
+//             {/* Modal Actions */}
+//             <div className="flex justify-end gap-3 pt-4 border-t">
+//               <Button variant="outline" onClick={() => setIsReviewModalOpen(false)}>
+//                 Cancel
+//               </Button>
+//               <Button onClick={handleReviewSubmit}>
+//                 Submit Review
+//               </Button>
+//             </div>
+//           </div>
+//         </DialogContent>
+//       </Dialog>
 //     </div>
 //   );
 // };
 
-// export default FacilityAddPage;
+// export default AssessmentViewPage;

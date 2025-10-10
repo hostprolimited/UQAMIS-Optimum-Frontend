@@ -609,13 +609,13 @@ const IncidentListPage = () => {
                                   <Edit className="h-4 w-4 mr-2" />
                                   Edit Incident
                                 </DropdownMenuItem>
-                                <DropdownMenuItem
+                                {/* <DropdownMenuItem
                                   onClick={() => handleDeleteIncident(row.id)}
                                   className="text-red-600"
                                 >
                                   <X className="h-4 w-4 mr-2" />
                                   Delete Incident
-                                </DropdownMenuItem>
+                                </DropdownMenuItem> */}
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </TableCell>

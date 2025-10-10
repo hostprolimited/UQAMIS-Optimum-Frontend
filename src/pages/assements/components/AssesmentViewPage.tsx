@@ -339,7 +339,7 @@ const AssessmentViewPage: React.FC = () => {
     },
     {
       accessorKey: "assessment_status",
-      header: "Condition",
+      header: "Conditions Review",
       cell: ({ row }) => {
         const status = row.getValue("assessment_status") as string;
         return (

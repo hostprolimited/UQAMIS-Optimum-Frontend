@@ -546,10 +546,10 @@ const EntitiesListPage = () => {
                                     <Edit className="h-4 w-4 mr-2" />
                                     Edit
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={(e) => {e.stopPropagation(); handleDeleteClick(row);}} className="text-destructive cursor-pointer focus:text-destructive focus:bg-destructive/10">
+                                  {/* <DropdownMenuItem onClick={(e) => {e.stopPropagation(); handleDeleteClick(row);}} className="text-destructive cursor-pointer focus:text-destructive focus:bg-destructive/10">
                                     <Trash2 className="h-4 w-4 mr-2" />
                                     Delete
-                                  </DropdownMenuItem>
+                                  </DropdownMenuItem> */}
                                 </DropdownMenuContent>
                               </DropdownMenu>
                             </TableCell>

@@ -35,11 +35,14 @@ interface Institution {
 const OnboardedSchoolList: React.FC = () => {
   const [institutions, setInstitutions] = useState<Institution[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sortKey, setSortKey] = useState<keyof Institution>('name');
-  const [sortAsc, setSortAsc] = useState(true);
+  const [sortKey, setSortKey] = useState<keyof Institution>('assessment_completion_percentage');
+  const [sortAsc, setSortAsc] = useState(false);
   const [selected, setSelected] = useState<number[]>([]);
   const [search, setSearch] = useState('');
   const [countyFilter, setCountyFilter] = useState('');
+  const [subcountyFilter, setSubcountyFilter] = useState('');
+  const [wardFilter, setWardFilter] = useState('');
+  const [percentageRange, setPercentageRange] = useState('');
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const navigate = useNavigate();
@@ -76,15 +79,35 @@ const OnboardedSchoolList: React.FC = () => {
       inst.county.toLowerCase().includes(search.toLowerCase()) ||
       (inst.subcounty?.toLowerCase().includes(search.toLowerCase()) ?? false);
     const matchesCounty = countyFilter ? inst.county === countyFilter : true;
-    return matchesSearch && matchesCounty;
+    const matchesSubcounty = subcountyFilter ? inst.subcounty === subcountyFilter : true;
+    const matchesWard = wardFilter ? inst.ward === wardFilter : true;
+    const matchesPercentage = () => {
+      if (!percentageRange) return true;
+      const percentage = parseFloat(inst.assessment_completion_percentage || '0');
+      switch (percentageRange) {
+        case 'below25': return percentage < 25;
+        case '25to50': return percentage >= 25 && percentage < 50;
+        case '50to75': return percentage >= 50 && percentage < 75;
+        case '75to100': return percentage >= 75;
+        default: return true;
+      }
+    };
+    return matchesSearch && matchesCounty && matchesSubcounty && matchesWard && matchesPercentage();
   });
 
   const sortedInstitutions = [...filteredInstitutions].sort((a, b) => {
-    const aValue = a[sortKey] || '';
-    const bValue = b[sortKey] || '';
-    if (aValue < bValue) return sortAsc ? -1 : 1;
-    if (aValue > bValue) return sortAsc ? 1 : -1;
-    return 0;
+    const numericKeys = ['total_students', 'total_submitted_assessments', 'total_entities_for_assessment', 'assessment_completion_percentage'];
+    if (numericKeys.includes(sortKey)) {
+      const aNum = parseFloat(a[sortKey] as string) || 0;
+      const bNum = parseFloat(b[sortKey] as string) || 0;
+      return sortAsc ? aNum - bNum : bNum - aNum;
+    } else {
+      const aStr = (a[sortKey] as string) || '';
+      const bStr = (b[sortKey] as string) || '';
+      if (aStr < bStr) return sortAsc ? -1 : 1;
+      if (aStr > bStr) return sortAsc ? 1 : -1;
+      return 0;
+    }
   });
 
   const visibleInstitutions = React.useMemo(
@@ -130,8 +153,10 @@ const OnboardedSchoolList: React.FC = () => {
     MySwal.fire('Export', `Exporting as ${type.toUpperCase()} (not implemented)`, 'info');
   };
 
-  // Get unique counties for filter dropdown
+  // Get unique counties, subcounties, and wards for filter dropdowns
   const countyOptions = Array.from(new Set(institutions.map(i => i.county))).filter(Boolean);
+  const subcountyOptions = Array.from(new Set(institutions.map(i => i.subcounty))).filter(Boolean);
+  const wardOptions = Array.from(new Set(institutions.map(i => i.ward))).filter(Boolean);
 
   return (
     <div className="space-y-6">
@@ -184,6 +209,37 @@ const OnboardedSchoolList: React.FC = () => {
             return <option key={county} value={county}>{county}</option>;
           })}
         </select>
+        <select
+          value={subcountyFilter}
+          onChange={e => setSubcountyFilter(e.target.value)}
+          className="border rounded px-3 py-2 w-full md:w-48"
+        >
+          <option value="">All Subcounties</option>
+          {subcountyOptions.map((subcounty) => {
+            return <option key={subcounty} value={subcounty}>{subcounty}</option>;
+          })}
+        </select>
+        <select
+          value={wardFilter}
+          onChange={e => setWardFilter(e.target.value)}
+          className="border rounded px-3 py-2 w-full md:w-48"
+        >
+          <option value="">All Wards</option>
+          {wardOptions.map((ward) => {
+            return <option key={ward} value={ward}>{ward}</option>;
+          })}
+        </select>
+        <select
+          value={percentageRange}
+          onChange={e => setPercentageRange(e.target.value)}
+          className="border rounded px-3 py-2 w-full md:w-48"
+        >
+          <option value="">All Percentages</option>
+          <option value="below25">Below 25%</option>
+          <option value="25to50">25% - 50%</option>
+          <option value="50to75">50% - 75%</option>
+          <option value="75to100">75% - 100%</option>
+        </select>
       </div>
 
       <div className="overflow-x-auto rounded-lg shadow bg-white">
@@ -205,7 +261,7 @@ const OnboardedSchoolList: React.FC = () => {
               <TableHead>Status</TableHead>
               <TableHead>Total Assessments</TableHead>
               <TableHead>Total Entities</TableHead>
-              <TableHead>Completion %</TableHead>
+              <TableHead onClick={() => handleSort('assessment_completion_percentage')} className="cursor-pointer">Completion % {sortKey === 'assessment_completion_percentage' && (sortAsc ? '▲' : '▼')}</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -261,9 +317,9 @@ const OnboardedSchoolList: React.FC = () => {
                         <DropdownMenuItem onClick={() => {/* TODO: update logic */}}>
                           Edit
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleDelete(inst.id)} className="text-destructive">
+                        {/* <DropdownMenuItem onClick={() => handleDelete(inst.id)} className="text-destructive">
                           Delete
-                        </DropdownMenuItem>
+                        </DropdownMenuItem> */}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>

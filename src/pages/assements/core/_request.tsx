@@ -157,7 +157,7 @@ export const updateAssessment = async (id: number, data: { status:'submitted' | 
   }
 
   const response = await api.put<APIResponse<any>>(
-    Urls.UPDATE_ASSESSMENT_URL(id),
+    Urls.UPDATE_REVIEW_STATUS(id),
     formData,
     {
       headers: {
