@@ -100,3 +100,15 @@ export const updatePermission = async (id: number, data: { name?: string; status
 export const deletePermission = async (id: number): Promise<void> => {
   await api.delete(Urls.DELETE_PERMISSION_URL(id));
 };
+
+// Transfer user
+export const transferUser = async (id: number, data: {
+  new_county_code?: string;
+  new_county?: string;
+  new_subcounty?: string;
+  new_ward?: string;
+  new_institution_id?: number;
+}): Promise<User> => {
+  const res = await api.patch(Urls.TRANSFER_USER_URL(id), data);
+  return res.data;
+};

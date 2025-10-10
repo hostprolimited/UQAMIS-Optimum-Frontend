@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { User, Mail, Shield, Edit, X, Trash2, AlertCircle, Phone, MoreHorizontal, Check, ChevronsUpDown } from 'lucide-react';
+import { User, Mail, Shield, Edit, X, Trash2, AlertCircle, Phone, MoreHorizontal, Check, ChevronsUpDown, ArrowRightLeft } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -19,7 +19,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
-import { getUsers, createUser, deleteUser, updateUser } from '../core/_requests';
+import { getUsers, createUser, deleteUser, updateUser, transferUser } from '../core/_requests';
 import { Urls } from '@/constants/urls';
 import { getInstitutions } from '@/pages/onboarding/core/_requests';
 import { getPermissions } from '../core/_requests';
@@ -431,10 +431,19 @@ const Users = () => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserModel | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [transferForm, setTransferForm] = useState({
+    new_county_code: '',
+    new_county: '',
+    new_subcounty: '',
+    new_ward: '',
+    new_institution_id: '',
+  });
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [openInstitution, setOpenInstitution] = useState(false);
   const [institutionSearch, setInstitutionSearch] = useState('');
+  const [transferInstitutionSearch, setTransferInstitutionSearch] = useState('');
   const { currentUser } = useRole();
   const { toast } = useToast();
 
@@ -595,6 +604,19 @@ const Users = () => {
     setWards([]);
   };
 
+  const handleCloseTransferModal = () => {
+    setShowTransferModal(false);
+    setSelectedUser(null);
+    setTransferForm({
+      new_county_code: '',
+      new_county: '',
+      new_subcounty: '',
+      new_ward: '',
+      new_institution_id: '',
+    });
+    setTransferInstitutionSearch('');
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
 
@@ -663,14 +685,61 @@ const Users = () => {
     }
   };
 
+  const handleTransfer = (user: UserModel) => {
+    setSelectedUser(user);
+    setTransferForm({
+      new_county_code: '',
+      new_county: '',
+      new_subcounty: '',
+      new_ward: '',
+      new_institution_id: '',
+    });
+    setShowTransferModal(true);
+  };
+
   const handleDelete = (user: UserModel) => {
     setSelectedUser(user);
     setShowDeleteDialog(true);
   };
 
+  const handleTransferSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedUser) return;
+
+    try {
+      const transferData: any = {};
+
+      if (selectedUser.role === 'agent') {
+        // For agents, collect county information
+        transferData.new_county_code = transferForm.new_county_code;
+        transferData.new_county = transferForm.new_county;
+        transferData.new_subcounty = transferForm.new_subcounty;
+        transferData.new_ward = transferForm.new_ward;
+      } else if (selectedUser.role === 'school_admin') {
+        // For school admins, collect institution information
+        transferData.new_institution_id = parseInt(transferForm.new_institution_id);
+      }
+
+      await transferUser(selectedUser.id, transferData);
+      toast({
+        title: "Success",
+        description: "User transferred successfully",
+        variant: "default",
+      });
+      setShowTransferModal(false);
+      fetchUsers(); // Refresh the users list
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to transfer user",
+        variant: "destructive",
+      });
+    }
+  };
+
   const confirmDelete = async () => {
     if (!selectedUser) return;
-    
+
     try {
       await deleteUser(selectedUser.id);
       toast({
@@ -936,16 +1005,16 @@ const Users = () => {
                         <Command>
                           <CommandInput
                             placeholder="Search institutions..."
-                            value={institutionSearch}
-                            onValueChange={setInstitutionSearch}
+                            value={transferInstitutionSearch}
+                            onValueChange={setTransferInstitutionSearch}
                           />
                           <CommandEmpty>No institution found.</CommandEmpty>
                           <CommandGroup>
                             {institutions
                               .sort((a, b) => a.name.localeCompare(b.name))
                               .filter((inst) =>
-                                institutionSearch === '' ||
-                                inst.name.toLowerCase().includes(institutionSearch.toLowerCase())
+                                transferInstitutionSearch === '' ||
+                                inst.name.toLowerCase().includes(transferInstitutionSearch.toLowerCase())
                               )
                               .slice(0, 10)
                               .map((inst) => (
@@ -1264,6 +1333,15 @@ const Users = () => {
                             <Edit className="h-4 w-4 mr-2" />
                             Edit
                           </DropdownMenuItem>
+                          {(user.role === 'agent' || user.role === 'school_admin') && (
+                            <DropdownMenuItem
+                              onClick={() => handleTransfer(user)}
+                              className="cursor-pointer"
+                            >
+                              <ArrowRightLeft className="h-4 w-4 mr-2" />
+                              Transfer User
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuItem
                             onClick={() => handleToggleStatus(user)}
                             className="cursor-pointer"
@@ -1324,6 +1402,134 @@ const Users = () => {
         </CardContent>
       </Card>
       </div>
+
+      {/* Transfer User Modal */}
+      {showTransferModal && selectedUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-lg shadow-lg w-full p-6 relative" style={{ maxWidth: '500px' }}>
+            <button className="absolute top-2 right-2 text-muted-foreground" onClick={handleCloseTransferModal}>
+              <X className="h-5 w-5" />
+            </button>
+            <h2 className="text-xl font-bold mb-4">Transfer User</h2>
+            <p className="text-sm text-muted-foreground mb-4">
+              Transfer {selectedUser.name} to a new location
+            </p>
+            <form onSubmit={handleTransferSubmit} className="space-y-4">
+              {selectedUser.role === 'agent' ? (
+                // Agent transfer form
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-1">New County Code <span className="text-destructive">*</span></label>
+                      <Input
+                        type="number"
+                        value={transferForm.new_county_code}
+                        onChange={(e) => setTransferForm({ ...transferForm, new_county_code: e.target.value })}
+                        placeholder="e.g., 23"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">New County <span className="text-destructive">*</span></label>
+                      <Input
+                        value={transferForm.new_county}
+                        onChange={(e) => setTransferForm({ ...transferForm, new_county: e.target.value })}
+                        placeholder="e.g., Nairobi"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-1">New Subcounty <span className="text-destructive">*</span></label>
+                      <Input
+                        value={transferForm.new_subcounty}
+                        onChange={(e) => setTransferForm({ ...transferForm, new_subcounty: e.target.value })}
+                        placeholder="e.g., Westlands"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">New Ward <span className="text-destructive">*</span></label>
+                      <Input
+                        value={transferForm.new_ward}
+                        onChange={(e) => setTransferForm({ ...transferForm, new_ward: e.target.value })}
+                        placeholder="e.g., Kileleshwa"
+                        required
+                      />
+                    </div>
+                  </div>
+                </>
+              ) : selectedUser.role === 'school_admin' ? (
+                // School Admin transfer form
+                <div>
+                  <label className="block text-sm font-medium mb-1">New Institution <span className="text-destructive">*</span></label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        className="w-full justify-between"
+                      >
+                        {transferForm.new_institution_id
+                          ? institutions.find((inst) => inst.id === parseInt(transferForm.new_institution_id))?.name
+                          : "Select institution..."}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-full p-0">
+                      <Command>
+                        <CommandInput
+                          placeholder="Search institutions..."
+                          value={institutionSearch}
+                          onValueChange={setInstitutionSearch}
+                        />
+                        <CommandEmpty>No institution found.</CommandEmpty>
+                        <CommandGroup>
+                          {institutions
+                            .sort((a, b) => a.name.localeCompare(b.name))
+                            .filter((inst) =>
+                              institutionSearch === '' ||
+                              inst.name.toLowerCase().includes(institutionSearch.toLowerCase())
+                            )
+                            .slice(0, 10)
+                            .map((inst) => (
+                              <CommandItem
+                                key={inst.id}
+                                value={inst.name}
+                                onSelect={() => {
+                                  setTransferForm({ ...transferForm, new_institution_id: inst.id.toString() });
+                                  setTransferInstitutionSearch('');
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    transferForm.new_institution_id === inst.id.toString() ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                {inst.name}
+                              </CommandItem>
+                            ))}
+                        </CommandGroup>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              ) : null}
+
+              <div className="flex justify-end space-x-2 pt-4">
+                <Button type="button" variant="outline" onClick={handleCloseTransferModal}>
+                  Cancel
+                </Button>
+                <Button type="submit" className="bg-primary text-primary-foreground">
+                  Transfer User
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
