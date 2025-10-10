@@ -90,6 +90,7 @@ const AssessmentViewPage: React.FC = () => {
   const [selectedFacility, setSelectedFacility] = useState<string>('');
   const [selectedEntity, setSelectedEntity] = useState<string>('');
   const [selectedAssessment, setSelectedAssessment] = useState<FacilityAssessment | null>(null);
+  const [originalDetails, setOriginalDetails] = useState<AssessmentDetail[]>([]);
 
   // Review modal
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
@@ -170,6 +171,7 @@ const AssessmentViewPage: React.FC = () => {
       const assessments = assessmentType === 'maintenance' ? allAssessments : safetyAssessments;
       const ass = assessments.find(a => a.facilityType === selectedFacility && a.entity.includes(selectedEntity));
       setSelectedAssessment(ass || null);
+      setOriginalDetails(ass?.details || []);
     } else {
       setSelectedAssessment(null);
     }
@@ -335,6 +337,27 @@ const AssessmentViewPage: React.FC = () => {
         const entityArray = row.getValue("entity") as string[] || [];
         const displayText = entityArray.length > 0 ? entityArray.join(", ") : "N/A";
         return <div className="font-medium max-w-[250px] truncate" title={displayText}>{displayText}</div>;
+      },
+    },
+    {
+      id: "original_condition",
+      header: "Condition",
+      cell: ({ row }) => {
+        const part = row.getValue("part_of_building") as string;
+        const original = originalDetails.find(d => d.part_of_building === part)?.assessment_status;
+        return (
+          <Badge
+            className={
+              original === 'Urgent Attention'
+                ? 'bg-red-100 text-red-800'
+                : original === 'Attention Required'
+                ? 'bg-yellow-100 text-yellow-800'
+                : 'bg-green-100 text-green-800'
+            }
+          >
+            {original || '-'}
+          </Badge>
+        );
       },
     },
     {
