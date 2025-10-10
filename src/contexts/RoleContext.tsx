@@ -89,7 +89,7 @@ export const RoleProvider: React.FC<RoleProviderProps> = ({ children }) => {
     'incidents': ['view_incidents', 'report_incidents', 'update_incidents', 'delete_incidents', 'investigate_incidents'],
     'assessment': ['create_assessment', 'view_assessments', 'create_maintenance_report', 'create_safety_report'],
     'review': ['maintenance_review', 'safety_review'],
-    'institutions': ['view_institutions', 'onboard_institution', 'view_institution', 'update_institution', 'view_subcounty_schools', 'view_ward_schools'],
+    'onboard': ['view_institutions', 'onboard_institution', 'view_institution', 'update_institution', 'view_subcounty_schools', 'view_ward_schools'],
     'permissions': ['view_permissions', 'create_role', 'view_roles', 'update_role', 'assign_permission_to_role', 'assign_permission_to_user', 'remove_permission_from_user', 'remove_permission_from_role'],
     'metrics': ['view_institution_metrics', 'create_institution_metrics', 'update_institution_metrics', 'delete_institution_metrics', 'view_school_metrics'],
     'facility_entities': ['view_facility_entities', 'create_facility_entities', 'update_facility_entities', 'delete_facility_entities'],
