@@ -1,2119 +1,1559 @@
-
-// import React, { useState, useRef, useEffect } from 'react';
-// import { useNavigate } from 'react-router-dom';
-// import { useForm } from 'react-hook-form';
-// import { zodResolver } from '@hookform/resolvers/zod';
-// import * as z from 'zod';
-// import { ArrowLeft, Plus, Upload, X, FileText, Users } from 'lucide-react';
-
+// import React, { useEffect, useState } from 'react';
+// import { User, Mail, Shield, Edit, X, Trash2, AlertCircle, Phone, MoreHorizontal, Check, ChevronsUpDown, ArrowRightLeft } from 'lucide-react';
+// import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+// import { Badge } from '@/components/ui/badge';
 // import { Button } from '@/components/ui/button';
-// import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+// import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+// import {
+//   AlertDialog,
+//   AlertDialogAction,
+//   AlertDialogCancel,
+//   AlertDialogContent,
+//   AlertDialogDescription,
+//   AlertDialogFooter,
+//   AlertDialogHeader,
+//   AlertDialogTitle,
+// } from "@/components/ui/alert-dialog";
 // import { Input } from '@/components/ui/input';
-// import { Label } from '@/components/ui/label';
-// import { Textarea } from '@/components/ui/textarea';
-// import {
-//   Form,
-//   FormControl,
-//   FormField,
-//   FormItem,
-//   FormLabel,
-//   FormMessage,
-// } from '@/components/ui/form';
-// import {
-//   Dialog,
-//   DialogContent,
-//   DialogHeader,
-//   DialogTitle,
-// } from '@/components/ui/dialog';
-// import {
-//   Tabs,
-//   TabsContent,
-//   TabsList,
-//   TabsTrigger,
-// } from '@/components/ui/tabs';
-// import { useToast } from '@/hooks/use-toast';
+// import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+// import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+// import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
+// import { cn } from "@/lib/utils";
+// import { getUsers, createUser, deleteUser, updateUser, transferUser } from '../core/_requests';
+// import { Urls } from '@/constants/urls';
+// import { getInstitutions } from '@/pages/onboarding/core/_requests';
+// import { getPermissions } from '../core/_requests';
+// import { User as UserModel, CreateUserInput } from '../core/_models';
 // import { useRole } from '@/contexts/RoleContext';
+// import { useToast } from "@/components/ui/use-toast";
+// import { Toaster } from "@/components/ui/toaster";
+// import data from '@/constants/data.json';
+// import api from '@/utils/api';
 
-// import { getFacilities, createMaintenanceAssessment, createSafetyAssessment } from "../core/_request";
-// import { Facility } from "../core/_model";
-// import { getSchoolEntities } from '../../facilities/core/_requests';
-// import ClassSafetyForm from './SafetyFormPage';
-// import { createIncident } from '../../reports/core/requests';
-// import { CreateIncidentInput } from '../../reports/core/_models';
-// import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-// import { Checkbox } from '@/components/ui/checkbox';
-// import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-// import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-// import { ChevronDown, Check } from 'lucide-react';
+// // Extract counties, subcounties, and wards from JSON
+// const counties = data.find((t) => t.name === 'counties').data;
+// const subcounties = data.find((t) => t.name === 'subcounties').data;
+// const wards = data.find((t) => t.name === 'station').data;
 
-// // Facility type mappings for consistent naming
-// const FACILITY_TYPE_MAPPINGS: { [key: string]: string } = {
-//   'class room': 'classroom',
-//   'class rooms': 'classroom',
-//   'classroom': 'classroom',
-//   'classrooms': 'classroom',
-//   'dormitory': 'dormitory',
-//   'dormitories': 'dormitory',
-//   'laboratory': 'laboratory',
-//   'laboratories': 'laboratory',
-//   'lab': 'laboratory',
-//   'labs': 'laboratory',
-//   'toilet': 'toilet',
-//   'toilets': 'toilet',
-//   'washroom': 'toilet',
-//   'washrooms': 'toilet',
-//   'library': 'library',
-//   'libraries': 'library',
-//   'office': 'office',
-//   'offices': 'office',
-//   'dining hall': 'dining_hall',
-//   'dining halls': 'dining_hall',
-//   'dining_hall': 'dining_hall',
-//   'compound': 'compound',
-//   'grounds': 'compound',
-//   'school compound': 'compound'
-// };
-
-// // Facility parts configuration
-// const FACILITY_PARTS = {
-//   classroom: [
-//     'Outside wall',
-//     'Verandah',
-//     'Roof',
-//     'Door',
-//     'Floor',
-//     'Inside wall',
-//     'Blackboard',
-//     'Ceiling'
-//   ],
-//   dormitory: [
-//     'Outside wall',
-//     'Flower beds',
-//     'Roof',
-//     'Door',
-//     'Window panes',
-//     'Window lock',
-//     'Floor',
-//     'Inside wall',
-//     'Hanging lines',
-//     'Curtains',
-//     'Ceiling'
-//   ],
-//   laboratory: [
-//     'Outside wall',
-//     'Gas taps',
-//     'Roof',
-//     'Door',
-//     'Door lock',
-//     'Window panes',
-//     'Window lock',
-//     'Floor',
-//     'Inside wall',
-//     'Water taps',
-//     'Cupboards',
-//     'Ceiling',
-//     'Black board',
-//     'Tables',
-//     'Stools'
-//   ],
-//   toilet: [
-//     'Outside wall',
-//     'Drainage',
-//     'Roof',
-//     'Door',
-//     'Door lock',
-//     'Window panes',
-//     'Window lock',
-//     'Floor',
-//     'Inside wall'
-//   ],
-//   library: [
-//     'Outside wall',
-//     'Verandah',
-//     'Roof',
-//     'Door',
-//     'Door lock',
-//     'Window panes',
-//     'Window lock',
-//     'Floor',
-//     'Inside wall',
-//     'Shelves',
-//     'Tables/Chairs',
-//     'Ceiling'
-//   ],
-//   office: [
-//     'Outside wall',
-//     'Verandah',
-//     'Roof',
-//     'Door',
-//     'Door lock',
-//     'Window panes',
-//     'Window lock',
-//     'Floor',
-//     'Inside wall',
-//     'Tables/Chairs',
-//     'Ceiling'
-//   ],
-//   dining_hall: [
-//     'Outside wall',
-//     'Flower beds',
-//     'Roof',
-//     'Door',
-//     'Door lock',
-//     'Window panes',
-//     'Window lock',
-//     'Floor',
-//     'Inside wall',
-//     'Tables',
-//     'Seats',
-//     'Ceiling'
-//   ],
-//   compound: [
-//     'Lawns',
-//     'Flowers',
-//     'Ornamentals',
-//     'Hedges',
-//     'Trees',
-//     'Fences',
-//     'Walk ways',
-//     'Pavements',
-//     'Road'
-//   ],
-//   ICTLab: [
-//     'Outside wall',
-//     'Verandah',
-//     'Roof',
-//     'Door',
-//     'Door lock',
-//     'Window panes',
-//     'Window lock',
-//     'Floor',
-//     'Inside wall',
-//     'Tables/Chairs',
-//     'Ceiling'
-//   ],
-//   SportsFacilities: [
-//     'Outside wall',
-//     'Verandah',
-//     'Roof',
-//     'Door',
-//     'Door lock',
-//     'Window panes',
-//     'Window lock',
-//     'Floor',
-//     'Inside wall',
-//     'Tables/Chairs',
-//     'Ceiling'
-//   ]
-
-// };
-
-// // Facility safety parts configuration
-// const FACILITY_SAFETY_PARTS = {
-//   classroom: [
-//     "Door opens outside",
-//     "Windows open outside",
-//     "Windows have no grills",
-//     "Spacing between desks adequate",
-//     "At least 5 students in class are trained to evacuate the rest in case of emergency",
-//     "The class have undertaken an evacuation drill in case of emergency",
-//     "At least five students in class have basic first aid skills",
-//     "The floor provides appropriate grip",
-//     "The space immediately outside the classroom provides easy movement in case of emergency",
-//     "There is a clear display of action expected in case of emergency",
-//     "There is a clear display of assembly point in case of emergency",
-//     "There is a fire extinguisher within close proximity from the classroom",
-//     "At least five students are trained on how to handle the available fire extinguisher",
-//   ],
-//   library: [
-//     "Door opens outside",
-//     "Windows open outside",
-//     "Windows have grills",
-//     "Spacing between tables adequate",
-//     "At least 5 students in every class are trained to evacuate the rest in case of emergency",
-//     "Students from every class have undertaken an evacuation drill in case of emergency",
-//     "Basic first aid kit is available.",
-//     "At least five students in class have basic first aid skills",
-//     "The floor provides appropriate grip",
-//     "The space immediately outside the library provides easy movement in case of emergency",
-//     "There is a clear display of action expected in case of emergency",
-//     "There is a clear display of assembly point in case of emergency",
-//     "There is a fire extinguisher within close proximity from the Library.",
-//     "At least five students are trained on how to handle the available fire extinguisher",
-//   ],
-//   laboratory: [
-//     "Door opens outside",
-//     "Windows open outside",
-//     "Windows have no grills",
-//     "Spacing between desks adequate",
-//     "At least 5 students in class are trained to evacuate the rest in case of emergency",
-//     "The class have undertaken an evacuation drill in case of emergency",
-//     "At least five students in class have basic first aid skills",
-//     "The floor provides appropriate grip",
-//     "The space immediately outside the classroom provides easy movement in case of emergency",
-//     "There is a clear display of action expected in case of emergency",
-//     "There is a clear display of assembly point in case of emergency",
-//     "There is a fire extinguisher, sand bucket and fire blanket within close proximity from the classroom",
-//     "At least five students are trained on how to handle the available fire extinguisher",
-//     "There is a reliable source of tap water",
-//     "There is a fully fitted first aid kit",
-//   ],
-//   dormitory: [
-//     "Door opens outside",
-//     "Windows open outside",
-//     "Windows have no grills",
-//     "Spacing between beds adequate",
-//     "At least 10 students in the dorm are trained to evacuate the rest in case of emergency",
-//     "The dorm members have undertaken an evacuation drill in case of emergency",
-//     "At least 10 students in the dorm have basic first aid skills",
-//     "The floor provides appropriate grip",
-//     "The space immediately outside the dormitory provides easy movement in case of emergency",
-//     "There is a clear display of action expected in case of emergency",
-//     "There is a clear display of assembly point in case of emergency",
-//     "There is a fire extinguisher within close proximity from the dormitory",
-//     "At least 10 students in the dorm are trained on how to handle the available fire extinguisher",
-//   ],
-//   toilet: [
-//     "Door opens outside",
-//     "Windows open outside",
-//     "Windows have no grills",
-//     "Spacing between desks adequate",
-//     "At least 5 students in class are trained to evacuate the rest in case of emergency",
-//     "The class have undertaken an evacuation drill in case of emergency",
-//     "At least five students in class have basic first aid skills",
-//     "The floor provides appropriate grip",
-//     "The space immediately outside the classroom provides easy movement in case of emergency",
-//     "There is a clear display of action expected in case of emergency",
-//     "There is a clear display of assembly point in case of emergency",
-//     "There is a fire extinguisher within close proximity from the classroom",
-//     "At least five students are trained on how to handle the available fire extinguisher",
-//   ],
-//   office: [
-//     "Door opens outside",
-//     "Windows open outside",
-//     "Windows have no grills",
-//     "Spacing between desks adequate",
-//     "At least 5 students in class are trained to evacuate the rest in case of emergency",
-//     "The class have undertaken an evacuation drill in case of emergency",
-//     "At least five students in class have basic first aid skills",
-//     "The floor provides appropriate grip",
-//     "The space immediately outside the classroom provides easy movement in case of emergency",
-//     "There is a clear display of action expected in case of emergency",
-//     "There is a clear display of assembly point in case of emergency",
-//     "There is a fire extinguisher within close proximity from the classroom",
-//     "At least five students are trained on how to handle the available fire extinguisher",
-//   ],
-//   dining_hall: [
-//     "Door opens outside",
-//     "Windows open outside",
-//     "Windows have no grills",
-//     "Spacing between tables adequate",
-//     "At least 5 students in every class are trained to evacuate the rest in case of emergency",
-//     "The class have undertaken an evacuation drill in case of emergency",
-//     "At least five students in every class have basic first aid skills",
-//     "The floor provides appropriate grip",
-//     "The space immediately outside the dining hall provides easy movement in case of emergency",
-//     "There is a clear display of action expected in case of emergency",
-//     "There is a clear display of assembly point in case of emergency",
-//     "There is a fire extinguisher within close proximity from the dining hall.",
-//     "At least five students are trained on how to handle the available fire extinguisher",
-//   ],
-//   compound: [
-//     "Door opens outside",
-//     "Windows open outside",
-//     "Windows have no grills",
-//     "Spacing between desks adequate",
-//     "At least 5 students in class are trained to evacuate the rest in case of emergency",
-//     "The class have undertaken an evacuation drill in case of emergency",
-//     "At least five students in class have basic first aid skills",
-//     "The floor provides appropriate grip",
-//     "The space immediately outside the classroom provides easy movement in case of emergency",
-//     "There is a clear display of action expected in case of emergency",
-//     "There is a clear display of assembly point in case of emergency",
-//     "There is a fire extinguisher within close proximity from the classroom",
-//     "At least five students are trained on how to handle the available fire extinguisher",
-//   ],
-//   ICTLab: [
-//     "Door opens outside",
-//     "Windows open outside",
-//     "Windows have no grills",
-//     "Spacing between desks adequate",
-//     "At least 5 students in class are trained to evacuate the rest in case of emergency",
-//     "The class have undertaken an evacuation drill in case of emergency",
-//     "At least five students in class have basic first aid skills",
-//     "The floor provides appropriate grip",
-//     "The space immediately outside the classroom provides easy movement in case of emergency",
-//     "There is a clear display of action expected in case of emergency",
-//     "There is a clear display of assembly point in case of emergency",
-//     "There is a fire extinguisher within close proximity from the classroom",
-//     "At least five students are trained on how to handle the available fire extinguisher",
-//   ],
-//   SportsFacilities: [
-//     "Door opens outside",
-//     "Windows open outside",
-//     "Windows have no grills",
-//     "Spacing between desks adequate",
-//     "At least 5 students in class are trained to evacuate the rest in case of emergency",
-//     "The class have undertaken an evacuation drill in case of emergency",
-//     "At least five students in class have basic first aid skills",
-//     "The floor provides appropriate grip",
-//     "The space immediately outside the classroom provides easy movement in case of emergency",
-//     "There is a clear display of action expected in case of emergency",
-//     "There is a clear display of assembly point in case of emergency",
-//     "There is a fire extinguisher within close proximity from the classroom",
-//     "At least five students are trained on how to handle the available fire extinguisher",
-//   ],
-// };
-
-// // Facility assessment schema
-// const facilityAssessmentSchema = z.object({
-//   institution_id: z.number(),
-//   facility_id: z.number(),
-//   class: z.string().optional(),
-//   status: z.enum(['pending', 'in_progress', 'completed']).default('pending'),
-//   details: z.array(z.object({
-//     part_of_building: z.string(),
-//     assessment_status: z.enum(['Urgent Attention', 'Attention Required', 'Good']).optional()
-//   })),
-//   school_feedback: z.string().min(1, 'School feedback is required'),
-//   agent_feedback: z.string().optional(),
-//   files: z.array(z.instanceof(File)).optional(),
-//   classes: z.array(z.string()).optional(),
-// });
-
-// type FacilityAssessmentData = z.infer<typeof facilityAssessmentSchema>;
-
-// // Helper function to get facility parts based on facility type
-// const getFacilityParts = (facilityType: string): string[] => {
-//   // Clean and normalize the input facility type
-//   const normalizedInput = facilityType.toLowerCase().trim();
-//   // Get the standard type from our mappings
-//   const standardType = FACILITY_TYPE_MAPPINGS[normalizedInput] || normalizedInput;
-//   const parts = FACILITY_PARTS[standardType as keyof typeof FACILITY_PARTS];
-//   if (!parts) {
-//     console.warn(`No parts defined for facility type: ${facilityType} (mapped to: ${standardType})`);
-//     return [];
-//   }
-//   return parts || [];
-// };
-
-// // Helper function to get standardized facility type
-// const getFacilityType = (facilityName: string): string => {
-//   const normalizedInput = facilityName.toLowerCase().trim();
-//   return FACILITY_TYPE_MAPPINGS[normalizedInput] || normalizedInput;
-// };
-
-// // Helper function to get facility safety parts based on facility type
-// const getFacilitySafetyParts = (facilityType: string): string[] => {
-//   // Clean and normalize the input facility type
-//   const normalizedInput = facilityType.toLowerCase().trim();
-//   // Get the standard type from our mappings
-//   const standardType = FACILITY_TYPE_MAPPINGS[normalizedInput] || normalizedInput;
-//   const parts = FACILITY_SAFETY_PARTS[standardType as keyof typeof FACILITY_SAFETY_PARTS];
-//   if (!parts) {
-//     console.warn(`No safety parts defined for facility type: ${facilityType} (mapped to: ${standardType})`);
-//     return [];
-//   }
-//   return parts || [];
-// };
-
-// // Helper function to convert file to base64
-// const fileToBase64 = (file: File): Promise<string> => {
-//   return new Promise((resolve, reject) => {
-//     const reader = new FileReader();
-//     reader.readAsDataURL(file);
-//     reader.onload = () => resolve(reader.result as string);
-//     reader.onerror = error => reject(error);
-//   });
-// };
-
-// const AssessmentAddPage: React.FC = () => {
-//   const navigate = useNavigate();
-//   const { toast } = useToast();
+// // School Admin Users Component
+// const SchoolAdminUsers: React.FC = () => {
+//   const [users, setUsers] = useState<UserModel[]>([]);
+//   const [loading, setLoading] = useState(true);
+//   const [showModal, setShowModal] = useState(false);
+//   const [form, setForm] = useState({ name: '', email: '', phone: '', gender: '', role: '', password: '' });
+//   const [submitting, setSubmitting] = useState(false);
+//   const [error, setError] = useState<string | null>(null);
+//   const [roles, setRoles] = useState<any[]>([]);
 //   const { currentUser } = useRole();
-//   const [isModalOpen, setIsModalOpen] = useState(false);
-//   const [selectedFacility, setSelectedFacility] = useState<Facility | null>(null);
-//   const [facilityParts, setFacilityParts] = useState<string[]>([]);
-//   const [assessments, setAssessments] = useState<any[]>([]);
-//   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
-//   const [facilities, setFacilities] = useState<Facility[]>([]);
-//   const [realClassOptions, setRealClassOptions] = useState<string[]>([]);
-//   const [toiletOptions, setToiletOptions] = useState<string[]>([]);
-//   const [laboratoryOptions, setLaboratoryOptions] = useState<string[]>([]);
-//   const [diningHallOptions, setDiningHallOptions] = useState<string[]>([]);
-//   const [dormitoryOptions, setDormitoryOptions] = useState<string[]>([]);
-//   const [officeOptions, setOfficeOptions] = useState<string[]>([]);
-//   const fileInputRef = useRef<HTMLInputElement>(null);
-//   const [isDraftLoaded, setIsDraftLoaded] = useState(false);
+//   const { toast } = useToast();
 
-//   // Safety data
-//   const [safetyData, setSafetyData] = useState<any[]>([]);
-
-//   // Toilet specific states
-//   const [hasToiletFacility, setHasToiletFacility] = useState<boolean | null>(null);
-//   const [selectedToiletTypes, setSelectedToiletTypes] = useState<string[]>([]);
-//   const [toiletQuantities, setToiletQuantities] = useState<{[key: string]: number}>({});
-
-//   // Laboratory specific states
-//   const [hasLaboratoryFacility, setHasLaboratoryFacility] = useState<boolean | null>(null);
-//   const [selectedLaboratoryTypes, setSelectedLaboratoryTypes] = useState<string[]>([]);
-//   const [laboratoryQuantities, setLaboratoryQuantities] = useState<{[key: string]: number}>({});
-
-//   // Dining Hall specific states
-//   const [hasDiningHallFacility, setHasDiningHallFacility] = useState<boolean | null>(null);
-//   const [selectedDiningHallTypes, setSelectedDiningHallTypes] = useState<string[]>([]);
-//   const [diningHallQuantities, setDiningHallQuantities] = useState<{[key: string]: number}>({});
-
-//   // Dormitory specific states
-//   const [hasDormitoryFacility, setHasDormitoryFacility] = useState<boolean | null>(null);
-//   const [selectedDormitoryTypes, setSelectedDormitoryTypes] = useState<string[]>([]);
-//   const [dormitoryQuantities, setDormitoryQuantities] = useState<{[key: string]: number}>({});
-
-//   // Office specific states
-//   const [hasOfficeFacility, setHasOfficeFacility] = useState<boolean | null>(null);
-//   const [selectedOfficeTypes, setSelectedOfficeTypes] = useState<string[]>([]);
-//   const [officeQuantities, setOfficeQuantities] = useState<{[key: string]: number}>({});
-
-//   // Incident reporting state
-//   const [isIncidentModalOpen, setIsIncidentModalOpen] = useState(false);
-//   const [incidentDescription, setIncidentDescription] = useState('');
-//   const [incidentSeverity, setIncidentSeverity] = useState('');
-//   const [incidentFiles, setIncidentFiles] = useState<File[]>([]);
-//   const [selectedIncidentFacility, setSelectedIncidentFacility] = useState<string>('');
-//   const [isSubmittingIncident, setIsSubmittingIncident] = useState(false);
-
-//   // Initialize form with empty values
-//   const facilityForm = useForm<FacilityAssessmentData>({
-//     resolver: zodResolver(facilityAssessmentSchema),
-//     defaultValues: {
-//       institution_id: 1,
-//       facility_id: 0,
-//       class: '',
-//       status: 'pending',
-//       details: [],
-//       school_feedback: '',
-//       agent_feedback: '',
-//       files: [],
-//       classes: [],
-//     }
-//   });
-
-//   // Draft management
-//   const saveDraft = () => {
-//     const draftData = {
-//       selectedFacility,
-//       facilityParts,
-//       safetyData,
-//       hasToiletFacility,
-//       selectedToiletTypes,
-//       toiletQuantities,
-//       hasLaboratoryFacility,
-//       selectedLaboratoryTypes,
-//       laboratoryQuantities,
-//       hasDiningHallFacility,
-//       selectedDiningHallTypes,
-//       diningHallQuantities,
-//       hasDormitoryFacility,
-//       selectedDormitoryTypes,
-//       dormitoryQuantities,
-//       hasOfficeFacility,
-//       selectedOfficeTypes,
-//       officeQuantities,
-//       formData: facilityForm.getValues(),
-//       timestamp: Date.now()
-//     };
-//     localStorage.setItem('assessmentDraft', JSON.stringify(draftData));
-//   };
-
-//   const clearDraft = () => {
-//     localStorage.removeItem('assessmentDraft');
-//     setIsDraftLoaded(false);
-//   };
-
-//   // Fetch facilities and entities data
-//   useEffect(() => {
-//     console.log('useEffect triggered for fetching data');
-//     const fetchData = async () => {
-//       try {
-//         console.log('Starting to fetch facilities and entities...');
-
-//         // Fetch facilities
-//         const facilitiesResponse = await getFacilities();
-//         const facilitiesData = facilitiesResponse.data || [];
-//         console.log('Fetched facilities:', facilitiesData);
-//         // Log facility type mappings
-//         facilitiesData.forEach(facility => {
-//           console.log(`Facility: ${facility.name} -> Type: ${getFacilityType(facility.name)}`);
-//         });
-//         setFacilities(facilitiesData);
-
-//         // Fetch entities to get real class data
-//         const entitiesResponse = await getSchoolEntities();
-//         const rawEntities = entitiesResponse.data || [];
-//         console.log('Fetched raw entities:', rawEntities);
-
-//         // Transform entities to include facilityName (same as EntitiesListPage)
-//         const entities = rawEntities.map((entity: any) => {
-//           const facility = facilitiesData.find(f => f.id === entity.facility_id);
-//           const facilityName = facility ? facility.name : 'Unknown Facility';
-//           return {
-//             ...entity,
-//             facilityName
-//           };
-//         });
-//         console.log('Transformed entities:', entities);
-
-//         // Filter entities by finding facility IDs that match each type
-//         const classroomFacilityIds = facilitiesData.filter(f => getFacilityType(f.name) === 'classroom').map(f => f.id);
-//         console.log('Classroom facility IDs:', classroomFacilityIds);
-//         const classroomEntities = entities.filter((entity: any) => classroomFacilityIds.includes(entity.facility_id));
-//         console.log('Classroom entities:', classroomEntities);
-//         const classOptions = classroomEntities.map((entity: any) => entity.name).sort();
-//         console.log('Class options:', classOptions);
-//         setRealClassOptions(classOptions);
-//         console.log('Set class options state');
-
-//         const toiletFacilityIds = facilitiesData.filter(f => getFacilityType(f.name) === 'toilet').map(f => f.id);
-//         console.log('Toilet facility IDs:', toiletFacilityIds);
-//         const toiletEntities = entities.filter((entity: any) => toiletFacilityIds.includes(entity.facility_id));
-//         console.log('Toilet entities:', toiletEntities);
-//         const toiletOpts = toiletEntities.map((entity: any) => entity.name).sort();
-//         console.log('Toilet options:', toiletOpts);
-//         setToiletOptions(toiletOpts);
-
-//         const laboratoryFacilityIds = facilitiesData.filter(f => getFacilityType(f.name) === 'laboratory').map(f => f.id);
-//         console.log('Laboratory facility IDs:', laboratoryFacilityIds);
-//         const laboratoryEntities = entities.filter((entity: any) => laboratoryFacilityIds.includes(entity.facility_id));
-//         console.log('Laboratory entities:', laboratoryEntities);
-//         const laboratoryOpts = laboratoryEntities.map((entity: any) => entity.name).sort();
-//         console.log('Laboratory options:', laboratoryOpts);
-//         setLaboratoryOptions(laboratoryOpts);
-
-//         const diningHallFacilityIds = facilitiesData.filter(f => getFacilityType(f.name) === 'dining_hall').map(f => f.id);
-//         console.log('Dining hall facility IDs:', diningHallFacilityIds);
-//         const diningHallEntities = entities.filter((entity: any) => diningHallFacilityIds.includes(entity.facility_id));
-//         console.log('Dining hall entities:', diningHallEntities);
-//         const diningHallOpts = diningHallEntities.map((entity: any) => entity.name).sort();
-//         console.log('Dining hall options:', diningHallOpts);
-//         setDiningHallOptions(diningHallOpts);
-
-//         const dormitoryFacilityIds = facilitiesData.filter(f => getFacilityType(f.name) === 'dormitory').map(f => f.id);
-//         console.log('Dormitory facility IDs:', dormitoryFacilityIds);
-//         const dormitoryEntities = entities.filter((entity: any) => dormitoryFacilityIds.includes(entity.facility_id));
-//         console.log('Dormitory entities:', dormitoryEntities);
-//         const dormitoryOpts = dormitoryEntities.map((entity: any) => entity.name).sort();
-//         console.log('Dormitory options:', dormitoryOpts);
-//         setDormitoryOptions(dormitoryOpts);
-
-//         const officeFacilityIds = facilitiesData.filter(f => getFacilityType(f.name) === 'office').map(f => f.id);
-//         console.log('Office facility IDs:', officeFacilityIds);
-//         const officeEntities = entities.filter((entity: any) => officeFacilityIds.includes(entity.facility_id));
-//         console.log('Office entities:', officeEntities);
-//         const officeOpts = officeEntities.map((entity: any) => entity.name).sort();
-//         console.log('Office options:', officeOpts);
-//         setOfficeOptions(officeOpts);
-
-//         // Validation logs
-//         console.log('Data loading summary:');
-//         console.log('- Facilities loaded:', facilitiesData.length);
-//         console.log('- Entities loaded:', entities.length);
-//         console.log('- Class options:', classOptions.length);
-//         console.log('- Toilet options:', toiletOpts.length);
-//         console.log('- Laboratory options:', laboratoryOpts.length);
-//         console.log('- Dining hall options:', diningHallOpts.length);
-//         console.log('- Dormitory options:', dormitoryOpts.length);
-//         console.log('- Office options:', officeOpts.length);
-
-//         // Validation checks
-//         if (facilitiesData.length === 0) {
-//           console.warn('Warning: No facilities loaded!');
-//         }
-//         if (entities.length === 0) {
-//           console.warn('Warning: No entities loaded!');
-//         }
-//         if (classOptions.length === 0) {
-//           console.warn('Warning: No class options found!');
-//         }
-//         if (toiletOpts.length === 0) {
-//           console.warn('Warning: No toilet options found!');
-//         }
-//         if (laboratoryOpts.length === 0) {
-//           console.warn('Warning: No laboratory options found!');
-//         }
-//         if (diningHallOpts.length === 0) {
-//           console.warn('Warning: No dining hall options found!');
-//         }
-//         if (dormitoryOpts.length === 0) {
-//           console.warn('Warning: No dormitory options found!');
-//         }
-//         if (officeOpts.length === 0) {
-//           console.warn('Warning: No office options found!');
-//         }
-
-//       } catch (error) {
-//         console.error('Error fetching facilities and entities:', error);
-//         toast({
-//           title: "Error",
-//           description: "Failed to load data.",
-//           variant: "destructive",
-//         });
-//         setFacilities([]);
-//         setRealClassOptions([]);
-//         setToiletOptions([]);
-//         setLaboratoryOptions([]);
-//         setDiningHallOptions([]);
-//         setDormitoryOptions([]);
-//         setOfficeOptions([]);
-//       }
-//   };
-//   fetchData();
-//   console.log('useEffect completed');
-// }, [toast]);
-
-
-// // Save draft on state changes
-// useEffect(() => {
-//   if (isDraftLoaded) return; // Don't save while loading
-//   saveDraft();
-// }, [
-//   selectedFacility,
-//   facilityParts,
-//   safetyData,
-//   hasToiletFacility,
-//   selectedToiletTypes,
-//   toiletQuantities,
-//   hasLaboratoryFacility,
-//   selectedLaboratoryTypes,
-//   laboratoryQuantities,
-//   hasDiningHallFacility,
-//   selectedDiningHallTypes,
-//   diningHallQuantities,
-//   hasDormitoryFacility,
-//   selectedDormitoryTypes,
-//   dormitoryQuantities,
-//   hasOfficeFacility,
-//   selectedOfficeTypes,
-//   officeQuantities
-// ]);
-
-// // Save draft on form changes
-// useEffect(() => {
-//   const subscription = facilityForm.watch(() => {
-//     if (isDraftLoaded) return;
-//     saveDraft();
-//   });
-//   return () => subscription.unsubscribe();
-// }, [facilityForm, isDraftLoaded]);
-
-// // Debug: Monitor option changes
-// useEffect(() => {
-//   console.log('realClassOptions changed:', realClassOptions);
-// }, [realClassOptions]);
-
-// useEffect(() => {
-//   console.log('toiletOptions changed:', toiletOptions);
-// }, [toiletOptions]);
-
-// useEffect(() => {
-//   console.log('laboratoryOptions changed:', laboratoryOptions);
-// }, [laboratoryOptions]);
-
-// useEffect(() => {
-//   console.log('diningHallOptions changed:', diningHallOptions);
-// }, [diningHallOptions]);
-
-// useEffect(() => {
-//   console.log('dormitoryOptions changed:', dormitoryOptions);
-// }, [dormitoryOptions]);
-
-// useEffect(() => {
-//   console.log('officeOptions changed:', officeOptions);
-// }, [officeOptions]);
-
-
-
-//   // Load draft data on component mount
-//   useEffect(() => {
-//     const draftData = localStorage.getItem('assessmentDraft');
-//     if (draftData) {
-//       try {
-//         const parsed = JSON.parse(draftData);
-//         setSelectedFacility(parsed.selectedFacility || null);
-//         setFacilityParts(parsed.facilityParts || []);
-//         setSafetyData(parsed.safetyData || []);
-//         setHasToiletFacility(parsed.hasToiletFacility ?? null);
-//         setSelectedToiletTypes(parsed.selectedToiletTypes || []);
-//         setToiletQuantities(parsed.toiletQuantities || {});
-//         setHasLaboratoryFacility(parsed.hasLaboratoryFacility ?? null);
-//         setSelectedLaboratoryTypes(parsed.selectedLaboratoryTypes || []);
-//         setLaboratoryQuantities(parsed.laboratoryQuantities || {});
-//         setHasDiningHallFacility(parsed.hasDiningHallFacility ?? null);
-//         setSelectedDiningHallTypes(parsed.selectedDiningHallTypes || []);
-//         setDiningHallQuantities(parsed.diningHallQuantities || {});
-//         setHasDormitoryFacility(parsed.hasDormitoryFacility ?? null);
-//         setSelectedDormitoryTypes(parsed.selectedDormitoryTypes || []);
-//         setDormitoryQuantities(parsed.dormitoryQuantities || {});
-//         setHasOfficeFacility(parsed.hasOfficeFacility ?? null);
-//         setSelectedOfficeTypes(parsed.selectedOfficeTypes || []);
-//         setOfficeQuantities(parsed.officeQuantities || {});
-//         if (parsed.formData) {
-//           facilityForm.reset(parsed.formData);
-//         }
-//         setIsDraftLoaded(true);
-//         toast({
-//           title: 'Draft Loaded',
-//           description: 'Your previous unsaved assessment data has been restored.',
-//           variant: 'default',
-//         });
-//       } catch (error) {
-//         console.error('Error loading draft:', error);
-//       }
-//     }
-//   }, [facilityForm, toast]);
-  
-//   // Update form when a facility is selected
-//   useEffect(() => {
-//     if (selectedFacility) {
-//       const parts = getFacilityParts(selectedFacility.name);
-//       setFacilityParts(parts);
-//       const safetyParts = getFacilitySafetyParts(selectedFacility.name);
-//       const initialSafetyData = safetyParts.map((part, index) => ({
-//         id: index + 1,
-//         part: part,
-//         attentionRequired: false,
-//         good: false,
-//       }));
-//       setSafetyData(initialSafetyData);
-//       const facilityType = getFacilityType(selectedFacility.name);
-//       const isClassFacility = facilityType === 'classroom';
-//       facilityForm.reset({
-//         institution_id: selectedFacility.institution_id || 1,
-//         facility_id: selectedFacility.id,
-//         class: isClassFacility ? '' : undefined,
-//         status: 'pending',
-//         details: parts.map(name => ({
-//           part_of_building: name,
-//           assessment_status: undefined as any
-//         })),
-//         school_feedback: '',
-//         agent_feedback: '',
-//         files: [],
-//         classes: [],
-//       });
-//     }
-//   }, [selectedFacility]);
-
-//   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-//     const files = Array.from(event.target.files || []);
-//     const newFiles = [...uploadedFiles, ...files];
-//     setUploadedFiles(newFiles);
-//     facilityForm.setValue('files', newFiles);
-//   };
-
-//   const removeFile = (index: number) => {
-//     const newFiles = uploadedFiles.filter((_, i) => i !== index);
-//     setUploadedFiles(newFiles);
-//     facilityForm.setValue('files', newFiles);
-//   };
-
-//   const handleDragOver = (event: React.DragEvent) => {
-//     event.preventDefault();
-//   };
-
-//   const handleDrop = (event: React.DragEvent) => {
-//     event.preventDefault();
-//     const files = Array.from(event.dataTransfer.files);
-//     const newFiles = [...uploadedFiles, ...files];
-//     setUploadedFiles(newFiles);
-//     facilityForm.setValue('files', newFiles);
-//   };
-
-//   const openAssessmentModal = (facility: Facility) => {
-//     setSelectedFacility(facility);
-
-//     // Get the parts for this facility type
-//     const facilityParts = getFacilityParts(facility.name);
-//     setFacilityParts(facilityParts);
-
-//     // Initialize form with default values for each part
-//     facilityForm.reset({
-//       facility_id: facility.id,
-//       details: facilityParts.map(name => ({ part_of_building: name, assessment_status: undefined as any })),
-//       files: []
-//     });
-//     setUploadedFiles([]);
-//     setIsModalOpen(true);
-//     // Reset facility-specific states
-//     setHasToiletFacility(null);
-//     setSelectedToiletTypes([]);
-//     setToiletQuantities({});
-//     setHasLaboratoryFacility(null);
-//     setSelectedLaboratoryTypes([]);
-//     setLaboratoryQuantities({});
-//     setHasDiningHallFacility(null);
-//     setSelectedDiningHallTypes([]);
-//     setDiningHallQuantities({});
-//     setHasDormitoryFacility(null);
-//     setSelectedDormitoryTypes([]);
-//     setDormitoryQuantities({});
-//   };
-
-//   const handleFacilityAssessmentSubmit = async (data: FacilityAssessmentData) => {
+//   const fetchSchoolUsers = async () => {
+//     setLoading(true);
 //     try {
-//       if (!selectedFacility) return;
-
-//       const facilityType = getFacilityType(selectedFacility.name);
-//       const isClassFacility = facilityType === 'classroom';
-//       const isToiletFacility = facilityType === 'toilet';
-//       const isLaboratoryFacility = facilityType === 'laboratory';
-//       const isDiningHallFacility = facilityType === 'dining_hall';
-//       const isDormitoryFacility = facilityType === 'dormitory';
-//       const isOfficeFacility = facilityType === 'office';
-
-//       // Validation: Check if all maintenance details are marked
-//       const allMaintenanceMarked = data.details.every(detail => detail.assessment_status !== undefined);
-//       if (!allMaintenanceMarked) {
-//         toast({
-//           title: 'Validation Error',
-//           description: 'Please mark all maintenance assessment areas before submitting.',
-//           variant: 'destructive',
-//         });
-//         return;
+//       const data = await getUsers();
+//       if (Array.isArray(data)) {
+//         // Filter users by institution_id
+//         const schoolUsers = data.filter(user => user.institution_id === currentUser?.institution_id);
+//         setUsers(schoolUsers);
+//       } else if (data && typeof data === 'object' && 'users' in data && Array.isArray((data as { users: UserModel[] }).users)) {
+//         const schoolUsers = (data as { users: UserModel[] }).users.filter(user => user.institution_id === currentUser?.institution_id);
+//         setUsers(schoolUsers);
+//       } else {
+//         setUsers([]);
 //       }
-
-//       // Validation: Check if all safety details are marked
-//       const allSafetyMarked = safetyData.every(item => item.attentionRequired || item.good);
-//       if (!allSafetyMarked) {
-//         toast({
-//           title: 'Validation Error',
-//           description: 'Please mark all safety assessment areas before submitting.',
-//           variant: 'destructive',
-//         });
-//         return;
-//       }
-
-//       let maintenanceSubmitted = false;
-//       let safetySubmitted = false;
-
-//       // Check if maintenance has changes
-//       const hasMaintenanceChanges = data.details.some(detail => detail.assessment_status !== 'Good');
-
-//       // Check if safety has changes
-//       const hasSafetyChanges = safetyData.some(item => item.attentionRequired || item.good);
-
-//       // Check if facility is not available
-//       const isFacilityNotAvailable = (isToiletFacility && hasToiletFacility === false) ||
-//                                      (isLaboratoryFacility && hasLaboratoryFacility === false) ||
-//                                      (isDiningHallFacility && hasDiningHallFacility === false) ||
-//                                      (isDormitoryFacility && hasDormitoryFacility === false) ||
-//                                      (isOfficeFacility && hasOfficeFacility === false);
-
-//       if (hasMaintenanceChanges) {
-//         // Create the assessment input object matching MaintenanceAssessmentInput type
-//          const assessmentInput = {
-//            institution_id: selectedFacility.institution_id || 1,
-//            institution_name: 'Institution', // Add required institution_name
-//            facility_id: data.facility_id,
-//            entity: isClassFacility ? (data.classes || []) :
-//                    isToiletFacility ? selectedToiletTypes :
-//                    [],
-//            status: 'pending' as 'pending',
-//            details: data.details.map(detail => ({
-//              part_of_building: detail.part_of_building,
-//              assessment_status: detail.assessment_status || 'Good'
-//            })),
-//            school_feedback: data.school_feedback,
-//            agent_feedback: data.agent_feedback,
-//            files: uploadedFiles,
-//          };
-
-//         const response = await createMaintenanceAssessment(assessmentInput);
-
-//         if (response && response.status === 'error') {
-//           toast({
-//             title: 'Maintenance Submission Error',
-//             description: response.message || 'Failed to submit maintenance assessment',
-//             variant: 'destructive',
-//           });
-//           return;
-//         }
-//         maintenanceSubmitted = true;
-//       } else if (isFacilityNotAvailable && data.school_feedback.trim()) {
-//         // Submit notes-only assessment for unavailable facility
-//         const assessmentInput = {
-//           institution_id: selectedFacility.institution_id || 1,
-//           institution_name: 'Institution',
-//           facility_id: data.facility_id,
-//           entity: [],
-//           status: 'pending' as 'pending',
-//           details: [],
-//           school_feedback: data.school_feedback,
-//           agent_feedback: data.agent_feedback,
-//           files: uploadedFiles,
-//         };
-
-//         const response = await createMaintenanceAssessment(assessmentInput);
-
-//         if (response && response.status === 'error') {
-//           toast({
-//             title: 'Submission Error',
-//             description: response.message || 'Failed to submit assessment',
-//             variant: 'destructive',
-//           });
-//           return;
-//         }
-//         maintenanceSubmitted = true;
-//       }
-
-//       if (hasSafetyChanges) {
-//         // Create safety assessment input
-//         const safetyInput = {
-//           institution_id: selectedFacility.institution_id || 1,
-//           institution_name: 'Institution',
-//           facility_id: data.facility_id,
-//           entity: isClassFacility ? (data.classes || []) :
-//                   isToiletFacility ? selectedToiletTypes :
-//                   [],
-//           status: 'pending' as 'pending',
-//           details: safetyData.map(item => ({
-//             part_of_building: item.part,
-//             assessment_status: item.attentionRequired ? ('Attention Required' as const) : ('Good' as const)
-//           })),
-//           school_feedback: data.school_feedback,
-//           agent_feedback: data.agent_feedback,
-//           files: uploadedFiles,
-//         };
-
-//         const safetyResponse = await createSafetyAssessment(safetyInput);
-
-//         if (safetyResponse && safetyResponse.status === 'error') {
-//           toast({
-//             title: 'Safety Submission Error',
-//             description: safetyResponse.message || 'Failed to submit safety assessment',
-//             variant: 'destructive',
-//           });
-//           return;
-//         }
-//         safetySubmitted = true;
-//       }
-
-//       if (!maintenanceSubmitted && !safetySubmitted && !data.school_feedback.trim()) {
-//         toast({
-//           title: 'No Changes',
-//           description: 'Please provide notes or make assessment changes.',
-//           variant: 'default',
-//         });
-//         return;
-//       }
-
-//       // Update the assessments list with the new assessment
-//       const newAssessment = {
-//         id: Date.now().toString(),
-//         facilityId: data.facility_id,
-//         facilityType: selectedFacility.name,
-//         assessmentDate: new Date().toISOString(),
-//         details: data.details,
-//       };
-
-//       setAssessments(prev => [newAssessment, ...prev]);
-
-//       const submittedTypes = [];
-//       if (maintenanceSubmitted) submittedTypes.push('Maintenance');
-//       if (safetySubmitted) submittedTypes.push('Safety');
-
-//       toast({
-//         title: 'Assessment Submitted',
-//         description: `${submittedTypes.join(' and ')} assessment${submittedTypes.length > 1 ? 's' : ''} for ${selectedFacility.name} submitted successfully!`,
-//         variant: 'default',
-//       });
-
-//       setIsModalOpen(false);
-//       setUploadedFiles([]);
-//       facilityForm.reset();
-//       setSelectedFacility(null);
-//       setSafetyData([]);
-//       // Reset toilet-specific states
-//       setHasToiletFacility(null);
-//       setSelectedToiletTypes([]);
-//       setToiletQuantities({});
-//       // Reset laboratory-specific states
-//       setHasLaboratoryFacility(null);
-//       setSelectedLaboratoryTypes([]);
-//       setLaboratoryQuantities({});
-//       // Reset dining hall-specific states
-//       setHasDiningHallFacility(null);
-//       setSelectedDiningHallTypes([]);
-//       setDiningHallQuantities({});
-//       // Reset dormitory-specific states
-//       setHasDormitoryFacility(null);
-//       setSelectedDormitoryTypes([]);
-//       setDormitoryQuantities({});
-//       // Reset office-specific states
-//       setHasOfficeFacility(null);
-//       setSelectedOfficeTypes([]);
-//       setOfficeQuantities({});
-//       setHasOfficeFacility(null);
-
-//       setSelectedOfficeTypes([]);
-//       setOfficeQuantities({});
-//       // Clear draft after successful submission
-//       clearDraft();
 //     } catch (error: any) {
-//       // Try to extract backend error message
-//       let message = 'Failed to submit assessment';
-//       if (error?.response?.data?.message) {
-//         message = error.response.data.message;
-//       } else if (error?.message) {
-//         message = error.message;
+//       console.error('Error fetching users:', error);
+//       let errorMessage = 'Failed to load users.';
+//       if (error?.response?.status === 403 || error?.response?.status === 401) {
+//         errorMessage = 'You do not have permission to view users.';
+//       } else if (error?.response?.data?.message) {
+//         errorMessage = error.response.data.message;
 //       }
 //       toast({
-//         title: 'Submission Error',
-//         description: message,
+//         title: 'Error',
+//         description: errorMessage,
 //         variant: 'destructive',
 //       });
+//       setUsers([]);
+//     } finally {
+//       setLoading(false);
 //     }
 //   };
 
+//   const fetchRoles = async () => {
+//     try {
+//       const data = await getPermissions();
+//       setRoles(data.roles?.map(r => ({ ...r, status: r.status || 'Active' })) || []);
+//     } catch (error: any) {
+//       console.error('Error fetching roles:', error);
+//       let errorMessage = 'Failed to load roles.';
+//       if (error?.response?.status === 403 || error?.response?.status === 401) {
+//         errorMessage = 'You do not have permission to view roles.';
+//       } else if (error?.response?.data?.message) {
+//         errorMessage = error.response.data.message;
+//       }
+//       toast({
+//         title: 'Error',
+//         description: errorMessage,
+//         variant: 'destructive',
+//       });
+//       setRoles([]);
+//     }
+//   };
 
-// interface ClassSelectProps {
-//   onChange: (selected: string[]) => void;
-//   value: string[];
-//   classOptions: string[];
-// }
+//   useEffect(() => {
+//     fetchSchoolUsers();
+//     fetchRoles();
+//   }, [currentUser?.institution_id]);
 
-// const ClassSelect: React.FC<ClassSelectProps> = ({ onChange, value, classOptions }) => {
-//   const [open, setOpen] = useState(false);
+//   const handleOpenModal = () => {
+//     setForm({ name: '', email: '', phone: '', gender: '', role: '', password: '' });
+//     setError(null);
+//     setShowModal(true);
+//   };
 
-//   return (
-//     <Popover open={open} onOpenChange={setOpen}>
-//       <PopoverTrigger asChild>
-//         <Button variant="outline" className="w-full justify-between">
-//           {value.length > 0 ? value.join(', ') : <em>Select classes...</em>}
-//           <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-//         </Button>
-//       </PopoverTrigger>
-//       <PopoverContent className="w-full p-0">
-//         <Command>
-//           <CommandList>
-//             <CommandEmpty>No classes found.</CommandEmpty>
-//             <CommandGroup>
-//               {classOptions.map((option) => {
-//                 const isSelected = value.includes(option);
-//                 return (
-//                   <CommandItem
-//                     key={option}
-//                     onSelect={() => {
-//                       const newValue = isSelected
-//                         ? value.filter((v) => v !== option)
-//                         : [...value, option];
-//                       onChange(newValue);
-//                     }}
-//                   >
-//                     {isSelected ? <Check className="mr-2 h-4 w-4" /> : <div className="mr-2 h-4 w-4" />}
-//                     {option}
-//                   </CommandItem>
-//                 );
-//               })}
-//             </CommandGroup>
-//           </CommandList>
-//         </Command>
-//       </PopoverContent>
-//     </Popover>
-//   );
-// };
+//   const handleCloseModal = () => {
+//     setShowModal(false);
+//     setError(null);
+//     setForm({ name: '', email: '', phone: '', gender: '', role: '', password: '' });
+//   };
 
-//   const getAssessmentCount = (facilityId: string) => {
-//     return assessments.filter(assessment => assessment.facilityId === facilityId).length;
+//   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+//     const { name, value } = e.target;
+//     if (name === 'phone') {
+//       const numericValue = value.replace(/\D/g, '');
+//       setForm({ ...form, [name]: numericValue });
+//     } else {
+//       setForm({ ...form, [name]: value });
+//     }
+//   };
+
+//   const handleSubmit = async (e: React.FormEvent) => {
+//     e.preventDefault();
+//     setSubmitting(true);
+//     setError(null);
+
+//     // Validation for phone number
+//     if (form.phone && !/^07\d{8}$/.test(form.phone)) {
+//       setError('Phone number must be a valid Kenyan number: 10 digits starting with 07');
+//       setSubmitting(false);
+//       return;
+//     }
+
+//     try {
+//       const createData = {
+//         ...form,
+//         institution_id: currentUser?.institution_id,
+//       };
+//       await createUser(createData);
+//       toast({
+//         title: "Success",
+//         description: "User created successfully",
+//         variant: "default",
+//       });
+//       setShowModal(false);
+//       fetchSchoolUsers();
+//     } catch (err: any) {
+//       const errorResponse = err?.response?.data;
+//       if (errorResponse?.errors) {
+//         const validationErrors = Object.entries(errorResponse.errors)
+//           .map(([field, messages]) => `${field}: ${(messages as string[]).join(', ')}`)
+//           .join('\n');
+//         toast({
+//           title: "Validation Error",
+//           description: validationErrors,
+//           variant: "destructive",
+//         });
+//         setError(validationErrors);
+//       } else {
+//         const errorMessage = errorResponse?.message || 'Failed to create user';
+//         toast({
+//           title: "Error",
+//           description: errorMessage,
+//           variant: "destructive",
+//         });
+//         setError(errorMessage);
+//       }
+//     } finally {
+//       setSubmitting(false);
+//     }
+//   };
+
+//   const formatRole = (role: string) => {
+//     return role.split('_').map(word =>
+//       word.charAt(0).toUpperCase() + word.slice(1)
+//     ).join(' ');
+//   };
+
+//   const getStatusBadge = (status: string) => {
+//     switch (status) {
+//       case 'Active':
+//         return <Badge className="bg-success text-success-foreground">Active</Badge>;
+//       case 'Inactive':
+//         return <Badge className="bg-muted text-muted-foreground">Inactive</Badge>;
+//       case 'Suspended':
+//         return <Badge className="bg-destructive text-destructive-foreground">Suspended</Badge>;
+//       default:
+//         return <Badge variant="outline">{status}</Badge>;
+//     }
 //   };
 
 //   return (
-//     <div className="container mx-auto py-6">
-//       {/* {isDraftLoaded && (
-//         <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
-//           <div className="flex items-center space-x-2">
-//             <FileText className="h-5 w-5 text-blue-600" />
-//             <div>
-//               <p className="text-sm font-medium text-blue-800">Draft Data Loaded</p>
-//               <p className="text-xs text-blue-600">Your previous unsaved assessment has been restored</p>
-//             </div>
+//     <>
+//       <div className="space-y-6">
+//         <div className="flex items-center justify-between">
+//           <div>
+//             <h1 className="text-2xl font-bold text-foreground">School Staff Management</h1>
+//             <p className="text-muted-foreground">
+//               Manage staff members for {currentUser?.institution?.name || 'your school'}
+//             </p>
 //           </div>
-//           <Button
-//             variant="outline"
-//             size="sm"
-//             onClick={clearDraft}
-//             className="text-blue-600 border-blue-300 hover:bg-blue-100"
-//           >
-//             Clear Draft
+//           <Button className="bg-primary hover:bg-primary-hover text-primary-foreground" onClick={handleOpenModal}>
+//             <User className="h-4 w-4 mr-2" />
+//             Add Staff Member
 //           </Button>
 //         </div>
-//       )} */}
-//       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-//         <div className="flex-1 min-w-0">
-//           <h1 className="text-3xl font-bold truncate">Facility Assessment</h1>
-//           <p className="text-muted-foreground mt-1">Select a facility type to begin assessment</p>
+
+//         {/* Statistics Cards */}
+//         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 my-6">
+//           <Card>
+//             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+//               <CardTitle className="text-sm font-medium">Total Staff</CardTitle>
+//               <User className="h-4 w-4 text-muted-foreground" />
+//             </CardHeader>
+//             <CardContent>
+//               <div className="text-2xl font-bold">{users.length}</div>
+//               <p className="text-xs text-muted-foreground">
+//                 School staff members
+//               </p>
+//             </CardContent>
+//           </Card>
+//           <Card>
+//             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+//               <CardTitle className="text-sm font-medium">Teachers</CardTitle>
+//               <User className="h-4 w-4 text-muted-foreground" />
+//             </CardHeader>
+//             <CardContent>
+//               <div className="text-2xl font-bold">
+//                 {users.filter(user => user.role === 'teacher').length}
+//               </div>
+//               <p className="text-xs text-muted-foreground">
+//                 Teaching staff
+//               </p>
+//             </CardContent>
+//           </Card>
+//           <Card>
+//             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+//               <CardTitle className="text-sm font-medium">Active Staff</CardTitle>
+//               <User className="h-4 w-4 text-muted-foreground" />
+//             </CardHeader>
+//             <CardContent>
+//               <div className="text-2xl font-bold">
+//                 {users.filter(user => user.status === 'Active').length}
+//               </div>
+//               <p className="text-xs text-muted-foreground">
+//                 Currently active staff
+//               </p>
+//             </CardContent>
+//           </Card>
 //         </div>
-//         <div className="flex flex-col sm:flex-row gap-2">
-//           <Button
-//             variant="destructive"
-//             onClick={() => setIsIncidentModalOpen(true)}
-//             className="flex-shrink-0 w-full sm:w-auto mt-2 sm:mt-0 bg-red-600 hover:bg-red-700"
-//           >
-//             🚨 Report Incident
-//           </Button>
-//           <Button
-//             variant="outline"
-//             onClick={() => navigate('/maintenance/assessment')}
-//             className="flex-shrink-0 w-full sm:w-auto mt-2 sm:mt-0"
-//           >
-//             <ArrowLeft className="mr-2 h-4 w-4" />
-//             Back to Reports
-//           </Button>
-//         </div>
-//       </div>
 
-//   {/* Facility Cards Grid */}
-//   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-10">
-//         {facilities.map((facility) => {
-//           const assessmentCount = getAssessmentCount(facility.id.toString());
-//           return (
-//             <Card key={facility.id} className={`${facility.color ?? "bg-white hover:bg-gray-50 border-gray-200"} cursor-pointer transition-all hover:shadow-lg border-2`}>
-//               <CardHeader className="pb-3">
-//                 <CardTitle className="text-xl font-semibold text-gray-800">{facility.name}</CardTitle>
-//                 <p className="text-sm text-gray-600 leading-relaxed">{facility.description}</p>
-//                 <div className="flex items-center justify-between pt-2">
-//                   <span className="text-xs text-gray-500">{facility.statistics}</span>
-//                   {assessmentCount > 0 && (
-//                     <div className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
-//                       {assessmentCount} completed
-//                     </div>
-//                   )}
-//                 </div>
-//               </CardHeader>
-//               <CardContent className="pt-0">
-//                 <Button 
-//                   onClick={() => openAssessmentModal(facility)}
-//                   className="w-full bg-[#010162] hover:bg-[#010162]/90 text-white"
-//                   variant="default"
-//                 >
-//                   <Plus className="mr-2 h-4 w-4" />
-//                   Add New Assessment
-//                 </Button>
-//               </CardContent>
-//             </Card>
-//           );
-//         })}
-//       </div>
-
-      
-
-//       {/* Assessment Modal */}
-//       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-//         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-//           <DialogHeader>
-//             <DialogTitle>
-//               {selectedFacility?.name} Assessment
-//             </DialogTitle>
-//           </DialogHeader>
-          
-//           {selectedFacility && (
-//             <Form {...facilityForm}>
-//               <form onSubmit={facilityForm.handleSubmit(handleFacilityAssessmentSubmit)}>
-//                 <Tabs defaultValue="maintenance" className="space-y-4">
-//                   <TabsList>
-//                     <TabsTrigger value="maintenance" disabled={hasToiletFacility === false || hasLaboratoryFacility === false || hasDiningHallFacility === false || hasDormitoryFacility === false || hasOfficeFacility === false}>Maintenance</TabsTrigger>
-//                     <TabsTrigger value="safety" disabled={hasToiletFacility === false || hasLaboratoryFacility === false || hasDiningHallFacility === false || hasDormitoryFacility === false || hasOfficeFacility === false}>Safety</TabsTrigger>
-//                   </TabsList>
-//                   <TabsContent value="maintenance">
-//                     <div className="max-w-5xl mx-auto bg-white shadow-lg rounded-xl p-6 mt-10">
-//                       <h2 className="text-xl font-semibold text-center mb-6 text-gray-700">MAINTENANCE REPORT</h2>
-//                       <table className="min-w-full border border-gray-300 text-sm">
-//                         <thead className="bg-gray-100">
-//                           <tr>
-//                             <th className="border px-4 py-2 text-left">S/No</th>
-//                             <th className="border px-4 py-2 text-left">Part of Building</th>
-//                             <th className="border px-4 py-2 text-center">Urgent Attention</th>
-//                             <th className="border px-4 py-2 text-center">Attention</th>
-//                             <th className="border px-4 py-2 text-center">Good</th>
-//                           </tr>
-//                         </thead>
-//                         <tbody>
-//                           {facilityParts.map((part, index) => (
-//                             <tr key={index}>
-//                               <td className="border px-4 py-2">{index + 1}</td>
-//                               <td className="border px-4 py-2">{part}</td>
-//                               {['urgent', 'attention', 'good'].map((condition) => (
-//                                 <td key={condition} className="border px-4 py-2 text-center">
-//                                   <FormField
-//                                     control={facilityForm.control}
-//                                     name={`details.${index}.assessment_status`}
-//                                     render={({ field }) => (
-//                                       <FormItem className="flex justify-center">
-//                                         <FormControl>
-//                                           <input
-//                                             type="radio"
-//                                             value={condition}
-//                                             disabled={hasToiletFacility === false || hasLaboratoryFacility === false || hasDiningHallFacility === false || hasDormitoryFacility === false || hasOfficeFacility === false}
-//                                             checked={field.value === (condition === 'urgent' ? 'Urgent Attention' : condition === 'attention' ? 'Attention Required' : 'Good')}
-//                                             onChange={() => {
-//                                               const updatedDetails = [...facilityForm.getValues().details];
-//                                               updatedDetails[index] = {
-//                                                 part_of_building: part,
-//                                                 assessment_status: condition === 'urgent' ? 'Urgent Attention' : condition === 'attention' ? 'Attention Required' : 'Good'
-//                                               };
-//                                               facilityForm.setValue('details', updatedDetails);
-//                                             }}
-//                                             className={`h-4 w-4 ${
-//                                               condition === 'urgent' && field.value === 'Urgent Attention' ? 'text-red-600' :
-//                                               condition === 'attention' && field.value === 'Attention Required' ? 'text-blue-600' :
-//                                               condition === 'good' && field.value === 'Good' ? 'text-green-600' : ''
-//                                             } ${hasToiletFacility === false || hasLaboratoryFacility === false ? 'opacity-50 cursor-not-allowed' : ''}`}
-//                                             style={
-//                                               condition === 'urgent' && field.value === 'Urgent Attention' ? { accentColor: '#dc2626' } :
-//                                               condition === 'attention' && field.value === 'Attention Required' ? { accentColor: '#2563eb' } :
-//                                               condition === 'good' && field.value === 'Good' ? { accentColor: '#16a34a' } : {}
-//                                             }
-//                                           />
-//                                         </FormControl>
-//                                       </FormItem>
-//                                     )}
-//                                   />
-//                                 </td>
-//                               ))}
-//                             </tr>
-//                           ))}
-//                         </tbody>
-//                       </table>
-//                     </div>
-//                   </TabsContent>
-//                   <TabsContent value="safety">
-//                     <div className={hasToiletFacility === false || hasLaboratoryFacility === false || hasDiningHallFacility === false || hasDormitoryFacility === false || hasOfficeFacility === false ? 'opacity-50 pointer-events-none' : ''}>
-//                       <ClassSafetyForm safetyData={safetyData} onSafetyDataChange={setSafetyData} />
-//                     </div>
-//                   </TabsContent>
-//                 </Tabs>
-
-//                 {/* Show message when facility availability is not selected */}
-//                 {/* {hasToiletFacility === null && (
-//                   <div className="text-center py-8 text-gray-500">
-//                     <p>Please select whether the school has toilet facilities to continue with the assessment.</p>
+//         {/* Modal for creating staff */}
+//         {showModal && (
+//           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+//             <div className="bg-white rounded-lg shadow-lg w-full p-6 relative" style={{ maxWidth: '500px' }}>
+//               <button className="absolute top-2 right-2 text-muted-foreground" onClick={handleCloseModal}>
+//                 <X className="h-5 w-5" />
+//               </button>
+//               <h2 className="text-xl font-bold mb-4">Add Staff Member</h2>
+//               <form onSubmit={handleSubmit} className="space-y-4">
+//                 {/* First Row */}
+//                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+//                   <div>
+//                     <label className="block text-sm font-medium mb-1">Name <span className="text-destructive">*</span></label>
+//                     <Input name="name" value={form.name} onChange={handleChange} required disabled={submitting} />
 //                   </div>
-//                 )} */}
-
-//                 {/* Class Selection */}
-//                 {getFacilityType(selectedFacility?.name || '') === 'classroom' && (
-//                   <FormField
-//                     control={facilityForm.control}
-//                     name="classes"
-//                     render={({ field }) => (
-//                       <FormItem>
-//                         <FormLabel className="flex items-center space-x-2 font-semibold">
-//                           <Users className="h-4 w-4 text-indigo-500" />
-//                           <span>Classes</span>
-//                         </FormLabel>
-//                         <FormControl>
-//                           <ClassSelect
-//                             onChange={field.onChange}
-//                             value={field.value || []}
-//                             classOptions={realClassOptions}
-//                           />
-//                         </FormControl>
-//                         <FormMessage />
-//                       </FormItem>
-//                     )}
-//                   />
-//                 )}
-
-//                 {/* Toilets Section */}
-//                 {getFacilityType(selectedFacility?.name || '') === 'toilet' && (
-//                   <div className="space-y-6">
-//                     {/* Facility Availability Check */}
-//                     <div className="space-y-4">
-//                       <div className="space-y-2">
-//                         <Label className="text-sm font-medium text-gray-700">
-//                           Does the school have this facility?
-//                         </Label>
-//                         <Select
-//                           value={hasToiletFacility === null ? '' : hasToiletFacility ? 'yes' : 'no'}
-//                           onValueChange={(value) => {
-//                             const isAvailable = value === 'yes';
-//                             setHasToiletFacility(isAvailable);
-//                             if (!isAvailable) {
-//                               // Clear maintenance and safety data when facility is not available
-//                               setSafetyData([]);
-//                               facilityForm.setValue('details', []);
-//                             }
-//                           }}
-//                         >
-//                           <SelectTrigger className="w-full">
-//                             <SelectValue placeholder="Select availability" />
-//                           </SelectTrigger>
-//                           <SelectContent>
-//                             <SelectItem value="yes">Yes</SelectItem>
-//                             <SelectItem value="no">No</SelectItem>
-//                           </SelectContent>
-//                         </Select>
-//                       </div>
-
-
-//                       {/* Show toilet configuration if facility is available */}
-//                       {hasToiletFacility === true && (
-//                         <>
-//                           <div className="space-y-4">
-//                             {/* Toilet Type Selection */}
-//                             <div className="space-y-2">
-//                               <Label className="text-sm font-medium text-gray-700">
-//                                 Select Toilet Types Available
-//                               </Label>
-//                               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-//                                 {toiletOptions.map((type) => (
-//                                   <div key={type} className="flex items-center space-x-2">
-//                                     <Checkbox
-//                                       id={type}
-//                                       checked={selectedToiletTypes.includes(type)}
-//                                       onCheckedChange={(checked) => {
-//                                         if (checked) {
-//                                           setSelectedToiletTypes(prev => [...prev, type]);
-//                                           setToiletQuantities(prev => ({ ...prev, [type]: 1 }));
-//                                         } else {
-//                                           setSelectedToiletTypes(prev => prev.filter(t => t !== type));
-//                                           setToiletQuantities(prev => {
-//                                             const newQuantities = { ...prev };
-//                                             delete newQuantities[type];
-//                                             return newQuantities;
-//                                           });
-//                                         }
-//                                       }}
-//                                     />
-//                                     <Label htmlFor={type} className="text-sm capitalize">
-//                                       {type}
-//                                     </Label>
-//                                   </div>
-//                                 ))}
-//                               </div>
-//                             </div>
-
-//                             {/* Toilet Quantities */}
-//                             {selectedToiletTypes.length > 0 && (
-//                               <div className="space-y-4">
-//                                 <Label className="text-sm font-medium text-gray-700">
-//                                   Number of Toilets for Each Type
-//                                 </Label>
-//                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-//                                   {selectedToiletTypes.map((type) => (
-//                                     <div key={type} className="space-y-2">
-//                                       <Label className="text-sm capitalize">{type}</Label>
-//                                       <Input
-//                                         type="number"
-//                                         placeholder="Enter number"
-//                                         value={toiletQuantities[type] || 1}
-//                                         onChange={(e) => {
-//                                           const value = e.target.value === '' ? 1 : Number(e.target.value);
-//                                           setToiletQuantities(prev => ({ ...prev, [type]: value }));
-//                                         }}
-//                                         className="w-full"
-//                                         min="1"
-//                                       />
-//                                     </div>
-//                                   ))}
-//                                 </div>
-//                               </div>
-//                             )}
-//                           </div>
-//                         </>
-//                       )}
-//                     </div>
+//                   <div>
+//                     <label className="block text-sm font-medium mb-1">Email <span className="text-destructive">*</span></label>
+//                     <Input name="email" type="email" value={form.email} onChange={handleChange} required disabled={submitting} />
 //                   </div>
-//                 )}
-
-//                 {/* Laboratories Section */}
-//                 {getFacilityType(selectedFacility?.name || '') === 'laboratory' && (
-//                   <div className="space-y-6">
-//                     {/* Facility Availability Check */}
-//                     <div className="space-y-4">
-//                       <div className="space-y-2">
-//                         <Label className="text-sm font-medium text-gray-700">
-//                           Does the school have this facility?
-//                         </Label>
-//                         <Select
-//                           value={hasLaboratoryFacility === null ? '' : hasLaboratoryFacility ? 'yes' : 'no'}
-//                           onValueChange={(value) => {
-//                             const isAvailable = value === 'yes';
-//                             setHasLaboratoryFacility(isAvailable);
-//                             if (!isAvailable) {
-//                               // Clear maintenance and safety data when facility is not available
-//                               setSafetyData([]);
-//                               facilityForm.setValue('details', []);
-//                             }
-//                           }}
-//                         >
-//                           <SelectTrigger className="w-full">
-//                             <SelectValue placeholder="Select availability" />
-//                           </SelectTrigger>
-//                           <SelectContent>
-//                             <SelectItem value="yes">Yes</SelectItem>
-//                             <SelectItem value="no">No</SelectItem>
-//                           </SelectContent>
-//                         </Select>
-//                       </div>
-
-
-//                       {/* Show laboratory configuration if facility is available */}
-//                       {hasLaboratoryFacility === true && (
-//                         <>
-//                           <div className="space-y-4">
-//                             {/* Laboratory Type Selection */}
-//                             <div className="space-y-2">
-//                               <Label className="text-sm font-medium text-gray-700">
-//                                 Select Laboratory Types Available
-//                               </Label>
-//                               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-//                                 {laboratoryOptions.map((type) => (
-//                                   <div key={type} className="flex items-center space-x-2">
-//                                     <Checkbox
-//                                       id={type}
-//                                       checked={selectedLaboratoryTypes.includes(type)}
-//                                       onCheckedChange={(checked) => {
-//                                         if (checked) {
-//                                           setSelectedLaboratoryTypes(prev => [...prev, type]);
-//                                           setLaboratoryQuantities(prev => ({ ...prev, [type]: 1 }));
-//                                         } else {
-//                                           setSelectedLaboratoryTypes(prev => prev.filter(t => t !== type));
-//                                           setLaboratoryQuantities(prev => {
-//                                             const newQuantities = { ...prev };
-//                                             delete newQuantities[type];
-//                                             return newQuantities;
-//                                           });
-//                                         }
-//                                       }}
-//                                     />
-//                                     <Label htmlFor={type} className="text-sm capitalize">
-//                                       {type}
-//                                     </Label>
-//                                   </div>
-//                                 ))}
-//                               </div>
-//                             </div>
-
-//                             {/* Laboratory Quantities */}
-//                             {selectedLaboratoryTypes.length > 0 && (
-//                               <div className="space-y-4">
-//                                 <Label className="text-sm font-medium text-gray-700">
-//                                   Number of Laboratories for Each Type
-//                                 </Label>
-//                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-//                                   {selectedLaboratoryTypes.map((type) => (
-//                                     <div key={type} className="space-y-2">
-//                                       <Label className="text-sm capitalize">{type}</Label>
-//                                       <Input
-//                                         type="number"
-//                                         placeholder="Enter number"
-//                                         value={laboratoryQuantities[type] || 1}
-//                                         onChange={(e) => {
-//                                           const value = e.target.value === '' ? 1 : Number(e.target.value);
-//                                           setLaboratoryQuantities(prev => ({ ...prev, [type]: value }));
-//                                         }}
-//                                         className="w-full"
-//                                         min="1"
-//                                       />
-//                                     </div>
-//                                   ))}
-//                                 </div>
-//                               </div>
-//                             )}
-//                           </div>
-//                         </>
-//                       )}
-//                     </div>
-//                   </div>
-//                 )}
-
-//                 {/* Dining Halls Section */}
-//                 {getFacilityType(selectedFacility?.name || '') === 'dining_hall' && (
-//                   <div className="space-y-6">
-//                     {/* Facility Availability Check */}
-//                     <div className="space-y-4">
-//                       <div className="space-y-2">
-//                         <Label className="text-sm font-medium text-gray-700">
-//                           Does the school have this facility?
-//                         </Label>
-//                         <Select
-//                           value={hasDiningHallFacility === null ? '' : hasDiningHallFacility ? 'yes' : 'no'}
-//                           onValueChange={(value) => {
-//                             const isAvailable = value === 'yes';
-//                             setHasDiningHallFacility(isAvailable);
-//                             if (!isAvailable) {
-//                               // Clear maintenance and safety data when facility is not available
-//                               setSafetyData([]);
-//                               facilityForm.setValue('details', []);
-//                             }
-//                           }}
-//                         >
-//                           <SelectTrigger className="w-full">
-//                             <SelectValue placeholder="Select availability" />
-//                           </SelectTrigger>
-//                           <SelectContent>
-//                             <SelectItem value="yes">Yes</SelectItem>
-//                             <SelectItem value="no">No</SelectItem>
-//                           </SelectContent>
-//                         </Select>
-//                       </div>
-
-
-//                       {/* Show dining hall configuration if facility is available */}
-//                       {hasDiningHallFacility === true && (
-//                         <>
-//                           <div className="space-y-4">
-//                             {/* Dining Hall Type Selection */}
-//                             <div className="space-y-2">
-//                               <Label className="text-sm font-medium text-gray-700">
-//                                 Select Dining Hall Types Available
-//                               </Label>
-//                               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-//                                 {diningHallOptions.map((type) => (
-//                                   <div key={type} className="flex items-center space-x-2">
-//                                     <Checkbox
-//                                       id={type}
-//                                       checked={selectedDiningHallTypes.includes(type)}
-//                                       onCheckedChange={(checked) => {
-//                                         if (checked) {
-//                                           setSelectedDiningHallTypes(prev => [...prev, type]);
-//                                           setDiningHallQuantities(prev => ({ ...prev, [type]: 1 }));
-//                                         } else {
-//                                           setSelectedDiningHallTypes(prev => prev.filter(t => t !== type));
-//                                           setDiningHallQuantities(prev => {
-//                                             const newQuantities = { ...prev };
-//                                             delete newQuantities[type];
-//                                             return newQuantities;
-//                                           });
-//                                         }
-//                                       }}
-//                                     />
-//                                     <Label htmlFor={type} className="text-sm capitalize">
-//                                       {type}
-//                                     </Label>
-//                                   </div>
-//                                 ))}
-//                               </div>
-//                             </div>
-
-//                             {/* Dining Hall Quantities */}
-//                             {selectedDiningHallTypes.length > 0 && (
-//                               <div className="space-y-4">
-//                                 <Label className="text-sm font-medium text-gray-700">
-//                                   Number of Dining Halls for Each Type
-//                                 </Label>
-//                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-//                                   {selectedDiningHallTypes.map((type) => (
-//                                     <div key={type} className="space-y-2">
-//                                       <Label className="text-sm capitalize">{type}</Label>
-//                                       <Input
-//                                         type="number"
-//                                         placeholder="Enter number"
-//                                         value={diningHallQuantities[type] || 1}
-//                                         onChange={(e) => {
-//                                           const value = e.target.value === '' ? 1 : Number(e.target.value);
-//                                           setDiningHallQuantities(prev => ({ ...prev, [type]: value }));
-//                                         }}
-//                                         className="w-full"
-//                                         min="1"
-//                                       />
-//                                     </div>
-//                                   ))}
-//                                 </div>
-//                               </div>
-//                             )}
-//                           </div>
-//                         </>
-//                       )}
-//                     </div>
-//                   </div>
-//                 )}
-
-//                 {/* Dormitories Section */}
-//                 {getFacilityType(selectedFacility?.name || '') === 'dormitory' && (
-//                   <div className="space-y-6">
-//                     {/* Facility Availability Check */}
-//                     <div className="space-y-4">
-//                       <div className="space-y-2">
-//                         <Label className="text-sm font-medium text-gray-700">
-//                           Does the school have this facility?
-//                         </Label>
-//                         <Select
-//                           value={hasDormitoryFacility === null ? '' : hasDormitoryFacility ? 'yes' : 'no'}
-//                           onValueChange={(value) => {
-//                             const isAvailable = value === 'yes';
-//                             setHasDormitoryFacility(isAvailable);
-//                             if (!isAvailable) {
-//                               // Clear maintenance and safety data when facility is not available
-//                               setSafetyData([]);
-//                               facilityForm.setValue('details', []);
-//                             }
-//                           }}
-//                         >
-//                           <SelectTrigger className="w-full">
-//                             <SelectValue placeholder="Select availability" />
-//                           </SelectTrigger>
-//                           <SelectContent>
-//                             <SelectItem value="yes">Yes</SelectItem>
-//                             <SelectItem value="no">No</SelectItem>
-//                           </SelectContent>
-//                         </Select>
-//                       </div>
-
-
-//                       {/* Show dormitory configuration if facility is available */}
-//                       {hasDormitoryFacility === true && (
-//                         <>
-//                           <div className="space-y-4">
-//                             {/* Dormitory Type Selection */}
-//                             <div className="space-y-2">
-//                               <Label className="text-sm font-medium text-gray-700">
-//                                 Select Dormitory Types Available
-//                               </Label>
-//                               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-//                                 {dormitoryOptions.map((type) => (
-//                                   <div key={type} className="flex items-center space-x-2">
-//                                     <Checkbox
-//                                       id={type}
-//                                       checked={selectedDormitoryTypes.includes(type)}
-//                                       onCheckedChange={(checked) => {
-//                                         if (checked) {
-//                                           setSelectedDormitoryTypes(prev => [...prev, type]);
-//                                           setDormitoryQuantities(prev => ({ ...prev, [type]: 1 }));
-//                                         } else {
-//                                           setSelectedDormitoryTypes(prev => prev.filter(t => t !== type));
-//                                           setDormitoryQuantities(prev => {
-//                                             const newQuantities = { ...prev };
-//                                             delete newQuantities[type];
-//                                             return newQuantities;
-//                                           });
-//                                         }
-//                                       }}
-//                                     />
-//                                     <Label htmlFor={type} className="text-sm capitalize">
-//                                       {type}
-//                                     </Label>
-//                                   </div>
-//                                 ))}
-//                               </div>
-//                             </div>
-
-//                             {/* Dormitory Quantities */}
-//                             {selectedDormitoryTypes.length > 0 && (
-//                               <div className="space-y-4">
-//                                 <Label className="text-sm font-medium text-gray-700">
-//                                   Number of Dormitories for Each Type
-//                                 </Label>
-//                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-//                                   {selectedDormitoryTypes.map((type) => (
-//                                     <div key={type} className="space-y-2">
-//                                       <Label className="text-sm capitalize">{type}</Label>
-//                                       <Input
-//                                         type="number"
-//                                         placeholder="Enter number"
-//                                         value={dormitoryQuantities[type] || 1}
-//                                         onChange={(e) => {
-//                                           const value = e.target.value === '' ? 1 : Number(e.target.value);
-//                                           setDormitoryQuantities(prev => ({ ...prev, [type]: value }));
-//                                         }}
-//                                         className="w-full"
-//                                         min="1"
-//                                       />
-//                                     </div>
-//                                   ))}
-//                                 </div>
-//                               </div>
-//                             )}
-//                           </div>
-//                         </>
-//                       )}
-//                     </div>
-//                   </div>
-//                 )}
-
-//                 {/* Offices Section */}
-//                 {getFacilityType(selectedFacility?.name || '') === 'office' && (
-//                   <div className="space-y-6">
-//                     {/* Facility Availability Check */}
-//                     <div className="space-y-4">
-//                       <div className="space-y-2">
-//                         <Label className="text-sm font-medium text-gray-700">
-//                           Does the school have this facility?
-//                         </Label>
-//                         <Select
-//                           value={hasOfficeFacility === null ? '' : hasOfficeFacility ? 'yes' : 'no'}
-//                           onValueChange={(value) => {
-//                             const isAvailable = value === 'yes';
-//                             setHasOfficeFacility(isAvailable);
-//                             if (!isAvailable) {
-//                               // Clear maintenance and safety data when facility is not available
-//                               setSafetyData([]);
-//                               facilityForm.setValue('details', []);
-//                             }
-//                           }}
-//                         >
-//                           <SelectTrigger className="w-full">
-//                             <SelectValue placeholder="Select availability" />
-//                           </SelectTrigger>
-//                           <SelectContent>
-//                             <SelectItem value="yes">Yes</SelectItem>
-//                             <SelectItem value="no">No</SelectItem>
-//                           </SelectContent>
-//                         </Select>
-//                       </div>
-
-
-//                       {/* Show office configuration if facility is available */}
-//                       {hasOfficeFacility === true && (
-//                         <>
-//                           <div className="space-y-4">
-//                             {/* Office Type Selection */}
-//                             <div className="space-y-2">
-//                               <Label className="text-sm font-medium text-gray-700">
-//                                 Select Office Types Available
-//                               </Label>
-//                               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-//                                 {officeOptions.map((type) => (
-//                                   <div key={type} className="flex items-center space-x-2">
-//                                     <Checkbox
-//                                       id={type}
-//                                       checked={selectedOfficeTypes.includes(type)}
-//                                       onCheckedChange={(checked) => {
-//                                         if (checked) {
-//                                           setSelectedOfficeTypes(prev => [...prev, type]);
-//                                           setOfficeQuantities(prev => ({ ...prev, [type]: 1 }));
-//                                         } else {
-//                                           setSelectedOfficeTypes(prev => prev.filter(t => t !== type));
-//                                           setOfficeQuantities(prev => {
-//                                             const newQuantities = { ...prev };
-//                                             delete newQuantities[type];
-//                                             return newQuantities;
-//                                           });
-//                                         }
-//                                       }}
-//                                     />
-//                                     <Label htmlFor={type} className="text-sm capitalize">
-//                                       {type}
-//                                     </Label>
-//                                   </div>
-//                                 ))}
-//                               </div>
-//                             </div>
-
-//                             {/* Office Quantities */}
-//                             {selectedOfficeTypes.length > 0 && (
-//                               <div className="space-y-4">
-//                                 <Label className="text-sm font-medium text-gray-700">
-//                                   Number of Offices for Each Type
-//                                 </Label>
-//                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-//                                   {selectedOfficeTypes.map((type) => (
-//                                     <div key={type} className="space-y-2">
-//                                       <Label className="text-sm capitalize">{type}</Label>
-//                                       <Input
-//                                         type="number"
-//                                         placeholder="Enter number"
-//                                         value={officeQuantities[type] || 1}
-//                                         onChange={(e) => {
-//                                           const value = e.target.value === '' ? 1 : Number(e.target.value);
-//                                           setOfficeQuantities(prev => ({ ...prev, [type]: value }));
-//                                         }}
-//                                         className="w-full"
-//                                         min="1"
-//                                       />
-//                                     </div>
-//                                   ))}
-//                                 </div>
-//                               </div>
-//                             )}
-//                           </div>
-//                         </>
-//                       )}
-//                     </div>
-//                   </div>
-//                 )}
-
-//                 {/* File Upload Section */}
-//                 <div className="space-y-4">
-//                   <FormField
-//                     control={facilityForm.control}
-//                     name="files"
-//                     render={({ field }) => (
-//                       <FormItem>
-//                         <FormLabel className="text-base font-semibold">Upload Supporting Documents</FormLabel>
-//                         <FormControl>
-//                           <div className="space-y-4">
-//                             {/* File Upload Area */}
-//                             <div
-//                               onDragOver={handleDragOver}
-//                               onDrop={handleDrop}
-//                               className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center transition-colors hover:border-gray-400 cursor-pointer"
-//                               onClick={() => fileInputRef.current?.click()}
-//                             >
-//                               <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-//                               <p className="text-lg font-medium text-gray-700">Drop files here or click to upload</p>
-//                               <p className="text-sm text-gray-500 mt-1">Support for multiple files (PDF, DOC, JPG, PNG)</p>
-//                               <input
-//                                 ref={fileInputRef}
-//                                 type="file"
-//                                 multiple
-//                                 accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif"
-//                                 onChange={handleFileUpload}
-//                                 className="hidden"
-//                               />
-//                             </div>
-
-//                             {/* Uploaded Files List */}
-//                             {uploadedFiles.length > 0 && (
-//                               <div className="space-y-2">
-//                                 <h4 className="font-medium text-gray-700">Uploaded Files ({uploadedFiles.length})</h4>
-//                                 <div className="space-y-2 max-h-32 overflow-y-auto">
-//                                   {uploadedFiles.map((file, index) => (
-//                                     <div key={index} className="flex items-center justify-between bg-gray-50 p-3 rounded-md">
-//                                       <div className="flex items-center space-x-3">
-//                                         <FileText className="h-5 w-5 text-gray-500" />
-//                                         <div>
-//                                           <p className="text-sm font-medium text-gray-700">{file.name}</p>
-//                                           <p className="text-xs text-gray-500">
-//                                             {(file.size / 1024 / 1024).toFixed(2)} MB
-//                                           </p>
-//                                         </div>
-//                                       </div>
-//                                       <Button
-//                                         type="button"
-//                                         variant="ghost"
-//                                         size="sm"
-//                                         onClick={() => removeFile(index)}
-//                                         className="text-red-500 hover:text-red-700 hover:bg-red-50"
-//                                       >
-//                                         <X className="h-4 w-4" />
-//                                       </Button>
-//                                     </div>
-//                                   ))}
-//                                 </div>
-//                               </div>
-//                             )}
-//                           </div>
-//                         </FormControl>
-//                         <FormMessage />
-//                       </FormItem>
-//                     )}
-//                   />
-
-//                   {/* School Feedback Section */}
-//                   <FormField
-//                     control={facilityForm.control}
-//                     name="school_feedback"
-//                     render={({ field }) => (
-//                       <FormItem>
-//                         <FormLabel className="text-base font-semibold">Notes</FormLabel>
-//                         <FormControl>
-//                           <Textarea
-//                             {...field}
-//                             placeholder="Enter notes, concerns, and priorities..."
-//                             className="min-h-[120px] resize-none"
-//                           />
-//                         </FormControl>
-//                         <FormMessage />
-//                       </FormItem>
-//                     )}
-//                   />
 //                 </div>
 
-//                 <div className="flex gap-2 pt-4">
-//                   <Button
-//                     type="button"
-//                     variant="outline"
-//                     onClick={() => setIsModalOpen(false)}
-//                     className="flex-1"
-//                   >
-//                     Cancel
-//                   </Button>
-//                   <Button
-//                     type="submit"
-//                     className="flex-1 bg-[#F89B0C] hover:bg-[#F89B0C]/90 text-primary-foreground"
-//                   >
-//                     Submit Assessment
+//                 {/* Second Row */}
+//                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+//                   <div>
+//                     <label className="block text-sm font-medium mb-1 flex items-center space-x-2">
+//                       <Phone className="h-4 w-4" />
+//                       <span>Phone Number</span>
+//                     </label>
+//                     <Input name="phone" value={form.phone} onChange={handleChange} placeholder="e.g., 0712345678" disabled={submitting} />
+//                   </div>
+//                   <div>
+//                     <label className="block text-sm font-medium mb-1">Gender</label>
+//                     <select name="gender" value={form.gender} onChange={handleChange} className="w-full border rounded px-2 py-1" disabled={submitting}>
+//                       <option value="">Select gender</option>
+//                       <option value="male">Male</option>
+//                       <option value="female">Female</option>
+//                       <option value="other">Other</option>
+//                     </select>
+//                   </div>
+//                 </div>
+
+//                 {/* Third Row */}
+//                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+//                   <div>
+//                     <label className="block text-sm font-medium mb-1">Role <span className="text-destructive">*</span></label>
+//                     <select name="role" value={form.role} onChange={handleChange} className="w-full border rounded px-2 py-1" required disabled={submitting}>
+//                       <option value="">Select role</option>
+//                       {roles.map(role => (
+//                         <option key={role.id} value={role.name}>
+//                           {formatRole(role.name)}
+//                         </option>
+//                       ))}
+//                     </select>
+//                   </div>
+//                   <div>
+//                     <label className="block text-sm font-medium mb-1">Password <span className="text-destructive">*</span></label>
+//                     <Input name="password" type="password" value={form.password} onChange={handleChange} required disabled={submitting} />
+//                   </div>
+//                 </div>
+
+//                 {error && <div className="text-destructive text-sm">{error}</div>}
+//                 <div className="flex justify-end">
+//                   <Button type="button" variant="outline" className="mr-2" onClick={handleCloseModal} disabled={submitting}>Cancel</Button>
+//                   <Button type="submit" disabled={submitting} className="bg-primary text-primary-foreground">
+//                     {submitting ? 'Creating...' : 'Create Staff Member'}
 //                   </Button>
 //                 </div>
 //               </form>
-//             </Form>
-//           )}
-//         </DialogContent>
-//       </Dialog>
-
-//       {/* Incident Report Modal */}
-//       <Dialog open={isIncidentModalOpen} onOpenChange={setIsIncidentModalOpen}>
-//         <DialogContent className="max-w-md">
-//           <DialogHeader>
-//             <DialogTitle className="flex items-center space-x-2">
-//               <span className="text-red-600">🚨</span>
-//               <span>Report Incident</span>
-//             </DialogTitle>
-//           </DialogHeader>
-
-//           <div className="space-y-4">
-//             {/* Auto-filled info */}
-//             <div className="bg-gray-50 p-3 rounded-lg space-y-2">
-//               <div className="text-sm">
-//                 <span className="font-medium text-gray-700">School:</span>
-//                 <span className="ml-2 text-gray-600">{currentUser?.institution?.name || 'N/A'}</span>
-//               </div>
-//               <div className="text-sm">
-//                 <span className="font-medium text-gray-700">Admin:</span>
-//                 <span className="ml-2 text-gray-600">{currentUser?.name || 'N/A'}</span>
-//               </div>
-//               <div className="text-sm">
-//                 <span className="font-medium text-gray-700">Timestamp:</span>
-//                 <span className="ml-2 text-gray-600">{new Date().toLocaleString()}</span>
-//               </div>
-//             </div>
-
-//             {/* Facility Selection */}
-//             <div className="space-y-2">
-//               <Label className="text-sm font-medium">Related Facility</Label>
-//               <Select value={selectedIncidentFacility} onValueChange={setSelectedIncidentFacility}>
-//                 <SelectTrigger>
-//                   <SelectValue placeholder="Select facility" />
-//                 </SelectTrigger>
-//                 <SelectContent>
-//                   {facilities.map((facility) => (
-//                     <SelectItem key={facility.id} value={facility.id.toString()}>
-//                       {facility.name}
-//                     </SelectItem>
-//                   ))}
-//                 </SelectContent>
-//               </Select>
-//             </div>
-
-//             {/* Description */}
-//             <div className="space-y-2">
-//               <Label htmlFor="incident-description" className="text-sm font-medium">
-//                 Incident Description
-//               </Label>
-//               <Textarea
-//                 id="incident-description"
-//                 placeholder="Describe the incident..."
-//                 value={incidentDescription}
-//                 onChange={(e) => setIncidentDescription(e.target.value)}
-//                 className="min-h-[80px] resize-none"
-//               />
-//             </div>
-
-//             {/* File Upload */}
-//             <div className="space-y-2">
-//               <Label className="text-sm font-medium">Attach Photo/Document (Optional)</Label>
-//               <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-gray-400 transition-colors">
-//                 <input
-//                   type="file"
-//                   accept="image/*,.pdf,.doc,.docx"
-//                   onChange={(e) => {
-//                     const file = e.target.files?.[0];
-//                     if (file) {
-//                       setIncidentFiles([file]);
-//                     }
-//                   }}
-//                   className="hidden"
-//                   id="incident-file"
-//                 />
-//                 <label htmlFor="incident-file" className="cursor-pointer">
-//                   <Upload className="mx-auto h-8 w-8 text-gray-400 mb-2" />
-//                   <p className="text-sm text-gray-600">
-//                     {incidentFiles.length > 0 ? incidentFiles[0].name : 'Click to upload or drag and drop'}
-//                   </p>
-//                 </label>
-//               </div>
-//             </div>
-
-//             {/* Severity */}
-//             <div className="space-y-2">
-//               <Label className="text-sm font-medium">Severity Level</Label>
-//               <Select value={incidentSeverity} onValueChange={setIncidentSeverity}>
-//                 <SelectTrigger>
-//                   <SelectValue placeholder="Select severity" />
-//                 </SelectTrigger>
-//                 <SelectContent>
-//                   <SelectItem value="low">Low</SelectItem>
-//                   <SelectItem value="medium">Medium</SelectItem>
-//                   <SelectItem value="high">High</SelectItem>
-//                   <SelectItem value="critical">Critical</SelectItem>
-//                 </SelectContent>
-//               </Select>
-//             </div>
-
-//             {/* Buttons */}
-//             <div className="flex gap-2 pt-4">
-//               <Button
-//                 type="button"
-//                 variant="outline"
-//                 onClick={() => setIsIncidentModalOpen(false)}
-//                 className="flex-1"
-//                 disabled={isSubmittingIncident}
-//               >
-//                 Cancel
-//               </Button>
-//               <Button
-//                 type="button"
-//                 onClick={async () => {
-//                   if (!incidentDescription.trim() || !incidentSeverity || !selectedIncidentFacility) {
-//                     toast({
-//                       title: 'Validation Error',
-//                       description: 'Please fill in all required fields.',
-//                       variant: 'destructive',
-//                     });
-//                     return;
-//                   }
-
-//                   setIsSubmittingIncident(true);
-//                   try {
-//                     let attachmentBase64 = '';
-//                     if (incidentFiles.length > 0) {
-//                       attachmentBase64 = await fileToBase64(incidentFiles[0]);
-//                     }
-
-//                     const incidentData: CreateIncidentInput = {
-//                       incident_description: incidentDescription,
-//                       facility_id: selectedIncidentFacility,
-//                       severity_level: incidentSeverity,
-//                       attachment: attachmentBase64,
-//                     };
-
-//                     await createIncident(incidentData);
-
-//                     toast({
-//                       title: 'Incident Reported',
-//                       description: 'Your incident report has been submitted successfully.',
-//                       variant: 'default',
-//                     });
-
-//                     // Reset form
-//                     setIsIncidentModalOpen(false);
-//                     setIncidentDescription('');
-//                     setIncidentSeverity('');
-//                     setIncidentFiles([]);
-//                     setSelectedIncidentFacility('');
-//                   } catch (error: any) {
-//                     console.error('Error creating incident:', error);
-//                     toast({
-//                       title: 'Error',
-//                       description: error?.response?.data?.message || error?.message || 'Failed to submit incident report.',
-//                       variant: 'destructive',
-//                     });
-//                   } finally {
-//                     setIsSubmittingIncident(false);
-//                   }
-//                 }}
-//                 className="flex-1 bg-red-600 hover:bg-red-700"
-//                 disabled={!incidentDescription.trim() || !incidentSeverity || !selectedIncidentFacility || isSubmittingIncident}
-//               >
-//                 {isSubmittingIncident ? 'Sending...' : 'Send Alert'}
-//               </Button>
 //             </div>
 //           </div>
-//         </DialogContent>
-//       </Dialog>
-//     </div>
+//         )}
+
+//         {/* Staff Table */}
+//         <Card>
+//           <CardHeader>
+//             <CardTitle>School Staff</CardTitle>
+//             <CardDescription>
+//               View and manage staff members at your school
+//             </CardDescription>
+//           </CardHeader>
+//           <CardContent>
+//             <Table>
+//               <TableHeader>
+//                 <TableRow>
+//                   <TableHead>Staff Member</TableHead>
+//                   <TableHead>Role</TableHead>
+//                   <TableHead>Status</TableHead>
+//                   <TableHead>Last Login</TableHead>
+//                 </TableRow>
+//               </TableHeader>
+//               <TableBody>
+//                 {loading ? (
+//                   <TableRow>
+//                     <TableCell colSpan={4} className="text-center">Loading...</TableCell>
+//                   </TableRow>
+//                 ) : users.length === 0 ? (
+//                   <TableRow>
+//                     <TableCell colSpan={4} className="text-center">No staff members found.</TableCell>
+//                   </TableRow>
+//                 ) : (
+//                   users.map((user) => (
+//                     <TableRow key={user.id} className="hover:bg-muted/50">
+//                       <TableCell>
+//                         <div className="flex items-center space-x-3">
+//                           <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
+//                             <User className="h-5 w-5 text-primary-foreground" />
+//                           </div>
+//                           <div>
+//                             <div className="font-semibold">{user.name}</div>
+//                             <div className="text-sm text-muted-foreground flex items-center">
+//                               <Mail className="h-3 w-3 mr-1" />
+//                               {user.email}
+//                             </div>
+//                           </div>
+//                         </div>
+//                       </TableCell>
+//                       <TableCell>
+//                         <Badge className="bg-muted text-muted-foreground">
+//                           {formatRole(user.role || '')}
+//                         </Badge>
+//                       </TableCell>
+//                       <TableCell>
+//                         {getStatusBadge(user.status || '')}
+//                       </TableCell>
+//                       <TableCell>
+//                         <div className="text-sm">
+//                           {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : '-'}
+//                         </div>
+//                         <div className="text-xs text-muted-foreground">
+//                           {user.lastLogin ? new Date(user.lastLogin).toLocaleTimeString() : ''}
+//                         </div>
+//                       </TableCell>
+//                     </TableRow>
+//                   ))
+//                 )}
+//               </TableBody>
+//             </Table>
+//           </CardContent>
+//         </Card>
+//       </div>
+//       <Toaster />
+//     </>
 //   );
 // };
 
-// export default AssessmentAddPage;
+// // Utility functions
+// function getSubCountiesByCountyId(county_id) {
+//   return subcounties
+//     .filter((s): s is { subcounty_id: string; county_id: string; constituency_name: string } => 'county_id' in s && 'constituency_name' in s)
+//     .filter((s) => s.county_id === county_id);
+// }
+// function getWardsBySubCountyId(subCountyId) {
+//   return wards
+//     .filter((w): w is { station_id: string; subcounty_id: string; constituency_name: string; ward: string } =>
+//       typeof w === 'object' && 'subcounty_id' in w && typeof w.subcounty_id === 'string'
+//     )
+//     .filter((w) => w.subcounty_id === subCountyId);
+// }
+
+// const Users = () => {
+//   const [users, setUsers] = useState<UserModel[]>([]);
+//   const [loading, setLoading] = useState(true);
+//   const [showModal, setShowModal] = useState(false);
+//   const [form, setForm] = useState<CreateUserInput & { subcounty_ids?: string[]; ward_ids?: string[] }>({ name: '', email: '', password: '', phone: '', role: '', county_code: '', subcounty_ids: [], ward_ids: [] });
+//   const [submitting, setSubmitting] = useState(false);
+//   const [error, setError] = useState<string | null>(null);
+//   const [institutions, setInstitutions] = useState<any[]>([]);
+//   const [subcounties, setSubcounties] = useState<any[]>([]);
+//   const [wards, setWards] = useState<any[]>([]);
+//   const [roles, setRoles] = useState<any[]>([]);
+//   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+//   const [selectedUser, setSelectedUser] = useState<UserModel | null>(null);
+//   const [isEditing, setIsEditing] = useState(false);
+//   const [showTransferModal, setShowTransferModal] = useState(false);
+//   const [transferForm, setTransferForm] = useState({
+//     new_county_code: '',
+//     new_county: '',
+//     new_subcounty: '',
+//     new_ward: '',
+//     new_institution_id: '',
+//   });
+//   const [page, setPage] = useState(0);
+//   const [rowsPerPage, setRowsPerPage] = useState(5);
+//   const [openInstitution, setOpenInstitution] = useState(false);
+//   const [institutionSearch, setInstitutionSearch] = useState('');
+//   const [transferInstitutionSearch, setTransferInstitutionSearch] = useState('');
+//   const { currentUser } = useRole();
+//   const { toast } = useToast();
+
+
+//   // If current user is school admin, show school admin interface
+//   if (currentUser?.role === 'school_admin') {
+//     return <SchoolAdminUsers />;
+//   }
+
+//   const fetchUsers = async () => {
+//     setLoading(true);
+//     try {
+//       const data = await getUsers();
+//       if (Array.isArray(data)) {
+//         setUsers(data);
+//       } else if (
+//         data &&
+//         typeof data === 'object' &&
+//         'users' in data &&
+//         Array.isArray((data as { users: UserModel[] }).users)
+//       ) {
+//         setUsers((data as { users: UserModel[] }).users);
+//       } else {
+//         setUsers([]);
+//       }
+//     } catch (error) {
+//       setUsers([]);
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+//   // Fetch institutions for select and listing
+//   const fetchInstitutions = async () => {
+//     setLoading(true);
+//     try {
+//       const data = await getInstitutions();
+//       setInstitutions(Array.isArray(data.institutions) ? data.institutions : []);
+//     } catch (e) {
+//       setInstitutions([]);
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+//   // Fetch roles for dropdown
+//   const fetchRoles = async () => {
+//     try {
+//       const data = await getPermissions();
+//       setRoles(data.roles || []);
+//     } catch (e) {
+//       setRoles([]);
+//     }
+//   };
+
+//   // Fetch subcounties for the agent's county
+//    const fetchSubcounties = async (countyId: string) => {
+//      try {
+//        // Filter subcounties from data.json based on county_id
+//        const subcountiesData = getSubCountiesByCountyId(countyId).map((subcounty: any) => ({
+//          id: subcounty.subcounty_id,
+//          name: subcounty.constituency_name,
+//          county_id: subcounty.county_id
+//        }));
+//        setSubcounties(subcountiesData);
+//      } catch (e) {
+//        setSubcounties([]);
+//      }
+//    };
+
+//   // Fetch wards for the selected subcounty
+//    const fetchWards = async (subcountyId: string) => {
+//      try {
+//        // Filter wards from data.json based on subcounty_id
+//        const wardsData = getWardsBySubCountyId(subcountyId).map((ward: any) => ({
+//          id: ward.station_id,
+//          name: ward.ward,
+//          subcounty_id: ward.subcounty_id
+//        }));
+//        setWards(wardsData);
+//      } catch (e) {
+//        setWards([]);
+//      }
+//    };
+
+//   useEffect(() => {
+//     fetchUsers();
+//     fetchInstitutions();
+//     fetchRoles();
+//   }, []);
+
+//   // Fetch wards when subcounties change
+//    useEffect(() => {
+//      if (form.subcounty_ids && form.subcounty_ids.length > 0) {
+//        // For now, fetch wards for the first selected subcounty
+//        // In a real implementation, you might want to fetch wards for all selected subcounties
+//        fetchWards(form.subcounty_ids[0]);
+//      } else {
+//        setWards([]);
+//      }
+//    }, [form.subcounty_ids]);
+
+//   const formatRole = (role: string) => {
+//     return role.split('_').map(word => 
+//       word.charAt(0).toUpperCase() + word.slice(1)
+//     ).join(' ');
+//   };
+
+//   const getRoleBadgeVariant = (role: string) => {
+//     switch (role) {
+//       case 'admin':
+//         return 'bg-destructive text-destructive-foreground';
+//       case 'county_admin':
+//         return 'bg-warning text-warning-foreground';
+//       case 'school_admin':
+//         return 'bg-success text-success-foreground';
+//       default:
+//         return 'bg-muted text-muted-foreground';
+//     }
+//   };
+
+//   const getStatusBadge = (status: string) => {
+//     switch (status) {
+//       case 'Active':
+//         return <Badge className="bg-success text-success-foreground">Active</Badge>;
+//       case 'Inactive':
+//         return <Badge className="bg-muted text-muted-foreground">Inactive</Badge>;
+//       case 'Suspended':
+//         return <Badge className="bg-destructive text-destructive-foreground">Suspended</Badge>;
+//       default:
+//         return <Badge variant="outline">{status}</Badge>;
+//     }
+//   };
+
+//   const visibleUsers = React.useMemo(
+//     () => users.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage),
+//     [users, page, rowsPerPage]
+//   );
+
+//   const handleOpenModal = () => {
+//     setForm({ name: '', email: '', password: '', phone: '', role: '', county_code: '', subcounty_ids: [], ward_ids: [] });
+//     setError(null);
+//     setShowModal(true);
+
+//     // If current user is agent, fetch subcounties for their county
+//     if (currentUser?.role === 'agent' && currentUser?.county_code) {
+//       fetchSubcounties(currentUser.county_code);
+//     }
+//   };
+
+//   const handleCloseModal = () => {
+//     setShowModal(false);
+//     setError(null);
+//     setIsEditing(false);
+//     setSelectedUser(null);
+//     setForm({ name: '', email: '', password: '', phone: '', role: '', county_code: '', subcounty_ids: [], ward_ids: [] });
+//     setSubcounties([]);
+//     setWards([]);
+//   };
+
+//   const handleCloseTransferModal = () => {
+//     setShowTransferModal(false);
+//     setSelectedUser(null);
+//     setTransferForm({
+//       new_county_code: '',
+//       new_county: '',
+//       new_subcounty: '',
+//       new_ward: '',
+//       new_institution_id: '',
+//     });
+//     setTransferInstitutionSearch('');
+//   };
+
+//   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+//     const { name, value } = e.target;
+
+//     if (name === 'subcounty_ids') {
+//       // Reset wards when subcounties change
+//       setForm({ ...form, [name]: value ? [value] : [], ward_ids: [] });
+//     } else if (name === 'role') {
+//       // Reset institution when role changes to non-school_admin
+//       if (value !== 'school_admin') {
+//         setForm({ ...form, [name]: value, institution_id: undefined });
+//       } else {
+//         setForm({ ...form, [name]: value });
+//       }
+//     } else if (name === 'phone') {
+//       // Allow only digits for phone number
+//       const numericValue = value.replace(/\D/g, '');
+//       setForm({ ...form, [name]: numericValue });
+//     } else {
+//       setForm({ ...form, [name]: value });
+//     }
+//   };
+
+//   const handleEdit = (user: UserModel) => {
+//     setSelectedUser(user);
+//     setForm({
+//       name: user.name,
+//       email: user.email,
+//       phone: user.phone || '',
+//       role: user.role || '',
+//       gender: user.gender,
+//       institution_id: user.institution_id,
+//       subcounty_ids: (user as any).subcounty_id ? [(user as any).subcounty_id] : [],
+//       ward_ids: (user as any).ward_id ? [(user as any).ward_id] : [],
+//       county_code: (user as any).county_code || '',
+//       password: '' // Password is optional for updates
+//     });
+
+//     // If current user is agent, fetch subcounties and wards for editing any user
+//     if (currentUser?.role === 'agent' && currentUser?.county_code) {
+//       fetchSubcounties(currentUser.county_code);
+//       if ((user as any).subcounty_id) {
+//         fetchWards((user as any).subcounty_id);
+//       }
+//     }
+
+//     setIsEditing(true);
+//     setShowModal(true);
+//   };
+
+//   const handleToggleStatus = async (user: UserModel) => {
+//     const newStatus = user.status === 'Active' ? 'Inactive' : 'Active';
+//     try {
+//       await api.patch(Urls.CHANGE_USER_STATUS(user.id));
+//       toast({
+//         title: "Success",
+//         description: `User ${newStatus.toLowerCase()}d successfully`,
+//         variant: "default",
+//       });
+//       fetchUsers();
+//     } catch (error: any) {
+//       toast({
+//         title: "Error",
+//         description: error.response?.data?.message || "Failed to update user status",
+//         variant: "destructive",
+//       });
+//     }
+//   };
+
+//   const handleTransfer = (user: UserModel) => {
+//     setSelectedUser(user);
+//     setTransferForm({
+//       new_county_code: '',
+//       new_county: '',
+//       new_subcounty: '',
+//       new_ward: '',
+//       new_institution_id: '',
+//     });
+//     setShowTransferModal(true);
+//   };
+
+//   const handleDelete = (user: UserModel) => {
+//     setSelectedUser(user);
+//     setShowDeleteDialog(true);
+//   };
+
+//   const handleTransferSubmit = async (e: React.FormEvent) => {
+//     e.preventDefault();
+//     if (!selectedUser) return;
+
+//     try {
+//       const transferData: any = {};
+
+//       if (selectedUser.role === 'agent') {
+//         // For agents, collect county information
+//         transferData.new_county_code = transferForm.new_county_code;
+//         transferData.new_county = transferForm.new_county;
+//         transferData.new_subcounty = transferForm.new_subcounty;
+//         transferData.new_ward = transferForm.new_ward;
+//       } else if (selectedUser.role === 'school_admin') {
+//         // For school admins, collect institution information
+//         transferData.new_institution_id = parseInt(transferForm.new_institution_id);
+//       }
+
+//       await transferUser(selectedUser.id, transferData);
+//       toast({
+//         title: "Success",
+//         description: "User transferred successfully",
+//         variant: "default",
+//       });
+//       setShowTransferModal(false);
+//       fetchUsers(); // Refresh the users list
+//     } catch (error: any) {
+//       toast({
+//         title: "Error",
+//         description: error.response?.data?.message || "Failed to transfer user",
+//         variant: "destructive",
+//       });
+//     }
+//   };
+
+//   const confirmDelete = async () => {
+//     if (!selectedUser) return;
+
+//     try {
+//       await deleteUser(selectedUser.id);
+//       toast({
+//         title: "Success",
+//         description: "User deleted successfully",
+//         variant: "default",
+//       });
+//       fetchUsers(); // Refresh the users list
+//     } catch (error: any) {
+//       toast({
+//         title: "Error",
+//         description: error.response?.data?.message || "Failed to delete user",
+//         variant: "destructive",
+//       });
+//     } finally {
+//       setShowDeleteDialog(false);
+//       setSelectedUser(null);
+//     }
+//   };
+
+//   const handleChangePage = (newPage: number) => {
+//     setPage(newPage);
+//   };
+
+//   const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLSelectElement>) => {
+//     setRowsPerPage(parseInt(event.target.value, 10));
+//     setPage(0);
+//   };
+
+//   const handleSubmit = async (e: React.FormEvent) => {
+//     e.preventDefault();
+//     setSubmitting(true);
+//     setError(null);
+
+//     // Validation for subcounty and ward when current user is agent (now optional)
+//     // No validation needed as they are optional
+
+//     // Validation for county_code when current user is ministry_admin
+//     if (currentUser?.role === 'ministry_admin') {
+//       if (!form.county_code) {
+//         setError('County Code is required');
+//         setSubmitting(false);
+//         return;
+//       }
+//     }
+
+//     // Validation for institution when role is school_admin
+//     if (form.role === 'school_admin' && !form.institution_id) {
+//       setError('Institution is required when role is School Admin');
+//       setSubmitting(false);
+//       return;
+//     }
+
+//     // Validation for phone number
+//     if (form.phone && !/^07\d{8}$/.test(form.phone)) {
+//       setError('Phone number must be a valid 10 digits ');
+//       setSubmitting(false);
+//       return;
+//     }
+
+//     try {
+//       if (isEditing && selectedUser) {
+//         // Handle update
+//         const updateData = { ...form };
+//         if (!updateData.password) {
+//           delete updateData.password;
+//         }
+//         // Map subcounty_ids to subcounty name and ward_ids to ward name (take first if multiple)
+//         if (updateData.subcounty_ids && updateData.subcounty_ids.length > 0) {
+//           const selectedSubcounty = subcounties.find(s => s.id === updateData.subcounty_ids[0]);
+//           updateData.subcounty = selectedSubcounty ? selectedSubcounty.name : '';
+//           delete (updateData as any).subcounty_ids;
+//         }
+//         if (updateData.ward_ids && updateData.ward_ids.length > 0) {
+//           const selectedWard = wards.find(w => w.id === updateData.ward_ids[0]);
+//           updateData.ward = selectedWard ? selectedWard.name : '';
+//           delete (updateData as any).ward_ids;
+//         }
+//         await updateUser(selectedUser.id, updateData);
+//         toast({
+//           title: "Success",
+//           description: "User updated successfully",
+//           variant: "default",
+//         });
+//       } else {
+//         // Handle create
+//         const createData = { ...form };
+//         // Map subcounty_ids to subcounty name and ward_ids to ward name (take first if multiple)
+//         if (createData.subcounty_ids && createData.subcounty_ids.length > 0) {
+//           const selectedSubcounty = subcounties.find(s => s.id === createData.subcounty_ids[0]);
+//           createData.subcounty = selectedSubcounty ? selectedSubcounty.name : '';
+//           delete (createData as any).subcounty_ids;
+//         }
+//         if (createData.ward_ids && createData.ward_ids.length > 0) {
+//           const selectedWard = wards.find(w => w.id === createData.ward_ids[0]);
+//           createData.ward = selectedWard ? selectedWard.name : '';
+//           delete (createData as any).ward_ids;
+//         }
+//         await createUser(createData);
+//         toast({
+//           title: "Success",
+//           description: "User created successfully",
+//           variant: "default",
+//         });
+//       }
+//       setShowModal(false);
+//       fetchUsers();
+//     } catch (err: any) {
+//       const errorResponse = err?.response?.data;
+//       if (errorResponse?.errors) {
+//         // Handle validation errors
+//         const validationErrors = Object.entries(errorResponse.errors)
+//           .map(([field, messages]) => `${field}: ${(messages as string[]).join(', ')}`)
+//           .join('\n');
+        
+//         toast({
+//           title: "Validation Error",
+//           description: validationErrors,
+//           variant: "destructive",
+//         });
+//         setError(validationErrors);
+//       } else {
+//         const errorMessage = errorResponse?.message || `Failed to ${isEditing ? 'update' : 'create'} user`;
+//         toast({
+//           title: "Error",
+//           description: errorMessage,
+//           variant: "destructive",
+//         });
+//         setError(errorMessage);
+//       }
+//     } finally {
+//       setSubmitting(false);
+//     }
+//   };
+
+//   return (
+//     <>
+//     <div className="space-y-6">
+//       <div className="flex items-center justify-between">
+//         <div>
+//           <h1 className="text-2xl font-bold text-foreground">User Management</h1>
+//           <p className="text-muted-foreground">
+//             Manage system users and their access permissions
+//           </p>
+//         </div>
+//         <Button className="bg-primary hover:bg-primary-hover text-primary-foreground" onClick={handleOpenModal}>
+//           <User className="h-4 w-4 mr-2" />
+//           Add New User
+//         </Button>
+//       </div>
+
+//       {/* Statistics Cards */}
+//       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 my-6">
+//         <Card>
+//           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+//             <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+//             <User className="h-4 w-4 text-muted-foreground" />
+//           </CardHeader>
+//           <CardContent>
+//             <div className="text-2xl font-bold">{users.length}</div>
+//             <p className="text-xs text-muted-foreground">
+//               Active system users
+//             </p>
+//           </CardContent>
+//         </Card>
+//         <Card>
+//           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+//             <CardTitle className="text-sm font-medium">System Admins</CardTitle>
+//             <Shield className="h-4 w-4 text-muted-foreground" />
+//           </CardHeader>
+//           <CardContent>
+//             <div className="text-2xl font-bold">
+//               {users.filter(user => user.role === 'admin').length}
+//             </div>
+//             <p className="text-xs text-muted-foreground">
+//               Administrators
+//             </p>
+//           </CardContent>
+//         </Card>
+//         <Card>
+//           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+//             <CardTitle className="text-sm font-medium">Active Users</CardTitle>
+//             <User className="h-4 w-4 text-muted-foreground" />
+//           </CardHeader>
+//           <CardContent>
+//             <div className="text-2xl font-bold">
+//               {users.filter(user => user.status === 'Active').length}
+//             </div>
+//             <p className="text-xs text-muted-foreground">
+//               Currently active users
+//             </p>
+//           </CardContent>
+//         </Card>
+//       </div>
+
+//       {/* Modal for creating user */}
+//       {showModal && (
+//         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+//           <div className="bg-white rounded-lg shadow-lg w-full p-6 relative" style={{ maxWidth: '650px' }}>
+//             <button className="absolute top-2 right-2 text-muted-foreground" onClick={handleCloseModal}>
+//               <X className="h-5 w-5" />
+//             </button>
+//             <h2 className="text-xl font-bold mb-4">{isEditing ? 'Edit User' : 'Create New User'}</h2>
+//             <form onSubmit={handleSubmit} className="space-y-4">
+//               {/* First Row */}
+//               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+//                 <div>
+//                   <label className="block text-sm font-medium mb-1">Name <span className="text-destructive">*</span></label>
+//                   <Input name="name" value={form.name} onChange={handleChange} required disabled={submitting} />
+//                 </div>
+//                 <div>
+//                   <label className="block text-sm font-medium mb-1">Email <span className="text-destructive">*</span></label>
+//                   <Input name="email" type="email" value={form.email} onChange={handleChange} required disabled={submitting} />
+//                 </div>
+//               </div>
+
+//               {/* Second Row */}
+//               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+//                 {/* Phone Number */}
+//               <div>
+//               <label className="block text-sm font-medium mb-1 flex items-center space-x-2">
+//                 <Phone className="h-4 w-4" />
+//                 <span>Phone Number</span>
+//               </label>
+//               <Input name="phone" value={form.phone} onChange={handleChange} placeholder="e.g., 0712345678" disabled={submitting} />
+//               </div>
+//                 <div>
+//                   <label className="block text-sm font-medium mb-1">Gender</label>
+//                   <select name="gender" value={form.gender} onChange={handleChange} className="w-full border rounded px-2 py-1" disabled={submitting}>
+//                     <option value="">Select gender</option>
+//                     <option value="male">Male</option>
+//                     <option value="female">Female</option>
+//                     <option value="other">Other</option>
+//                   </select>
+//                 </div>
+//               </div>
+
+//               {/* Third Row */}
+//               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+//                 <div>
+//                   <label className="block text-sm font-medium mb-1">Password <span className="text-destructive">*</span></label>
+//                   <Input name="password" type="password" value={form.password} onChange={handleChange} required disabled={submitting} />
+//                 </div>
+//                 {form.role === 'school_admin' && (
+//                   <div>
+//                     <label className="block text-sm font-medium mb-1">Institution (School) <span className="text-destructive">*</span></label>
+//                     <Popover open={openInstitution} onOpenChange={setOpenInstitution}>
+//                       <PopoverTrigger asChild>
+//                         <Button
+//                           variant="outline"
+//                           role="combobox"
+//                           aria-expanded={openInstitution}
+//                           className="w-full justify-between"
+//                           disabled={submitting}
+//                         >
+//                           {form.institution_id
+//                             ? institutions.find((inst) => inst.id === form.institution_id)?.name
+//                             : "Select institution..."}
+//                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+//                         </Button>
+//                       </PopoverTrigger>
+//                       <PopoverContent className="w-full p-0">
+//                         <Command>
+//                           <CommandInput
+//                             placeholder="Search institutions..."
+//                             value={transferInstitutionSearch}
+//                             onValueChange={setTransferInstitutionSearch}
+//                           />
+//                           <CommandEmpty>No institution found.</CommandEmpty>
+//                           <CommandGroup>
+//                             {institutions
+//                               .sort((a, b) => a.name.localeCompare(b.name))
+//                               .filter((inst) =>
+//                                 transferInstitutionSearch === '' ||
+//                                 inst.name.toLowerCase().includes(transferInstitutionSearch.toLowerCase())
+//                               )
+//                               .slice(0, 10)
+//                               .map((inst) => (
+//                                 <CommandItem
+//                                   key={inst.id}
+//                                   value={inst.name}
+//                                   onSelect={() => {
+//                                     setForm({ ...form, institution_id: inst.id });
+//                                     setOpenInstitution(false);
+//                                     setInstitutionSearch('');
+//                                   }}
+//                                 >
+//                                   <Check
+//                                     className={cn(
+//                                       "mr-2 h-4 w-4",
+//                                       form.institution_id === inst.id ? "opacity-100" : "opacity-0"
+//                                     )}
+//                                   />
+//                                   {inst.name}
+//                                 </CommandItem>
+//                               ))}
+//                           </CommandGroup>
+//                           {institutions.length > 10 && (
+//                             <div className="p-2 text-xs text-muted-foreground border-t">
+//                               {institutionSearch === ''
+//                                 // ? "Showing first 10 institutions. Type to search more."
+//                                 // : `Showing first 10 matches for "${institutionSearch}". Refine search for better results.`
+//                               }
+//                             </div>
+//                           )}
+//                         </Command>
+//                       </PopoverContent>
+//                     </Popover>
+//                   </div>
+//                 )}
+//               </div>
+
+//               {/* Fourth Row */}
+//               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+//                 <div>
+//                   <label className="block text-sm font-medium mb-1">Role</label>
+//                   <select name="role" value={form.role} onChange={handleChange} className="w-full border rounded px-2 py-1" disabled={submitting}>
+//                     <option value="">Select role</option>
+//                     {roles
+//                       .filter(role =>
+//                         // Agents cannot assign 'agent' or 'ministry_admin' roles
+//                         !(currentUser?.role === 'agent' && (role.name === 'agent' || role.name === 'ministry_admin'))
+//                       )
+//                       .map(role => (
+//                         <option key={role.id} value={role.name}>
+//                           {role.name.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+//                         </option>
+//                       ))}
+//                   </select>
+//                 </div>
+
+//                 {/* Subcounty field for agents */}
+//                 {currentUser?.role === 'agent' && (
+//                   <div>
+//                     <label className="block text-sm font-medium mb-1">Subcounty (Optional)</label>
+//                     <Popover>
+//                       <PopoverTrigger asChild>
+//                         <Button
+//                           variant="outline"
+//                           role="combobox"
+//                           className="w-full justify-between"
+//                           disabled={submitting}
+//                         >
+//                           {form.subcounty_ids && form.subcounty_ids.length > 0
+//                             ? (() => {
+//                                 const selectedNames = form.subcounty_ids.map(id => subcounties.find(s => s.id === id)?.name).filter(Boolean);
+//                                 if (selectedNames.length <= 2) {
+//                                   return selectedNames.join(', ');
+//                                 } else {
+//                                   return `${selectedNames.slice(0, 2).join(', ')} and ${selectedNames.length - 2} more`;
+//                                 }
+//                               })()
+//                             : "Select subcounties..."}
+//                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+//                         </Button>
+//                       </PopoverTrigger>
+//                       <PopoverContent className="w-full p-0">
+//                         <Command>
+//                           <CommandInput placeholder="Search subcounties..." />
+//                           <CommandEmpty>No subcounty found.</CommandEmpty>
+//                           <CommandGroup>
+//                             {subcounties.map((subcounty) => {
+//                               const isSelected = form.subcounty_ids?.includes(subcounty.id) || false;
+//                               return (
+//                                 <CommandItem
+//                                   key={subcounty.id}
+//                                   value={subcounty.name}
+//                                   onSelect={() => {
+//                                     const newValues = isSelected
+//                                       ? (form.subcounty_ids?.filter(id => id !== subcounty.id) || [])
+//                                       : [...(form.subcounty_ids || []), subcounty.id];
+//                                     setForm(prev => ({ ...prev, subcounty_ids: newValues, ward_ids: [] }));
+//                                   }}
+//                                 >
+//                                   <Check
+//                                     className={cn(
+//                                       "mr-2 h-4 w-4",
+//                                       isSelected ? "opacity-100" : "opacity-0"
+//                                     )}
+//                                   />
+//                                   {subcounty.name}
+//                                 </CommandItem>
+//                               );
+//                             })}
+//                           </CommandGroup>
+//                         </Command>
+//                       </PopoverContent>
+//                     </Popover>
+//                   </div>
+//                 )}
+
+//                 {/* County Code field for ministry */}
+//                 {currentUser?.role === 'ministry_admin' && (
+//                   <div>
+//                     <label className="block text-sm font-medium mb-1">County Code <span className="text-destructive">*</span></label>
+//                     <Input
+//                       name="county_code"
+//                       type="number"
+//                       value={form.county_code}
+//                       onChange={handleChange}
+//                       placeholder="e.g., 23"
+//                       disabled={submitting}
+//                       required
+//                       className="w-72"
+//                     />
+//                   </div>
+//                 )}
+//               </div>
+
+//               {/* Fifth Row - Ward field for agents (only show if subcounty is selected) */}
+//               {currentUser?.role === 'agent' && form.subcounty_ids && form.subcounty_ids.length > 0 && (
+//                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+//                   <div>
+//                     <label className="block text-sm font-medium mb-1">Ward (Optional)</label>
+//                     <Popover>
+//                       <PopoverTrigger asChild>
+//                         <Button
+//                           variant="outline"
+//                           role="combobox"
+//                           className="w-full justify-between"
+//                           disabled={submitting}
+//                         >
+//                           {form.ward_ids && form.ward_ids.length > 0
+//                             ? (() => {
+//                                 const selectedNames = form.ward_ids.map(id => wards.find(w => w.id === id)?.name).filter(Boolean);
+//                                 if (selectedNames.length <= 2) {
+//                                   return selectedNames.join(', ');
+//                                 } else {
+//                                   return `${selectedNames.slice(0, 2).join(', ')} and ${selectedNames.length - 2} more`;
+//                                 }
+//                               })()
+//                             : "Select wards..."}
+//                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+//                         </Button>
+//                       </PopoverTrigger>
+//                       <PopoverContent className="w-full p-0">
+//                         <Command>
+//                           <CommandInput placeholder="Search wards..." />
+//                           <CommandEmpty>No ward found.</CommandEmpty>
+//                           <CommandGroup>
+//                             {wards.map((ward) => {
+//                               const isSelected = form.ward_ids?.includes(ward.id) || false;
+//                               return (
+//                                 <CommandItem
+//                                   key={ward.id}
+//                                   value={ward.name}
+//                                   onSelect={() => {
+//                                     const newValues = isSelected
+//                                       ? (form.ward_ids?.filter(id => id !== ward.id) || [])
+//                                       : [...(form.ward_ids || []), ward.id];
+//                                     setForm(prev => ({ ...prev, ward_ids: newValues }));
+//                                   }}
+//                                 >
+//                                   <Check
+//                                     className={cn(
+//                                       "mr-2 h-4 w-4",
+//                                       isSelected ? "opacity-100" : "opacity-0"
+//                                     )}
+//                                   />
+//                                   {ward.name}
+//                                 </CommandItem>
+//                               );
+//                             })}
+//                           </CommandGroup>
+//                         </Command>
+//                       </PopoverContent>
+//                     </Popover>
+//                   </div>
+//                   {/* Empty div to maintain grid layout */}
+//                   <div></div>
+//                 </div>
+//               )}
+
+//               {error && <div className="text-destructive text-sm">{error}</div>}
+//               <div className="flex justify-end">
+//                 <Button type="button" variant="outline" className="mr-2" onClick={handleCloseModal} disabled={submitting}>Cancel</Button>
+//                 <Button type="submit" disabled={submitting} className="bg-primary text-primary-foreground">
+//                   {submitting ? 'Creating...' : 'Create User'}
+//                 </Button>
+//               </div>
+//             </form>
+//           </div>
+//         </div>
+//       )}
+
+//       {/* List institutions for this agent/county */}
+//       {/* <div className="mt-8">
+//         <h2 className="text-lg font-bold mb-2">Institutions Onboarded {currentUser?.role === 'agent' ? 'by You' : 'in Your County'}</h2>
+//         <ul className="list-disc pl-6">
+//           {institutions.length === 0 ? (
+//             <li className="text-muted-foreground">No institutions found.</li>
+//           ) : (
+//             institutions
+//               .filter(inst => {
+//                 if (currentUser?.role === 'agent') {
+//                   return inst.created_by === currentUser.id;
+//                 } else if (currentUser?.county_id) {
+//                   return inst.county === currentUser.county_id;
+//                 }
+//                 return true;
+//               })
+//               .map(inst => (
+//                 <li key={inst.id}>{inst.name} <span className="text-xs text-muted-foreground">({inst.county})</span></li>
+//               ))
+//           )}
+//         </ul>
+//       </div> */}
+
+//       {/* Users Table */}
+//       <Card>
+//         <CardHeader>
+//           <CardTitle>System Users</CardTitle>
+//           <CardDescription>
+//             View and manage all users in the quality assurance system
+//           </CardDescription>
+//         </CardHeader>
+//         <CardContent>
+//           <Table>
+//             <TableHeader>
+//               <TableRow>
+//                 <TableHead>User</TableHead>
+//                 <TableHead>Role</TableHead>
+//                 <TableHead>Jurisdiction</TableHead>
+//                 <TableHead>Status</TableHead>
+//                 <TableHead>Last Login</TableHead>
+//                 <TableHead>Actions</TableHead>
+//               </TableRow>
+//             </TableHeader>
+//             <TableBody>
+//               {loading ? (
+//                 <TableRow>
+//                   <TableCell colSpan={6} className="text-center">Loading...</TableCell>
+//                 </TableRow>
+//               ) : users.length === 0 ? (
+//                 <TableRow>
+//                   <TableCell colSpan={6} className="text-center">No users found.</TableCell>
+//                 </TableRow>
+//               ) : (
+//                 visibleUsers.map((user) => (
+//                   <TableRow key={user.id} className="hover:bg-muted/50">
+//                     <TableCell>
+//                       <div className="flex items-center space-x-3">
+//                         <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
+//                           <User className="h-5 w-5 text-primary-foreground" />
+//                         </div>
+//                         <div>
+//                           <div className="font-semibold">{user.name}</div>
+//                           <div className="text-sm text-muted-foreground flex items-center">
+//                             <Mail className="h-3 w-3 mr-1" />
+//                             {user.email}
+//                           </div>
+//                         </div>
+//                       </div>
+//                     </TableCell>
+//                     <TableCell>
+//                       <Badge className={getRoleBadgeVariant(user.role || '')}>
+//                         {formatRole(user.role || '')}
+//                       </Badge>
+//                     </TableCell>
+//                     <TableCell>
+//                       <div>
+//                         <div className="font-medium">{user.county || '-'}</div>
+//                         {user.school && (
+//                           <div className="text-sm text-muted-foreground">{user.school}</div>
+//                         )}
+//                       </div>
+//                     </TableCell>
+//                     <TableCell>
+//                       {getStatusBadge(user.status || '')}
+//                     </TableCell>
+//                     <TableCell>
+//                       <div className="text-sm">
+//                         {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : '-'}
+//                       </div>
+//                       <div className="text-xs text-muted-foreground">
+//                         {user.lastLogin ? new Date(user.lastLogin).toLocaleTimeString() : ''}
+//                       </div>
+//                     </TableCell>
+//                     <TableCell>
+//                       <DropdownMenu>
+//                         <DropdownMenuTrigger asChild>
+//                           <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+//                             <MoreHorizontal className="h-4 w-4" />
+//                           </Button>
+//                         </DropdownMenuTrigger>
+//                         <DropdownMenuContent align="end" className="w-40">
+//                           <DropdownMenuItem
+//                             onClick={() => handleEdit(user)}
+//                             className="cursor-pointer"
+//                           >
+//                             <Edit className="h-4 w-4 mr-2" />
+//                             Edit
+//                           </DropdownMenuItem>
+//                           {(user.role === 'agent' || user.role === 'school_admin') && (
+//                             <DropdownMenuItem
+//                               onClick={() => handleTransfer(user)}
+//                               className="cursor-pointer"
+//                             >
+//                               <ArrowRightLeft className="h-4 w-4 mr-2" />
+//                               Transfer User
+//                             </DropdownMenuItem>
+//                           )}
+//                           <DropdownMenuItem
+//                             onClick={() => handleToggleStatus(user)}
+//                             className="cursor-pointer"
+//                           >
+//                             <Trash2 className="h-4 w-4 mr-2" />
+//                             {user.status === 'Active' ? 'Deactivate' : 'Activate'}
+//                           </DropdownMenuItem>
+//                         </DropdownMenuContent>
+//                       </DropdownMenu>
+//                     </TableCell>
+//                   </TableRow>
+//                 ))
+//               )}
+//             </TableBody>
+//           </Table>
+
+//           {/* Pagination */}
+//           {!loading && users.length > 0 && (
+//             <div className="flex items-center justify-between px-2 py-4">
+//               <div className="flex items-center space-x-2">
+//                 <label className="text-sm font-medium">Rows per page:</label>
+//                 <select
+//                   value={rowsPerPage}
+//                   onChange={handleChangeRowsPerPage}
+//                   className="border rounded px-2 py-1 text-sm"
+//                 >
+//                   <option value={5}>5</option>
+//                   <option value={10}>10</option>
+//                   <option value={25}>25</option>
+//                   <option value={50}>50</option>
+//                 </select>
+//               </div>
+//               <div className="flex items-center space-x-2">
+//                 <span className="text-sm">
+//                   {page * rowsPerPage + 1}-{Math.min((page + 1) * rowsPerPage, users.length)} of {users.length}
+//                 </span>
+//                 <div className="flex space-x-1">
+//                   <Button
+//                     variant="outline"
+//                     size="sm"
+//                     onClick={() => handleChangePage(page - 1)}
+//                     disabled={page === 0}
+//                   >
+//                     Previous
+//                   </Button>
+//                   <Button
+//                     variant="outline"
+//                     size="sm"
+//                     onClick={() => handleChangePage(page + 1)}
+//                     disabled={(page + 1) * rowsPerPage >= users.length}
+//                   >
+//                     Next
+//                   </Button>
+//                 </div>
+//               </div>
+//             </div>
+//           )}
+//         </CardContent>
+//       </Card>
+//       </div>
+
+//       {/* Transfer User Modal */}
+//       {showTransferModal && selectedUser && (
+//         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+//           <div className="bg-white rounded-lg shadow-lg w-full p-6 relative" style={{ maxWidth: '500px' }}>
+//             <button className="absolute top-2 right-2 text-muted-foreground" onClick={handleCloseTransferModal}>
+//               <X className="h-5 w-5" />
+//             </button>
+//             <h2 className="text-xl font-bold mb-4">Transfer User</h2>
+//             <p className="text-sm text-muted-foreground mb-4">
+//               Transfer {selectedUser.name} to a new location
+//             </p>
+//             <form onSubmit={handleTransferSubmit} className="space-y-4">
+//               {selectedUser.role === 'agent' ? (
+//                 // Agent transfer form
+//                 <>
+//                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+//                     <div>
+//                       <label className="block text-sm font-medium mb-1">New County Code <span className="text-destructive">*</span></label>
+//                       <Input
+//                         type="number"
+//                         value={transferForm.new_county_code}
+//                         onChange={(e) => setTransferForm({ ...transferForm, new_county_code: e.target.value })}
+//                         placeholder="e.g., 23"
+//                         required
+//                       />
+//                     </div>
+//                     <div>
+//                       <label className="block text-sm font-medium mb-1">New County <span className="text-destructive">*</span></label>
+//                       <Input
+//                         value={transferForm.new_county}
+//                         onChange={(e) => setTransferForm({ ...transferForm, new_county: e.target.value })}
+//                         placeholder="e.g., Nairobi"
+//                         required
+//                       />
+//                     </div>
+//                   </div>
+//                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+//                     <div>
+//                       <label className="block text-sm font-medium mb-1">New Subcounty <span className="text-destructive">*</span></label>
+//                       <Input
+//                         value={transferForm.new_subcounty}
+//                         onChange={(e) => setTransferForm({ ...transferForm, new_subcounty: e.target.value })}
+//                         placeholder="e.g., Westlands"
+//                         required
+//                       />
+//                     </div>
+//                     <div>
+//                       <label className="block text-sm font-medium mb-1">New Ward <span className="text-destructive">*</span></label>
+//                       <Input
+//                         value={transferForm.new_ward}
+//                         onChange={(e) => setTransferForm({ ...transferForm, new_ward: e.target.value })}
+//                         placeholder="e.g., Kileleshwa"
+//                         required
+//                       />
+//                     </div>
+//                   </div>
+//                 </>
+//               ) : selectedUser.role === 'school_admin' ? (
+//                 // School Admin transfer form
+//                 <div>
+//                   <label className="block text-sm font-medium mb-1">New Institution <span className="text-destructive">*</span></label>
+//                   <Popover>
+//                     <PopoverTrigger asChild>
+//                       <Button
+//                         variant="outline"
+//                         role="combobox"
+//                         className="w-full justify-between"
+//                       >
+//                         {transferForm.new_institution_id
+//                           ? institutions.find((inst) => inst.id === parseInt(transferForm.new_institution_id))?.name
+//                           : "Select institution..."}
+//                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+//                       </Button>
+//                     </PopoverTrigger>
+//                     <PopoverContent className="w-full p-0">
+//                       <Command>
+//                         <CommandInput
+//                           placeholder="Search institutions..."
+//                           value={institutionSearch}
+//                           onValueChange={setInstitutionSearch}
+//                         />
+//                         <CommandEmpty>No institution found.</CommandEmpty>
+//                         <CommandGroup>
+//                           {institutions
+//                             .sort((a, b) => a.name.localeCompare(b.name))
+//                             .filter((inst) =>
+//                               institutionSearch === '' ||
+//                               inst.name.toLowerCase().includes(institutionSearch.toLowerCase())
+//                             )
+//                             .slice(0, 10)
+//                             .map((inst) => (
+//                               <CommandItem
+//                                 key={inst.id}
+//                                 value={inst.name}
+//                                 onSelect={() => {
+//                                   setTransferForm({ ...transferForm, new_institution_id: inst.id.toString() });
+//                                   setTransferInstitutionSearch('');
+//                                 }}
+//                               >
+//                                 <Check
+//                                   className={cn(
+//                                     "mr-2 h-4 w-4",
+//                                     transferForm.new_institution_id === inst.id.toString() ? "opacity-100" : "opacity-0"
+//                                   )}
+//                                 />
+//                                 {inst.name}
+//                               </CommandItem>
+//                             ))}
+//                         </CommandGroup>
+//                       </Command>
+//                     </PopoverContent>
+//                   </Popover>
+//                 </div>
+//               ) : null}
+
+//               <div className="flex justify-end space-x-2 pt-4">
+//                 <Button type="button" variant="outline" onClick={handleCloseTransferModal}>
+//                   Cancel
+//                 </Button>
+//                 <Button type="submit" className="bg-primary text-primary-foreground">
+//                   Transfer User
+//                 </Button>
+//               </div>
+//             </form>
+//           </div>
+//         </div>
+//       )}
+
+//       {/* Delete Confirmation Dialog */}
+//       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+//         <AlertDialogContent>
+//           <AlertDialogHeader>
+//             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+//             <AlertDialogDescription>
+//               This action cannot be undone. This will permanently delete the user
+//               {selectedUser ? ` "${selectedUser.name}"` : ''} and remove their data from the system.
+//             </AlertDialogDescription>
+//           </AlertDialogHeader>
+//           <AlertDialogFooter>
+//             <AlertDialogCancel>Cancel</AlertDialogCancel>
+//             <AlertDialogAction
+//               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+//               onClick={confirmDelete}
+//             >
+//               Delete
+//             </AlertDialogAction>
+//           </AlertDialogFooter>
+//         </AlertDialogContent>
+//       </AlertDialog>
+
+//       <Toaster />
+//     </>
+//   );
+// };export default Users;

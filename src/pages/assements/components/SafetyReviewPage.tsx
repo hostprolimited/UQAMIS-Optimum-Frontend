@@ -689,6 +689,46 @@ const SafetyReviewPage: React.FC = () => {
                     </table>
                   </div>
                 </div>
+
+                {selectedSubmission.agent_condition && selectedSubmission.agent_condition.length > 0 && (
+                  <div className="mt-3">
+                    <span className="font-medium">Agent Review Summary:</span>
+                    <div className="mt-2 overflow-x-auto">
+                      <table className="min-w-full bg-white border rounded">
+                        <thead>
+                          <tr className="bg-gray-50">
+                            <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Part of Building</th>
+                            <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Agent Assessment Status</th>
+                            <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Agent Score</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {selectedSubmission.agent_condition.map((condition, index) => (
+                            <tr key={index} className="border-t">
+                              <td className="px-4 py-2 text-sm font-medium">{condition.part_of_building}</td>
+                              <td className="px-4 py-2">
+                                <Badge
+                                  className={
+                                    condition.assessment_status === 'Urgent Attention'
+                                      ? 'bg-red-100 text-red-800'
+                                      : condition.assessment_status === 'Attention Required'
+                                      ? 'bg-yellow-100 text-yellow-800'
+                                      : 'bg-green-100 text-green-800'
+                                  }
+                                >
+                                  {condition.assessment_status}
+                                </Badge>
+                              </td>
+                              <td className="px-4 py-2 text-sm text-gray-600">
+                                {condition.score}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Review Form */}
