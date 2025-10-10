@@ -170,6 +170,15 @@ const LoginPage = () => {
         {/* Card */}
         <Card className="bg-white w-full max-w-md lg:max-w-lg shadow-xl border-0 rounded-lg">
           <CardContent className="p-6 lg:p-10">
+            {/* Optimum Logo */}
+            <div className="flex justify-center mb-8">
+              <img
+                src="/optimum logo.jpeg"
+                alt="Optimum Logo"
+                className="h-16 w-auto object-contain"
+              />
+            </div>
+
             {/* Form */}
             <form className="w-full" onSubmit={handleSubmit}>
               {error && (
