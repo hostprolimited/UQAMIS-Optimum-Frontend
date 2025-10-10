@@ -319,7 +319,7 @@ const Overview = () => {
                     />
                     <div className="flex-1">
                       <p className="text-sm font-medium">{item.name}</p>
-                      <p className="text-xs text-muted-foreground">{item.value} assessments</p>
+                      <p className="text-xs text-muted-foreground">{item.value} parts</p>
                     </div>
                   </div>
                 ))}
@@ -489,7 +489,7 @@ const Overview = () => {
                   <TableRow>
                     <TableHead>School Name</TableHead>
                     <TableHead>Condition</TableHead>
-                    <TableHead>Items Count</TableHead>
+                    <TableHead>Parts</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
