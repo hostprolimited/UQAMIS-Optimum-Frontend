@@ -73,6 +73,7 @@ interface FacilityAssessment {
   totalScorePercentage?: number;
   created_at?: string;
   details?: AssessmentDetail[];
+  agent_condition?: AssessmentDetail[];
 }
 
 // Mapping helper (adapts API response to our UI model)
@@ -95,6 +96,7 @@ const mapMaintenanceReport = (report: any, facilityIdToName: Record<string, stri
   totalScorePercentage: report.total_score_percentage,
   created_at: report.created_at,
   details: report.details ?? [],
+  agent_condition: report.agent_condition ?? [],
 });
 
 // Get current logged-in institution name from localStorage
@@ -266,7 +268,7 @@ const AssessmentReviewPage: React.FC = () => {
     },
     {
       accessorKey: "totalScorePercentage",
-      header: "Score (%)",
+      header: " Score (%)",
       cell: ({ row }) => (
         <div className="text-center font-semibold">{row.getValue("totalScorePercentage") ?? '-'}</div>
       ),
@@ -559,6 +561,65 @@ const AssessmentReviewPage: React.FC = () => {
                     <p className="text-sm text-gray-600 mt-1">{selectedSubmission.school_feedback}</p>
                   </div>
                 )}
+
+                <div className="mt-3">
+                  <span className="font-medium">Assessment Details Review:</span>
+                  <div className="mt-2 overflow-x-auto">
+                    <table className="min-w-full bg-white border rounded">
+                      <thead>
+                        <tr className="bg-gray-50">
+                          <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Part of Building</th>
+                          <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Original Condition</th>
+                          <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Agent Condition</th>
+                          <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Agent Score</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {selectedSubmission.details?.map((detail, index) => {
+                          const agentCondition = selectedSubmission.agent_condition?.find(ac => ac.part_of_building === detail.part_of_building);
+                          return (
+                            <tr key={index} className="border-t">
+                              <td className="px-4 py-2 text-sm font-medium">{detail.part_of_building}</td>
+                              <td className="px-4 py-2">
+                                <Badge
+                                  className={
+                                    detail.assessment_status === 'Urgent Attention'
+                                      ? 'bg-red-100 text-red-800'
+                                      : detail.assessment_status === 'Attention Required'
+                                      ? 'bg-yellow-100 text-yellow-800'
+                                      : 'bg-green-100 text-green-800'
+                                  }
+                                >
+                                  {detail.assessment_status}
+                                </Badge>
+                              </td>
+                              <td className="px-4 py-2">
+                                {agentCondition ? (
+                                  <Badge
+                                    className={
+                                      agentCondition.assessment_status === 'Urgent Attention'
+                                        ? 'bg-red-100 text-red-800'
+                                        : agentCondition.assessment_status === 'Attention Required'
+                                        ? 'bg-yellow-100 text-yellow-800'
+                                        : 'bg-green-100 text-green-800'
+                                    }
+                                  >
+                                    {agentCondition.assessment_status}
+                                  </Badge>
+                                ) : (
+                                  <span className="text-gray-400">-</span>
+                                )}
+                              </td>
+                              <td className="px-4 py-2 text-sm text-gray-600">
+                                {agentCondition ? agentCondition.score : '-'}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               </div>
 
               {/* Review Form */}
@@ -634,3 +695,4 @@ const AssessmentReviewPage: React.FC = () => {
 };
 
 export default AssessmentReviewPage;
+

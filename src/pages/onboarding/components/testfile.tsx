@@ -2,6 +2,7 @@
 // import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 // import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 // import { Badge } from '@/components/ui/badge';
+// import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 // import { useRole } from '@/contexts/RoleContext';
 // import { getDashboardData } from '../core/_request';
 // import { getSchoolMetrics } from '../../assements/core/_request';
@@ -49,16 +50,26 @@
 //   const [schoolMetricsData, setSchoolMetricsData] = useState<SchoolMetric[] | null>(null);
 //   const [dashboardData, setDashboardData] = useState<DashboardResponse | null>(null);
 
+//   const getDashboardType = () => {
+//     if (currentUser.permissions?.includes('view_national_dashboard')) return 'ministry_admin';
+//     if (currentUser.permissions?.includes('view_county_dashboard') || currentUser.permissions?.includes('view_ward_dashboard')) return 'agent';
+//     if (currentUser.permissions?.includes('view_school_dashboard')) return 'school_admin';
+//     // fallback to role
+//     return currentUser.role;
+//   };
+
+//   const dashboardType = getDashboardType();
+
 //   useEffect(() => {
 //     const fetchData = async () => {
 //       try {
-//         if (currentUser.role === 'ministry_admin' || currentUser.role === 'agent' || currentUser.role === 'school_admin') {
+//         if (dashboardType === 'ministry_admin' || dashboardType === 'agent' || dashboardType === 'school_admin') {
 //           const response = await getDashboardData();
 //           if (response.status === 'success') {
 //             setDashboardData(response);
 //           }
 //         }
-//         if (currentUser.role === 'ministry_admin') {
+//         if (dashboardType === 'ministry_admin') {
 //           const response = await getSchoolMetrics();
 //           if (response.status === 'success') {
 //             setSchoolMetricsData(response.data);
@@ -69,31 +80,40 @@
 //       }
 //     };
 //     fetchData();
-//   }, [currentUser.role]);
+//   }, [dashboardType]);
 
 //   const getOverviewTitle = () => {
-//     switch (currentUser.role) {
+//     switch (dashboardType) {
 //       case 'ministry_admin':
-//       case 'agent':
-//       case 'school_admin':
-//         if (dashboardData && dashboardData.title && currentUser.role === 'ministry_admin') {
+//         if (dashboardData && dashboardData.title) {
 //           return dashboardData.title;
 //         } else {
-//           if (currentUser.role === 'ministry_admin') return 'National Overview';
-//           if (currentUser.role === 'agent') {
-//             const code = (currentUser as any).county_code || currentUser.county_code || currentUser.county_name;
-//             const countyName = countyCodeToName[String(code)] || 'Unknown';
-//             return `${countyName} County Overview`;
-//           }
-//           if (currentUser.role === 'school_admin') return `${dashboardData?.institution_name || currentUser.institution_name} Overview`;
+//           return 'National Overview';
 //         }
+//       case 'agent':
+//         if (dashboardData && dashboardData.title) {
+//           // Extract county code from title like "County Dashboard: 12"
+//           const titleMatch = dashboardData.title.match(/County Dashboard:\s*(\d+)/);
+//           if (titleMatch) {
+//             const countyCode = titleMatch[1];
+//             const countyName = countyCodeToName[countyCode] || `County ${countyCode}`;
+//             return `County Dashboard: ${countyName}`;
+//           }
+//           return dashboardData.title;
+//         } else {
+//           const code = (currentUser as any).county_code || currentUser.county_code || currentUser.county_name;
+//           const countyName = countyCodeToName[String(code)] || 'Unknown';
+//           return `${countyName} County Overview`;
+//         }
+//       case 'school_admin':
+//         return `${dashboardData?.institution_name || currentUser.institution_name} Overview`;
 //       default:
 //         return 'Overview';
 //     }
 //   };
 
 //    const getKPIData = () => {
-//       switch (currentUser.role) {
+//        switch (dashboardType) {
 //         case 'ministry_admin':
 //           if (dashboardData) {
 //             return [
@@ -138,28 +158,19 @@
 //               { title: 'Total Schools', value: dashboardData.data.metrics_kpis.total_schools.value.toString(), icon: School, trend: dashboardData.data.metrics_kpis.total_schools.vs_last_month, color: 'text-primary' },
 //               { title: 'Total Teachers', value: dashboardData.data.metrics_kpis.total_teachers.value.toString(), icon: Users, trend: dashboardData.data.metrics_kpis.total_teachers.vs_last_month, color: 'text-success' },
 //               { title: 'Total Students', value: dashboardData.data.metrics_kpis.total_students.value.toString(), icon: Users, trend: dashboardData.data.metrics_kpis.total_students.vs_last_month, color: 'text-info' },
+//               { title: 'Assessment Coverage', value: dashboardData.data.metrics_kpis.assessment_coverage_percentage.value.toString(), icon: FileText, trend: dashboardData.data.metrics_kpis.assessment_coverage_percentage.vs_last_month, color: 'text-warning' },
+//               { title: 'Assessments Overdue', value: dashboardData.data.metrics_kpis.assessments_overdue.value.toString(), icon: AlertTriangle, trend: dashboardData.data.metrics_kpis.assessments_overdue.vs_last_month, color: 'text-destructive' },
+//               { title: 'Avg Time to Complete', value: dashboardData.data.metrics_kpis.avg_time_to_complete_days.value.toString(), icon: TrendingUp, trend: dashboardData.data.metrics_kpis.avg_time_to_complete_days.vs_last_month, color: 'text-info' },
 //               { title: 'Total Assessments', value: dashboardData.data.metrics_kpis.total_assessments.value.toString(), icon: FileText, trend: dashboardData.data.metrics_kpis.total_assessments.vs_last_month, color: 'text-warning' },
 //               { title: 'Safety Assessments', value: dashboardData.data.metrics_kpis.total_safety_assessments.value.toString(), icon: CheckCircle, trend: dashboardData.data.metrics_kpis.total_safety_assessments.vs_last_month, color: 'text-primary' },
 //               { title: 'Safety Score', value: dashboardData.data.metrics_kpis.safety_score.value.toString(), icon: TrendingUp, trend: dashboardData.data.metrics_kpis.safety_score.vs_last_month, color: 'text-success' },
 //               { title: 'Maintenance Assessments', value: dashboardData.data.metrics_kpis.total_maintenance_assessments.value.toString(), icon: AlertTriangle, trend: dashboardData.data.metrics_kpis.total_maintenance_assessments.vs_last_month, color: 'text-warning' },
-//                { title: 'Maintenance Score', value: dashboardData.data.metrics_kpis.maintenance_score.value.toString(), icon: TrendingUp, trend: dashboardData.data.metrics_kpis.maintenance_score.vs_last_month, color: 'text-info' },
+//               { title: 'Maintenance Score', value: dashboardData.data.metrics_kpis.maintenance_score.value.toString(), icon: TrendingUp, trend: dashboardData.data.metrics_kpis.maintenance_score.vs_last_month, color: 'text-info' },
 //               { title: 'Completed Maintenance', value: dashboardData.data.metrics_kpis.completed_maintenance.value.toString(), icon: CheckCircle, trend: dashboardData.data.metrics_kpis.completed_maintenance.vs_last_month, color: 'text-primary' },
 //               { title: 'High Priority Maintenance', value: dashboardData.data.metrics_kpis.high_priority_maintenance.value.toString(), icon: AlertTriangle, trend: dashboardData.data.metrics_kpis.high_priority_maintenance.vs_last_month, color: 'text-destructive' },
 //             ];
-//           } else {
-//             return [
-//               { title: 'Total Schools', value: '1', icon: School, trend: '+100%', color: 'text-primary' },
-//               { title: 'Total Teachers', value: '0', icon: Users, trend: '0%', color: 'text-success' },
-//               { title: 'Total Students', value: '0', icon: Users, trend: '0%', color: 'text-info' },
-//               { title: 'Total Assessments', value: '5', icon: FileText, trend: '+100%', color: 'text-warning' },
-//               { title: 'Safety Assessments', value: '2', icon: CheckCircle, trend: '+100%', color: 'text-primary' },
-//               { title: 'Safety Score', value: '50', icon: TrendingUp, trend: 'N/A', color: 'text-success' },
-//               { title: 'Maintenance Assessments', value: '3', icon: AlertTriangle, trend: '+100%', color: 'text-warning' },
-//               { title: 'Maintenance Score', value: '30.8', icon: TrendingUp, trend: 'N/A', color: 'text-info' },
-//               { title: 'Completed Maintenance', value: '0', icon: CheckCircle, trend: '0%', color: 'text-primary' },
-//               { title: 'High Priority Maintenance', value: '0', icon: AlertTriangle, trend: '0%', color: 'text-destructive' },
-//             ];
 //           }
+//           return [];
 //         case 'school_admin':
 //           if (dashboardData) {
 //             return [
@@ -212,7 +223,7 @@
 
 //   const statusData = dashboardData && dashboardData.data.assessment_status_distribution ? dashboardData.data.assessment_status_distribution.map(item => ({
 //     name: item.label,
-//     value: item.value,
+//     value: Array.isArray(item.value) ? item.value.reduce((sum, assessment) => sum + (assessment.count || 0), 0) : item.value,
 //     color: item.color
 //   })) : [
 //     { name: 'Approved', value: 314, color: 'hsl(var(--success))' },
@@ -221,10 +232,32 @@
 //     { name: 'Not Assessed', value: 67, color: 'hsl(var(--muted-foreground))' },
 //   ];
 
-//   const subCountyData = dashboardData && dashboardData.data.sub_county_performance ?
-//     dashboardData.data.sub_county_performance.labels.map((label, i) => {
-//       const obj: any = { name: label };
-//       dashboardData.data.sub_county_performance!.data.forEach(item => {
+//   // Prepare assessment details data for the table
+//   const assessmentDetailsData = React.useMemo(() => {
+//     if (!dashboardData?.data?.assessment_status_distribution) return [];
+
+//     const details: any[] = [];
+//     dashboardData.data.assessment_status_distribution.forEach(statusGroup => {
+//       if (Array.isArray(statusGroup.value)) {
+//         statusGroup.value.forEach(assessment => {
+//           details.push({
+//             school_name: assessment.school_name,
+//             item_description: assessment.item_description,
+//             status: assessment.status,
+//             count: assessment.count,
+//             status_color: statusGroup.color,
+//             status_label: statusGroup.label
+//           });
+//         });
+//       }
+//     });
+//     return details;
+//   }, [dashboardData]);
+
+//   const subCountyData = dashboardData && (dashboardData.data.county_performance || dashboardData.data.sub_county_performance || dashboardData.data.institution_performance) ?
+//     (dashboardData.data.county_performance || dashboardData.data.sub_county_performance || dashboardData.data.institution_performance).labels.map((label, i) => {
+//       const obj: any = { name: countyCodeToName[label] || label };
+//       (dashboardData.data.county_performance || dashboardData.data.sub_county_performance || dashboardData.data.institution_performance)!.data.forEach(item => {
 //         obj[item.label] = item.values[i];
 //       });
 //       return obj;
@@ -246,86 +279,53 @@
 //           </Badge>
 //         </div> */}
 //       </div>
-
-//       {/* KPI Cards */}
-//       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-//         {kpiData.map((kpi, index) => (
-//           <Card key={index} className="relative overflow-hidden">
-//             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-//               <CardTitle className="text-sm font-medium text-muted-foreground">
-//                 {kpi.title}
-//               </CardTitle>
-//               <kpi.icon className={`h-4 w-4 ${kpi.color}`} />
-//             </CardHeader>
-//             <CardContent>
-//               <div className="flex items-center space-x-2">
-//                 <div className="text-2xl font-bold text-foreground">{kpi.value}</div>
-//                 <Badge
-//                   variant="secondary"
-//                   className={`text-xs ${
-//                     kpi.trend.startsWith('+')
-//                       ? 'text-success border-success/20 bg-success/10'
-//                       : 'text-muted-foreground'
-//                   }`}
-//                 >
-//                   {kpi.trend !== '0' && kpi.trend}
-//                 </Badge>
-//               </div>
-//               <p className="text-xs text-muted-foreground mt-1">
-//                 {kpi.trend.startsWith('+') ? 'vs last month' : 'no change'}
-//               </p>
-//             </CardContent>
-//           </Card>
-//         ))}
-//       </div>
-
 //       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 //         {/* Assessment Status Distribution */}
-//         <Card>
-//           <CardHeader>
-//             <CardTitle className="flex items-center space-x-2">
-//               <CheckCircle className="h-5 w-5 text-success" />
-//               <span>Assessment Status</span>
-//             </CardTitle>
-//             <CardDescription>
-//               Distribution of assessment outcomes
-//             </CardDescription>
-//           </CardHeader>
-//           <CardContent>
-//             <ResponsiveContainer width="100%" height={300}>
-//               <PieChart>
-//                 <Pie
-//                   data={statusData}
-//                   cx="50%"
-//                   cy="50%"
-//                   innerRadius={60}
-//                   outerRadius={100}
-//                   paddingAngle={5}
-//                   dataKey="value"
-//                 >
-//                   {statusData.map((entry, index) => (
-//                     <Cell key={`cell-${index}`} fill={entry.color} />
-//                   ))}
-//                 </Pie>
-//                 <Tooltip />
-//               </PieChart>
-//             </ResponsiveContainer>
-//             <div className="grid grid-cols-2 gap-4 mt-4">
-//               {statusData.map((item, index) => (
-//                 <div key={index} className="flex items-center space-x-2">
-//                   <div 
-//                     className="w-3 h-3 rounded-full" 
-//                     style={{ backgroundColor: item.color }}
-//                   />
-//                   <div className="flex-1">
-//                     <p className="text-sm font-medium">{item.name}</p>
-//                     {/* <p className="text-xs text-muted-foreground">{item.value} assesments</p> */}
+//           <Card>
+//             <CardHeader>
+//               <CardTitle className="flex items-center space-x-2">
+//                 <CheckCircle className="h-5 w-5 text-success" />
+//                 <span>Assessment Status Distribution</span>
+//               </CardTitle>
+//               <CardDescription>
+//                 Overview of assessment outcomes across all schools
+//               </CardDescription>
+//             </CardHeader>
+//             <CardContent>
+//               <ResponsiveContainer width="100%" height={300}>
+//                 <PieChart>
+//                   <Pie
+//                     data={statusData}
+//                     cx="50%"
+//                     cy="50%"
+//                     innerRadius={60}
+//                     outerRadius={100}
+//                     paddingAngle={5}
+//                     dataKey="value"
+//                   >
+//                     {statusData.map((entry, index) => (
+//                       <Cell key={`cell-${index}`} fill={entry.color} />
+//                     ))}
+//                   </Pie>
+//                   <Tooltip />
+//                 </PieChart>
+//               </ResponsiveContainer>
+//               <div className="grid grid-cols-2 gap-4 mt-4">
+//                 {statusData.map((item, index) => (
+//                   <div key={index} className="flex items-center space-x-2">
+//                     <div
+//                       className="w-3 h-3 rounded-full"
+//                       style={{ backgroundColor: item.color }}
+//                     />
+//                     <div className="flex-1">
+//                       <p className="text-sm font-medium">{item.name}</p>
+//                       <p className="text-xs text-muted-foreground">{item.value} assessments</p>
+//                     </div>
 //                   </div>
-//                 </div>
-//               ))}
-//             </div>
-//           </CardContent>
-//         </Card>
+//                 ))}
+//               </div>
+//             </CardContent>
+//           </Card>
 
 //         {/* Performance Trends */}
 //         <Card>
@@ -375,14 +375,50 @@
 //         </Card>
 //       </div>
 
+//       {/* KPI Cards */}
+//       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+//         {kpiData.map((kpi, index) => (
+//           <Card key={index} className="relative overflow-hidden">
+//             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+//               <CardTitle className="text-sm font-medium text-muted-foreground">
+//                 {kpi.title}
+//               </CardTitle>
+//               <kpi.icon className={`h-4 w-4 ${kpi.color}`} />
+//             </CardHeader>
+//             <CardContent>
+//               <div className="flex items-center space-x-2">
+//                 <div className="text-2xl font-bold text-foreground">{kpi.value}</div>
+//                 <Badge
+//                   variant="secondary"
+//                   className={`text-xs ${
+//                     kpi.trend.startsWith('+')
+//                       ? 'text-success border-success/20 bg-success/10'
+//                       : 'text-muted-foreground'
+//                   }`}
+//                 >
+//                   {kpi.trend !== '0' && kpi.trend}
+//                 </Badge>
+//               </div>
+//               <p className="text-xs text-muted-foreground mt-1">
+//                 {kpi.trend.startsWith('+') ? 'vs last month' : 'no change'}
+//               </p>
+//             </CardContent>
+//           </Card>
+//         ))}
+//       </div>
+
+      
+
 //       {/* County/Regional Performance (for Admin and County Admin) */}
-//       {(currentUser.role === 'ministry_admin' || currentUser.role === 'agent') && (
+//       {(dashboardType === 'ministry_admin' || dashboardType === 'agent') && (
 //         <Card>
 //           <CardHeader>
 //             <CardTitle className="flex items-center space-x-2">
 //               <BarChart3 className="h-5 w-5 text-primary" />
 //               <span>
-//                 {currentUser.role === 'ministry_admin' ? 'County Performance' : 'Sub-County Performance'}
+//                 {dashboardType === 'ministry_admin' ? 'County Performance' :
+//                  dashboardData?.data?.institution_performance ? 'Institution Performance' :
+//                  'Sub-County Performance'}
 //               </span>
 //             </CardTitle>
 //             <CardDescription>
@@ -390,13 +426,24 @@
 //             </CardDescription>
 //           </CardHeader>
 //           <CardContent>
-//             <ResponsiveContainer width="100%" height={400}>
-//               <BarChart data={subCountyData}>
+//             <ResponsiveContainer width="100%" height={500}>
+//               <BarChart
+//                 data={subCountyData}
+//                 barCategoryGap="20%"
+//                 barGap={4}
+//                 margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+//               >
 //                 <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
 //                 <XAxis
 //                   dataKey="name"
 //                   className="text-muted-foreground"
-//                   fontSize={12}
+//                   fontSize={10}
+//                   angle={-45}
+//                   textAnchor="end"
+//                   height={100}
+//                   interval={0}
+//                   dy={10}
+//                   tickLine={false}
 //                 />
 //                 <YAxis className="text-muted-foreground" fontSize={12} />
 //                 <Tooltip
@@ -406,29 +453,69 @@
 //                     borderRadius: '6px'
 //                   }}
 //                 />
-//                 {dashboardData ? (
-//                                   currentUser.role === 'ministry_admin' && dashboardData.data.county_performance ?
-//                                     dashboardData.data.county_performance.data.map(item => (
-//                                       <Bar key={item.label} dataKey={item.label} fill={item.color} name={item.label} />
-//                                     )) :
-//                                   dashboardData.data.sub_county_performance ?
-//                                     dashboardData.data.sub_county_performance.data.map(item => (
-//                                       <Bar key={item.label} dataKey={item.label} fill={item.color} name={item.label} />
-//                                     )) :
-//                                   <>
-//                                     <Bar dataKey="approved" fill="hsl(var(--success))" name="Approved" />
-//                                     <Bar dataKey="pending" fill="hsl(var(--warning))" name="Pending" />
-//                                     <Bar dataKey="rejected" fill="hsl(var(--destructive))" name="Rejected" />
-//                                   </>
-//                                 ) : (
-//                   <>
-//                     <Bar dataKey="approved" fill="hsl(var(--success))" name="Approved" />
-//                     <Bar dataKey="pending" fill="hsl(var(--warning))" name="Pending" />
-//                     <Bar dataKey="rejected" fill="hsl(var(--destructive))" name="Rejected" />
-//                   </>
-//                 )}
+//                 {dashboardData && (dashboardData.data.county_performance || dashboardData.data.sub_county_performance || dashboardData.data.institution_performance) &&
+//                   (dashboardData.data.county_performance || dashboardData.data.sub_county_performance || dashboardData.data.institution_performance).data.map(item => (
+//                     <Bar
+//                       key={item.label}
+//                       dataKey={item.label}
+//                       fill={item.color}
+//                       name={item.label}
+//                       maxBarSize={40}
+//                     />
+//                   ))
+//                 }
 //               </BarChart>
 //             </ResponsiveContainer>
+//           </CardContent>
+//         </Card>
+//       )}
+
+//       {/* Assessment Details Table */}
+//       {assessmentDetailsData.length > 0 && (
+//         <Card>
+//           <CardHeader>
+//             <CardTitle className="flex items-center space-x-2">
+//               <FileText className="h-5 w-5 text-primary" />
+//               <span>Assessment Details</span>
+//             </CardTitle>
+//             <CardDescription>
+//               Detailed breakdown of assessments by school, building parts, and condition
+//             </CardDescription>
+//           </CardHeader>
+//           <CardContent>
+//             <div className="overflow-x-auto">
+//               <Table>
+//                 <TableHeader>
+//                   <TableRow>
+//                     <TableHead>School Name</TableHead>
+//                     <TableHead>Building Part</TableHead>
+//                     <TableHead>Condition</TableHead>
+//                     <TableHead>Items Count</TableHead>
+//                   </TableRow>
+//                 </TableHeader>
+//                 <TableBody>
+//                   {assessmentDetailsData.map((item, index) => (
+//                     <TableRow key={index}>
+//                       <TableCell className="font-medium">{item.school_name}</TableCell>
+//                       <TableCell>{item.item_description}</TableCell>
+//                       <TableCell>
+//                         <Badge
+//                           variant="outline"
+//                           className="text-xs"
+//                           style={{
+//                             borderColor: item.status_color,
+//                             color: item.status_color
+//                           }}
+//                         >
+//                           {item.status}
+//                         </Badge>
+//                       </TableCell>
+//                       <TableCell>{item.count}</TableCell>
+//                     </TableRow>
+//                   ))}
+//                 </TableBody>
+//               </Table>
+//             </div>
 //           </CardContent>
 //         </Card>
 //       )}

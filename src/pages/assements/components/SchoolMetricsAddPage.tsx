@@ -316,14 +316,14 @@ const SchoolFormAddPage = () => {
                 <span className="font-medium">Year:</span>
                 <p className="text-muted-foreground">{formDataToSubmit?.year}</p>
               </div>
-              <div>
+              {/* <div>
                 <span className="font-medium">Class:</span>
                 <p className="text-muted-foreground">{formDataToSubmit?.class || 'N/A'}</p>
               </div>
               <div>
                 <span className="font-medium">Streams:</span>
                 <p className="text-muted-foreground">{formDataToSubmit?.streams || 'N/A'}</p>
-              </div>
+              </div> */}
             </div>
           </div>
           <AlertDialogFooter>

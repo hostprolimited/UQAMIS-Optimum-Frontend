@@ -123,7 +123,7 @@ export const getMaintenanceReportById = async (id: number): Promise<APIResponse<
 
 // agent review maintainance report 
 export const agentReviewMaintenanceReport = async (id: number, data: { review_decision: 'approved' | 'rejected' | 'requires_clarification' | 'pending'; review_remarks: string; recommended_action: string; priority?: 'low' | 'medium' | 'high' | 'urgent'; }): Promise<APIResponse<any>> => {
-  const response = await api.put<APIResponse<any>>(Urls.AGENT_REVIEW_MAINTENANCE_ASSESSMENT(id), data);
+  const response = await api.patch<APIResponse<any>>(Urls.AGENT_REVIEW_MAINTENANCE_ASSESSMENT(id), data);
   return response.data;
 };
 
@@ -135,7 +135,7 @@ export const getSafetyReports = async (): Promise<APIResponse<SafetyReport[]>> =
 
 // agent review safety report
 export const agentReviewSafetyReport = async (id: number, data: { review_decision: 'approved' | 'rejected' | 'requires_clarification' | 'pending'; review_remarks: string; recommended_action: string; priority?: 'low' | 'medium' | 'high' | 'urgent'; }): Promise<APIResponse<any>> => {
-  const response = await api.put<APIResponse<any>>(Urls.AGENT_REVIEW_SAFETY_ASSESSMENT(id), data);
+  const response = await api.patch<APIResponse<any>>(Urls.AGENT_REVIEW_SAFETY_ASSESSMENT(id), data);
   return response.data;
 };
 
@@ -165,6 +165,22 @@ export const updateAssessment = async (id: number, data: { status:'submitted' | 
       },
     }
   );
+  return response.data;
+};
+
+// update assessment detail
+export const updateAssessmentDetail = async (id: number, data: { part_of_building: string; assessment_status: string }): Promise<APIResponse<any>> => {
+  const response = await api.patch<APIResponse<any>>(Urls.UPDATE_ASSESSMENT_URL(id), {
+    assessment_update: JSON.stringify(data)
+  });
+  return response.data;
+};
+
+// update safety assessment detail
+export const updateSafetyAssessmentDetail = async (id: number, data: { part_of_building: string; assessment_status: string }): Promise<APIResponse<any>> => {
+  const response = await api.patch<APIResponse<any>>(Urls.UPDATE_SAFETY_ASSESSMENT_DETAIL_URL(id), {
+    assessment_update: JSON.stringify(data)
+  });
   return response.data;
 };
 

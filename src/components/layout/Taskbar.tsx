@@ -250,7 +250,7 @@ export function Taskbar() {
                   className="bg-white rounded-2xl border border-gray-200 overflow-hidden"
                 >
                   {/* Header */}
-                  <div className="flex items-center justify-between p-4 border-b border-gray-100">
+                  {/* <div className="flex items-center justify-between p-4 border-b border-gray-100">
                     <h2 className="text-lg font-semibold text-gray-900">Notifications</h2>
                     {unreadCount > 0 && (
                       <button
@@ -263,7 +263,7 @@ export function Taskbar() {
                         Mark all as read
                       </button>
                     )}
-                  </div>
+                  </div> */}
 
                   {/* Notification list */}
                   <div className="max-h-[400px] overflow-y-auto">

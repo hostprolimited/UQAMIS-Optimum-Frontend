@@ -18,8 +18,9 @@ export const Urls = {
    CREATE_INSTITUTION_METRICS_URL: '/institutions/metrics/create',
    UPDATE_INSTITUTION_METRICS_URL: (id: number) => `/institutions/metrics/update`,
    DELETE_INSTITUTION_METRICS_URL: (id: number) => `/institutions/metrics/${id}`,
-   UPDATE_ASSESSMENT_URL: (id: number) => `/maintenance/update/${id}`,
+   UPDATE_ASSESSMENT_URL: (id: number) => `/maintenance/assessment/${id}`,
    DELETE_ASSESSMENT_URL: (id: number) => `/maintenance/delete/${id}`,
+   UPDATE_SAFETY_ASSESSMENT_DETAIL_URL: (id: number) => `/safety/assessment/${id}`,
    UPDATE_SAFETY_ASSESSMENT_URL: (id: number) => `/safety/update/{id}`,
    DELETE_SAFETY_ASSESSMENT_URL: (id: number) => `/safety/delete/{id}`,
 

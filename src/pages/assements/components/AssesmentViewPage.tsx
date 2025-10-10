@@ -25,7 +25,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { DataTable } from "@/components/ui/data-table";
 import { useToast } from "@/hooks/use-toast";
 
-import { getMaintenanceReports, agentReviewMaintenanceReport, getFacilities, getSafetyReports, agentReviewSafetyReport, updateAssessment, deleteAssessment } from "../core/_request";
+import { getMaintenanceReports, agentReviewMaintenanceReport, getFacilities, getSafetyReports, agentReviewSafetyReport, updateAssessment, updateAssessmentDetail, updateSafetyAssessmentDetail, deleteAssessment } from "../core/_request";
 import { Facility } from "../core/_model";
 
 // --- Types ---
@@ -53,6 +53,7 @@ interface FacilityAssessment {
   totalScorePercentage?: number;
   created_at?: string;
   details?: AssessmentDetail[];
+  agent_condition?: AssessmentDetail[];
 }
 
 // Mapping helper
@@ -74,6 +75,7 @@ const mapMaintenanceReport = (report: any, facilityIdToName: Record<string, stri
   totalScorePercentage: report.total_score_percentage,
   created_at: report.created_at,
   details: report.details ?? [],
+  agent_condition: report.agent_condition ?? [],
 });
 
 const AssessmentViewPage: React.FC = () => {
@@ -224,22 +226,10 @@ const AssessmentViewPage: React.FC = () => {
     if (!editingDetail || !selectedAssessment) return;
 
     try {
-      // Update the details array
-      const updatedDetails = selectedAssessment.details?.map(d =>
-        d.part_of_building === editingDetail.part_of_building
-          ? { ...d, part_of_building: editForm.part_of_building, assessment_status: editForm.assessment_status }
-          : d
-      ) || [];
-
-      await updateAssessment(parseInt(selectedAssessment.id), {
-        status: selectedAssessment.status as any,
-        school_feedback: selectedAssessment.school_feedback || '',
-        agent_feedback: selectedAssessment.agent_feedback || '',
-        entity: selectedAssessment.entity,
-        details: updatedDetails.map(d => ({
-          part_of_building: d.part_of_building,
-          assessment_status: d.assessment_status as any,
-        })),
+      const updateFunction = assessmentType === 'maintenance' ? updateAssessmentDetail : updateSafetyAssessmentDetail;
+      await updateFunction(parseInt(selectedAssessment.id), {
+        part_of_building: editForm.part_of_building,
+        assessment_status: editForm.assessment_status,
       });
 
       toast({ title: "Success", description: "Detail updated successfully" });
@@ -319,6 +309,7 @@ const AssessmentViewPage: React.FC = () => {
     school_feedback: selectedAssessment.school_feedback,
     agent_feedback: selectedAssessment.agent_feedback,
     entity: selectedAssessment.entity,
+    agent_condition: selectedAssessment.agent_condition,
   })) || [] : [];
 
   const columns: ColumnDef<typeof tableData[0]>[] = [
@@ -339,30 +330,30 @@ const AssessmentViewPage: React.FC = () => {
         return <div className="font-medium max-w-[250px] truncate" title={displayText}>{displayText}</div>;
       },
     },
-    {
-      id: "original_condition",
-      header: "Condition",
-      cell: ({ row }) => {
-        const part = row.getValue("part_of_building") as string;
-        const original = originalDetails.find(d => d.part_of_building === part)?.assessment_status;
-        return (
-          <Badge
-            className={
-              original === 'Urgent Attention'
-                ? 'bg-red-100 text-red-800'
-                : original === 'Attention Required'
-                ? 'bg-yellow-100 text-yellow-800'
-                : 'bg-green-100 text-green-800'
-            }
-          >
-            {original || '-'}
-          </Badge>
-        );
-      },
-    },
+    // {
+    //   id: "original_condition",
+    //   header: "Condition",
+    //   cell: ({ row }) => {
+    //     const part = row.getValue("part_of_building") as string;
+    //     const original = originalDetails.find(d => d.part_of_building === part)?.assessment_status;
+    //     return (
+    //       <Badge
+    //         className={
+    //           original === 'Urgent Attention'
+    //             ? 'bg-red-100 text-red-800'
+    //             : original === 'Attention Required'
+    //             ? 'bg-yellow-100 text-yellow-800'
+    //             : 'bg-green-100 text-green-800'
+    //         }
+    //       >
+    //         {original || '-'}
+    //       </Badge>
+    //     );
+    //   },
+    // },
     {
       accessorKey: "assessment_status",
-      header: "Conditions Review",
+      header: "School Condition",
       cell: ({ row }) => {
         const status = row.getValue("assessment_status") as string;
         return (
@@ -380,11 +371,47 @@ const AssessmentViewPage: React.FC = () => {
         );
       },
     },
-    {
+     {
       accessorKey: "score",
-      header: "Score",
+      header: "School Score",
       cell: ({ row }) => row.getValue("score") ?? '-',
     },
+    {
+      id: "agent_condition",
+      header: "Agent Condition",
+      cell: ({ row }) => {
+        const part = row.getValue("part_of_building") as string;
+        const agentConditions = row.original.agent_condition as AssessmentDetail[] || [];
+        const agentCondition = agentConditions.find(ac => ac.part_of_building === part);
+        if (agentCondition) {
+          return (
+            <Badge
+              className={
+                agentCondition.assessment_status === 'Urgent Attention'
+                  ? 'bg-red-100 text-red-800'
+                  : agentCondition.assessment_status === 'Attention Required'
+                  ? 'bg-yellow-100 text-yellow-800'
+                  : 'bg-green-100 text-green-800'
+              }
+            >
+              {agentCondition.assessment_status}
+            </Badge>
+          );
+        }
+        return <span className="text-gray-400">-</span>;
+      },
+    },
+    {
+      id: "agent_score",
+      header: "Agent Score",
+      cell: ({ row }) => {
+        const part = row.getValue("part_of_building") as string;
+        const agentConditions = row.original.agent_condition as AssessmentDetail[] || [];
+        const agentCondition = agentConditions.find(ac => ac.part_of_building === part);
+        return <span className="text-sm text-gray-600">{agentCondition ? agentCondition.score : '-'}</span>;
+      },
+    },
+   
     {
       accessorKey: "school_feedback",
       header: "School Feedback",
@@ -425,7 +452,7 @@ const AssessmentViewPage: React.FC = () => {
   ];
 
   return (
-    <div className="container mx-auto py-6 max-w-6xl">
+    <div className="container mx-auto py-6 max-w-full px-4">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -573,7 +600,9 @@ const AssessmentViewPage: React.FC = () => {
             <CardTitle>{assessmentType === 'maintenance' ? 'Maintenance' : 'Safety'} Details - {selectedEntity}</CardTitle>
           </CardHeader>
           <CardContent>
-            <DataTable columns={columns} data={tableData} searchKey="part_of_building" />
+            <div className="overflow-x-auto">
+              <DataTable columns={columns} data={tableData} searchKey="part_of_building" />
+            </div>
           </CardContent>
         </Card>
       )}
