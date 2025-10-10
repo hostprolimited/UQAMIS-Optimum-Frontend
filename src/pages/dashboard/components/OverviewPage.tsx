@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -19,268 +19,6 @@ const countyCodeToName: Record<string, string> = counties.reduce((acc: Record<st
   return acc;
 }, {});
 import { School, Users, FileText, TrendingUp, CheckCircle, AlertTriangle, XCircle, BarChart3 } from 'lucide-react';
-
-// Component definitions
-interface KpiItem {
-  title: string;
-  value: string;
-  icon: React.ComponentType<any>;
-  trend: string;
-  color: string;
-}
-
-interface KpiGridProps {
-  items: KpiItem[];
-}
-
-const KpiGrid: React.FC<KpiGridProps> = ({ items }) => (
-  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-    {items.map((kpi, index) => (
-      <Card key={index} className="relative overflow-hidden">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">
-            {kpi.title}
-          </CardTitle>
-          <kpi.icon className={`h-4 w-4 ${kpi.color}`} />
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center space-x-2">
-            <div className="text-2xl font-bold text-foreground">{kpi.value}</div>
-            <Badge
-              variant="secondary"
-              className={`text-xs ${
-                kpi.trend.startsWith('+')
-                  ? 'text-success border-success/20 bg-success/10'
-                  : 'text-muted-foreground'
-              }`}
-            >
-              {kpi.trend !== '0' && kpi.trend}
-            </Badge>
-          </div>
-          <p className="text-xs text-muted-foreground mt-1">
-            {kpi.trend.startsWith('+') ? 'vs last month' : 'no change'}
-          </p>
-        </CardContent>
-      </Card>
-    ))}
-  </div>
-);
-
-interface StatusDonutProps {
-  data: any[];
-}
-
-const StatusDonut: React.FC<StatusDonutProps> = ({ data }) => (
-  <Card>
-    <CardHeader>
-      <CardTitle className="flex items-center space-x-2">
-        <CheckCircle className="h-5 w-5 text-success" />
-        <span>Assessment Status Distribution</span>
-      </CardTitle>
-      <CardDescription>
-        Overview of assessment outcomes across all schools
-      </CardDescription>
-    </CardHeader>
-    <CardContent>
-      <ResponsiveContainer width="100%" height={300}>
-        <PieChart>
-          <Pie
-            data={data}
-            cx="50%"
-            cy="50%"
-            innerRadius={60}
-            outerRadius={100}
-            paddingAngle={5}
-            dataKey="value"
-          >
-            {data.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={entry.color} />
-            ))}
-          </Pie>
-          <Tooltip />
-        </PieChart>
-      </ResponsiveContainer>
-      <div className="grid grid-cols-2 gap-4 mt-4">
-        {data.map((item, index) => (
-          <div key={index} className="flex items-center space-x-2">
-            <div
-              className="w-3 h-3 rounded-full"
-              style={{ backgroundColor: item.color }}
-            />
-            <div className="flex-1">
-              <p className="text-sm font-medium">{item.name}</p>
-              <p className="text-xs text-muted-foreground">{item.value} assessments</p>
-            </div>
-          </div>
-        ))}
-      </div>
-    </CardContent>
-  </Card>
-);
-
-interface PerformanceChartProps {
-  data: any[];
-}
-
-const PerformanceChart: React.FC<PerformanceChartProps> = ({ data }) => (
-  <Card>
-    <CardHeader>
-      <CardTitle className="flex items-center space-x-2">
-        <TrendingUp className="h-5 w-5 text-info" />
-        <span>Performance Trends</span>
-      </CardTitle>
-      <CardDescription>
-        Assessment completion and quality scores over time
-      </CardDescription>
-    </CardHeader>
-    <CardContent>
-      <ResponsiveContainer width="100%" height={300}>
-        <LineChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-          <XAxis
-            dataKey="month"
-            className="text-muted-foreground"
-            fontSize={12}
-          />
-          <YAxis className="text-muted-foreground" fontSize={12} />
-          <Tooltip
-            contentStyle={{
-              backgroundColor: 'hsl(var(--card))',
-              border: '1px solid hsl(var(--border))',
-              borderRadius: '6px'
-            }}
-          />
-          <Line
-            type="monotone"
-            dataKey="completed"
-            stroke="hsl(var(--primary))"
-            strokeWidth={2}
-            name="Completed"
-          />
-          <Line
-            type="monotone"
-            dataKey="score"
-            stroke="hsl(var(--success))"
-            strokeWidth={2}
-            name="Average Score"
-          />
-        </LineChart>
-      </ResponsiveContainer>
-    </CardContent>
-  </Card>
-);
-
-interface RegionBarChartProps {
-  data: any[];
-  keys: string[];
-}
-
-const RegionBarChart: React.FC<RegionBarChartProps> = ({ data, keys }) => (
-  <Card>
-    <CardHeader>
-      <CardTitle className="flex items-center space-x-2">
-        <BarChart3 className="h-5 w-5 text-primary" />
-        <span>Region Performance</span>
-      </CardTitle>
-      <CardDescription>
-        Assessment metrics across different regions
-      </CardDescription>
-    </CardHeader>
-    <CardContent>
-      <ResponsiveContainer width="100%" height={500}>
-        <BarChart
-          data={data}
-          barCategoryGap="20%"
-          barGap={4}
-          margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
-        >
-          <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-          <XAxis
-            dataKey="name"
-            className="text-muted-foreground"
-            fontSize={10}
-            angle={-45}
-            textAnchor="end"
-            height={100}
-            interval={0}
-            dy={10}
-            tickLine={false}
-          />
-          <YAxis className="text-muted-foreground" fontSize={12} />
-          <Tooltip
-            contentStyle={{
-              backgroundColor: 'hsl(var(--card))',
-              border: '1px solid hsl(var(--border))',
-              borderRadius: '6px'
-            }}
-          />
-          {keys.map((key, index) => (
-            <Bar
-              key={key}
-              dataKey={key}
-              fill={`hsl(${(index * 137.5) % 360}, 70%, 50%)`}
-              name={key}
-              maxBarSize={40}
-            />
-          ))}
-        </BarChart>
-      </ResponsiveContainer>
-    </CardContent>
-  </Card>
-);
-
-interface AssessmentTableProps {
-  rows: any[];
-}
-
-const AssessmentTable: React.FC<AssessmentTableProps> = ({ rows }) => (
-  <Card>
-    <CardHeader>
-      <CardTitle className="flex items-center space-x-2">
-        <FileText className="h-5 w-5 text-primary" />
-        <span>Assessment Details</span>
-      </CardTitle>
-      <CardDescription>
-        Detailed breakdown of assessments by school, building parts, and condition
-      </CardDescription>
-    </CardHeader>
-    <CardContent>
-      <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>School Name</TableHead>
-              <TableHead>Building Part</TableHead>
-              <TableHead>Condition</TableHead>
-              <TableHead>Items Count</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.map((item, index) => (
-              <TableRow key={index}>
-                <TableCell className="font-medium">{item.school_name}</TableCell>
-                <TableCell>{item.item_description}</TableCell>
-                <TableCell>
-                  <Badge
-                    variant="outline"
-                    className="text-xs"
-                    style={{
-                      borderColor: item.status_color,
-                      color: item.status_color
-                    }}
-                  >
-                    {item.status}
-                  </Badge>
-                </TableCell>
-                <TableCell>{item.count}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-    </CardContent>
-  </Card>
-);
 
 // Mock data for different levels
 const countyData = [
@@ -475,109 +213,367 @@ const Overview = () => {
       }
     };
 
-  // Performance chart data
-  const performanceData = useMemo(() => {
-    if (dashboardData && dashboardData.data?.performance_trends) {
-      return dashboardData.data.performance_trends.labels.map((label: string, i: number) => ({
-        month: label,
-        completed: dashboardData.data.performance_trends.completion_rate[i] || 0,
-        score: dashboardData.data.performance_trends.quality_score[i] || 0,
-      }));
-    }
-    // fallback demo data
-    return [
-      { month: 'Jan', completed: 40, score: 82 },
-      { month: 'Feb', completed: 55, score: 86 },
-      { month: 'Mar', completed: 50, score: 84 },
-      { month: 'Apr', completed: 60, score: 88 },
-    ];
-  }, [dashboardData]);
+  const kpiData = getKPIData();
 
-  const statusPieData = useMemo(() => {
-    if (dashboardData && dashboardData.data?.assessment_status_distribution) {
-      return dashboardData.data.assessment_status_distribution.map((s: any) => ({
-        name: s.label,
-        value: Array.isArray(s.value) ? s.value.reduce((a: number, b: any) => a + (b.count || 0), 0) : s.value,
-        color: s.color || '#ccc',
-      }));
-    }
-    return [
-      { name: 'Good', value: 60, color: '#10B981' },
-      { name: 'Attention Required', value: 30, color: '#F59E0B' },
-      { name: 'Urgent', value: 10, color: '#EF4444' },
-    ];
-  }, [dashboardData]);
+  const performanceData = dashboardData ? dashboardData.data.performance_trends.labels.map((label, i) => ({
+    month: label,
+    completed: dashboardData.data.performance_trends.completion_rate[i],
+    score: dashboardData.data.performance_trends.quality_score[i]
+  })) : schoolAssessmentData;
 
-  const assessmentDetails = useMemo(() => {
+  const statusData = dashboardData && dashboardData.data.assessment_status_distribution ? dashboardData.data.assessment_status_distribution.map(item => ({
+    name: item.label,
+    value: Array.isArray(item.value) ? item.value.reduce((sum, assessment) => sum + (assessment.count || 0), 0) : item.value,
+    color: item.color
+  })) : [
+    { name: 'Approved', value: 314, color: 'hsl(var(--success))' },
+    { name: 'Pending Review', value: 89, color: 'hsl(var(--warning))' },
+    { name: 'Needs Improvement', value: 48, color: 'hsl(var(--destructive))' },
+    { name: 'Not Assessed', value: 67, color: 'hsl(var(--muted-foreground))' },
+  ];
+
+  // Prepare assessment details data for the table
+  const assessmentDetailsData = React.useMemo(() => {
     if (!dashboardData?.data?.assessment_status_distribution) return [];
-    const out: any[] = [];
-    dashboardData.data.assessment_status_distribution.forEach((g: any) => {
-      if (Array.isArray(g.value)) {
-        g.value.forEach((a: any) => {
-          out.push({
-            school_name: a.school_name || 'N/A',
-            item_description: a.item_description || 'N/A',
-            status: a.status || g.label,
-            count: a.count || 0,
-            status_color: g.color,
+
+    const details: any[] = [];
+    dashboardData.data.assessment_status_distribution.forEach(statusGroup => {
+      if (Array.isArray(statusGroup.value)) {
+        statusGroup.value.forEach(assessment => {
+          details.push({
+            school_name: assessment.school_name,
+            item_description: assessment.item_description,
+            status: assessment.status,
+            count: assessment.count,
+            status_color: statusGroup.color,
+            status_label: statusGroup.label
           });
         });
       }
     });
-    return out;
+    return details;
   }, [dashboardData]);
 
-  const regionData = useMemo(() => {
-    const labels = dashboardData?.data?.county_performance?.labels || dashboardData?.data?.sub_county_performance?.labels || dashboardData?.data?.institution_performance?.labels || [];
-    const series = dashboardData?.data?.county_performance?.data || dashboardData?.data?.sub_county_performance?.data || dashboardData?.data?.institution_performance?.data || [];
-    if (labels.length && series.length) {
-      return labels.map((label: string, idx: number) => {
-        const obj: any = { name: countyCodeToName[label] || label };
-        series.forEach((s: any) => {
-          obj[s.label] = Number(s.values[idx] || 0);
-        });
-        return obj;
+  const subCountyData = dashboardData && (dashboardData.data.county_performance || dashboardData.data.sub_county_performance || dashboardData.data.institution_performance) ?
+    (dashboardData.data.county_performance || dashboardData.data.sub_county_performance || dashboardData.data.institution_performance).labels.map((label, i) => {
+      const obj: any = { name: countyCodeToName[label] || label };
+      (dashboardData.data.county_performance || dashboardData.data.sub_county_performance || dashboardData.data.institution_performance)!.data.forEach(item => {
+        obj[item.label] = item.values[i];
       });
-    }
-    // fallback demo
-    return [
-      { name: 'Nairobi', Good: 8, Attention: 4, 'Urgent Attention': 1 },
-      { name: 'Mombasa', Good: 6, Attention: 3, 'Urgent Attention': 2 },
-    ];
-  }, [dashboardData]);
-
-  const kpiData = getKPIData();
-
-  const title = getOverviewTitle();
+      return obj;
+    }) :
+    countyData;
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">{title}</h1>
-          <p className="text-sm text-muted-foreground">Monitor and track quality assurance metrics across your jurisdiction</p>
+          <h1 className="text-2xl font-bold text-foreground">{getOverviewTitle()}</h1>
+          <p className="text-muted-foreground">
+            Monitor and track quality assurance metrics across your jurisdiction
+          </p>
         </div>
+        {/* <div className="flex items-center space-x-2">
+          <Badge variant="outline" className="text-sm">
+            Last updated: 2 minutes ago
+          </Badge>
+        </div> */}
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Assessment Status Distribution */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <CheckCircle className="h-5 w-5 text-success" />
+                <span>Assessment Status Distribution</span>
+              </CardTitle>
+              <CardDescription>
+                Overview of assessment outcomes across all schools
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={statusData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={100}
+                    paddingAngle={5}
+                    dataKey="value"
+                  >
+                    {statusData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="grid grid-cols-2 gap-4 mt-4">
+                {statusData.map((item, index) => (
+                  <div key={index} className="flex items-center space-x-2">
+                    <div
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: item.color }}
+                    />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">{item.name}</p>
+                      <p className="text-xs text-muted-foreground">{item.value} assessments</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+        {/* Performance Trends */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <TrendingUp className="h-5 w-5 text-info" />
+              <span>Performance Trends</span>
+            </CardTitle>
+            <CardDescription>
+              Assessment completion and quality scores over time
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={performanceData}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                <XAxis 
+                  dataKey="month" 
+                  className="text-muted-foreground" 
+                  fontSize={12}
+                />
+                <YAxis className="text-muted-foreground" fontSize={12} />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: 'hsl(var(--card))',
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '6px'
+                  }}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="completed" 
+                  stroke="hsl(var(--primary))" 
+                  strokeWidth={2}
+                  name="Completed"
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="score" 
+                  stroke="hsl(var(--success))" 
+                  strokeWidth={2}
+                  name="Average Score"
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* KPI Grid */}
-      <KpiGrid items={kpiData} />
-
-      {/* Charts Row */}
-      <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
-        <StatusDonut data={statusPieData} />
-        <PerformanceChart data={performanceData} />
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {kpiData.map((kpi, index) => (
+          <Card key={index} className="relative overflow-hidden">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                {kpi.title}
+              </CardTitle>
+              <kpi.icon className={`h-4 w-4 ${kpi.color}`} />
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center space-x-2">
+                <div className="text-2xl font-bold text-foreground">{kpi.value}</div>
+                <Badge
+                  variant="secondary"
+                  className={`text-xs ${
+                    kpi.trend.startsWith('+')
+                      ? 'text-success border-success/20 bg-success/10'
+                      : 'text-muted-foreground'
+                  }`}
+                >
+                  {kpi.trend !== '0' && kpi.trend}
+                </Badge>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {kpi.trend.startsWith('+') ? 'vs last month' : 'no change'}
+              </p>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      {/* Region performance */}
+      
+
+      {/* County/Regional Performance (for Admin and County Admin) */}
       {(dashboardType === 'ministry_admin' || dashboardType === 'agent') && (
-        <RegionBarChart
-          data={regionData}
-          keys={[...new Set(Object.keys(regionData[0] || {}).filter(k => k !== 'name'))]}
-        />
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <BarChart3 className="h-5 w-5 text-primary" />
+              <span>
+                {dashboardType === 'ministry_admin' ? 'County Performance' :
+                 dashboardData?.data?.institution_performance ? 'Institution Performance' :
+                 'Sub-County Performance'}
+              </span>
+            </CardTitle>
+            <CardDescription>
+              Assessment metrics across different regions
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={500}>
+              <BarChart
+                data={subCountyData}
+                barCategoryGap="20%"
+                barGap={4}
+                margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                <XAxis
+                  dataKey="name"
+                  className="text-muted-foreground"
+                  fontSize={10}
+                  angle={-45}
+                  textAnchor="end"
+                  height={100}
+                  interval={0}
+                  dy={10}
+                  tickLine={false}
+                />
+                <YAxis className="text-muted-foreground" fontSize={12} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'hsl(var(--card))',
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '6px'
+                  }}
+                />
+                {dashboardData && (dashboardData.data.county_performance || dashboardData.data.sub_county_performance || dashboardData.data.institution_performance) &&
+                  (dashboardData.data.county_performance || dashboardData.data.sub_county_performance || dashboardData.data.institution_performance).data.map(item => (
+                    <Bar
+                      key={item.label}
+                      dataKey={item.label}
+                      fill={item.color}
+                      name={item.label}
+                      maxBarSize={40}
+                    />
+                  ))
+                }
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
       )}
 
-      {/* Assessment Details */}
-      {assessmentDetails.length > 0 && <AssessmentTable rows={assessmentDetails} />}
+      {/* Assessment Details Table */}
+      {assessmentDetailsData.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <FileText className="h-5 w-5 text-primary" />
+              <span>Assessment Details</span>
+            </CardTitle>
+            <CardDescription>
+              Detailed breakdown of assessments by school and condition
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>School Name</TableHead>
+                    <TableHead>Condition</TableHead>
+                    <TableHead>Items Count</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {assessmentDetailsData.map((item, index) => (
+                    <TableRow key={index}>
+                      <TableCell className="font-medium">{item.school_name}</TableCell>
+                      <TableCell>
+                        <Badge
+                          variant="outline"
+                          className="text-xs"
+                          style={{
+                            borderColor: item.status_color,
+                            color: item.status_color
+                          }}
+                        >
+                          {item.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{item.count}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Recent Activity */}
+      {/* <Card>
+        <CardHeader>
+          <CardTitle>Recent Activity</CardTitle>
+          <CardDescription>Latest assessment updates and system events</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {[
+              {
+                icon: CheckCircle,
+                color: 'text-success',
+                title: 'Green Valley Primary School',
+                description: 'Assessment approved with score 92.5',
+                time: '2 minutes ago'
+              },
+              {
+                icon: AlertTriangle,
+                color: 'text-warning',
+                title: 'St. Mary Secondary School',
+                description: 'Assessment pending review - missing documentation',
+                time: '15 minutes ago'
+              },
+              {
+                icon: FileText,
+                color: 'text-info',
+                title: 'Hillside Academy',
+                description: 'New assessment submitted for review',
+                time: '1 hour ago'
+              },
+              {
+                icon: XCircle,
+                color: 'text-destructive',
+                title: 'Riverside Primary',
+                description: 'Assessment requires improvements in safety protocols',
+                time: '2 hours ago'
+              }
+            ].map((activity, index) => (
+              <div key={index} className="flex items-start space-x-3">
+                <activity.icon className={`h-5 w-5 mt-0.5 ${activity.color}`} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground">
+                    {activity.title}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {activity.description}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {activity.time}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card> */}
     </div>
   );
 };
