@@ -76,6 +76,7 @@ export const Urls = {
   USER_DETAIL_URL: (id: number) => `/users/${id}`,
   UPDATE_USER_URL: (id: number) => `/users/${id}`,
   DELETE_USER_URL: (id: number) => `/users/${id}`,
+  TRANSFER_USER_URL: (id: number) => `/users/transfer-user/${id}`,
 
   // Permission Management Endpoints
   GET_PERMISSIONS_URL: '/permissions/list',

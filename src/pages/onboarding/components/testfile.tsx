@@ -319,7 +319,7 @@
 //                     />
 //                     <div className="flex-1">
 //                       <p className="text-sm font-medium">{item.name}</p>
-//                       <p className="text-xs text-muted-foreground">{item.value} assessments</p>
+//                       <p className="text-xs text-muted-foreground">{item.value} parts</p>
 //                     </div>
 //                   </div>
 //                 ))}
@@ -479,7 +479,7 @@
 //               <span>Assessment Details</span>
 //             </CardTitle>
 //             <CardDescription>
-//               Detailed breakdown of assessments by school, building parts, and condition
+//               Detailed breakdown of assessments by school and condition
 //             </CardDescription>
 //           </CardHeader>
 //           <CardContent>
@@ -488,16 +488,14 @@
 //                 <TableHeader>
 //                   <TableRow>
 //                     <TableHead>School Name</TableHead>
-//                     <TableHead>Building Part</TableHead>
 //                     <TableHead>Condition</TableHead>
-//                     <TableHead>Items Count</TableHead>
+//                     <TableHead>Parts</TableHead>
 //                   </TableRow>
 //                 </TableHeader>
 //                 <TableBody>
 //                   {assessmentDetailsData.map((item, index) => (
 //                     <TableRow key={index}>
 //                       <TableCell className="font-medium">{item.school_name}</TableCell>
-//                       <TableCell>{item.item_description}</TableCell>
 //                       <TableCell>
 //                         <Badge
 //                           variant="outline"

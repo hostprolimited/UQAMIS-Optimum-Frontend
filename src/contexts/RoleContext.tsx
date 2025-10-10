@@ -73,79 +73,45 @@ export const RoleProvider: React.FC<RoleProviderProps> = ({ children }) => {
     }
   };
 
+  // Grouped permissions - pages that require any of the listed permissions
+  const groupedPermissions: Record<string, string[]> = {
+    'reports': [
+      'view_maintenance_report',
+      'view_safety_report',
+      'update_maintenance_report',
+      'update_safety_report',
+      'view_school_reports',
+      'view_county_reports'
+    ],
+    'overview': ['view_school_dashboard', 'view_county_dashboard', 'view_subcounty_dashboard', 'view_ward_dashboard', 'view_national_dashboard'],
+    'user_management': ['view_users', 'create_user', 'update_user', 'delete_user', 'update_user_status', 'transfer_user', 'manage_users'],
+    'facilities': ['view_facilities', 'create_facilities', 'update_facilities', 'delete_facilities'],
+    'incidents': ['view_incidents', 'report_incidents', 'update_incidents', 'delete_incidents', 'investigate_incidents'],
+    'assessment': ['create_assessment', 'view_assessments', 'create_maintenance_report', 'create_safety_report'],
+    'review': ['maintenance_review', 'safety_review'],
+    'institutions': ['view_institutions', 'onboard_institution', 'view_institution', 'update_institution', 'view_subcounty_schools', 'view_ward_schools'],
+    'permissions': ['view_permissions', 'create_role', 'view_roles', 'update_role', 'assign_permission_to_role', 'assign_permission_to_user', 'remove_permission_from_user', 'remove_permission_from_role'],
+    'metrics': ['view_institution_metrics', 'create_institution_metrics', 'update_institution_metrics', 'delete_institution_metrics', 'view_school_metrics'],
+    'facility_entities': ['view_facility_entities', 'create_facility_entities', 'update_facility_entities', 'delete_facility_entities'],
+    'term_dates': ['view_term_dates', 'create_term_dates', 'update_term_dates', 'delete_term_dates'],
+    'safety_reports': ['view_safety_report', 'update_safety_report', 'edit_own_safety_report', 'delete_own_safety_report'],
+    'maintenance_reports': ['view_maintenance_report', 'update_maintenance_report', 'update_own_maintenance_report', 'delete_own_maintenance_report'],
+  };
+
+  // Individual page permissions for backward compatibility
   const pagePermissions: Record<string, string> = {
-    'overview': 'view_school_dashboard',
-    'reports': 'view_school_reports',
     'onboard': 'onboard_institution',
     'system_safety': 'view_system_safety',
-    'review': 'maintenance_review',
     'entities': 'view_institution',
-    'term_dates': 'view_term_dates',
     'backup': 'manage_backup',
-    'user_management': 'manage_users',
-    'assessment': 'create_assessment',
     'school_form': 'view_school_metrics',
     'institutions_assessment': 'view_assessments',
-    'incidents': 'view_incidents',
-    'facilities': 'view_facilities',
     'detailed_roles_permissions': 'view_detailed_roles_permissions',
     'safety_review': 'safety_review',
-    'maintenance_report': 'view_maintenance_report',
-    'safety_report': 'view_safety_report',
-    "view_users": "view_users",
-    "create_user": "create_user",
-    "view_user": "view_user",
-    "update_user": "update_user",
-    "delete_user": "delete_user",
-    "update_user_status": "update_user_status",
-    "transfer_user": "transfer_user",
-    "view_institutions": "view_institutions",
-    "onboard_institution": "onboard_institution",
-    "view_institution": "view_institution",
-    "update_institution": "update_institution",
-    "view_subcounty_schools": "view_subcounty_schools",
-    "view_ward_schools": "view_ward_schools",
-    "view_county_dashboard": "view_county_dashboard",
-    "view_subcounty_dashboard": "view_subcounty_dashboard",
-    "view_ward_dashboard": "view_ward_dashboard",
-    "view_county_reports": "view_county_reports",
-    "view_permissions": "view_permissions",
-    "create_role": "create_role",
-    "view_roles": "view_roles",
-    "update_role": "update_role",
-    "assign_permission_to_role": "assign_permission_to_role",
-    "assign_permission_to_user": "assign_permission_to_user",
-    "remove_permission_from_user": "remove_permission_from_user",
-    "remove_permission_from_role": "remove_permission_from_role",
-    "view_maintenance_report": "view_maintenance_report",
-    "update_maintenance_report": "update_maintenance_report",
-    "maintenance_review": "maintenance_review",
-    "view_safety_report": "view_safety_report",
-    "update_safety_report": "update_safety_report",
-    "edit_own_safety_report": "edit_own_safety_report",
-    "delete_own_safety_report": "delete_own_safety_report",
-    "view_facilities": "view_facilities",
-    "create_facilities": "create_facilities",
-    "update_facilities": "update_facilities",
-    "delete_facilities": "delete_facilities",
-    "view_institution_metrics": "view_institution_metrics",
-    "create_institution_metrics": "create_institution_metrics",
-    "update_institution_metrics": "update_institution_metrics",
-    "delete_institution_metrics": "delete_institution_metrics",
-    "facility_unit_metadata_view": "facility_unit_metadata_view",
-    "facility_unit_metadata_create": "facility_unit_metadata_create",
-    "facility_unit_metadata_delete": "facility_unit_metadata_delete",
-    "facility_unit_metadata_edit": "facility_unit_metadata_edit",
-    "view_term_dates": "view_term_dates",
-    "view_facility_entities": "view_facility_entities",
-    "create_facility_entities": "create_facility_entities",
-    "update_facility_entities": "update_facility_entities",
-    "delete_facility_entities": "delete_facility_entities",
-    "report_incidents": "report_incidents",
-    "view_incidents": "view_incidents",
-    "update_incidents": "update_incidents",
-    "delete_incidents": "delete_incidents",
-    "investigate_incidents": "investigate_incidents",
+    'facility_unit_metadata_view': 'facility_unit_metadata_view',
+    'facility_unit_metadata_create': 'facility_unit_metadata_create',
+    'facility_unit_metadata_delete': 'facility_unit_metadata_delete',
+    'facility_unit_metadata_edit': 'facility_unit_metadata_edit',
   };
 
   const hasAccess = (page: string): boolean => {
@@ -197,8 +163,15 @@ export const RoleProvider: React.FC<RoleProviderProps> = ({ children }) => {
       }
     }
 
-    // For custom roles, check permissions
+    // For custom roles, check permissions (both grouped and individual)
     if (currentUser.permissions && currentUser.permissions.length > 0) {
+      // First check if it's a grouped permission
+      const groupedPerms = groupedPermissions[page];
+      if (groupedPerms) {
+        return groupedPerms.some(perm => currentUser.permissions!.includes(perm));
+      }
+
+      // Then check individual permissions
       const requiredPerm = pagePermissions[page];
       if (!requiredPerm) return false;
       return currentUser.permissions.includes(requiredPerm);

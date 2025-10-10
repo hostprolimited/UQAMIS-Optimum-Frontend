@@ -487,7 +487,9 @@ const Overview = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>School Name</TableHead>
+                    {(dashboardType === 'ministry_admin' || dashboardType === 'agent') && (
+                      <TableHead>School Name</TableHead>
+                    )}
                     <TableHead>Condition</TableHead>
                     <TableHead>Parts</TableHead>
                   </TableRow>
@@ -495,7 +497,9 @@ const Overview = () => {
                 <TableBody>
                   {assessmentDetailsData.map((item, index) => (
                     <TableRow key={index}>
-                      <TableCell className="font-medium">{item.school_name}</TableCell>
+                      {(dashboardType === 'ministry_admin' || dashboardType === 'agent') && (
+                        <TableCell className="font-medium">{item.school_name}</TableCell>
+                      )}
                       <TableCell>
                         <Badge
                           variant="outline"
