@@ -114,51 +114,51 @@ const AssessmentViewPage: React.FC = () => {
   const MySwal = withReactContent(Swal);
 
   // Fetch assessment and facilities
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
+  const fetchData = async () => {
+    try {
+      setLoading(true);
 
-        // Fetch facilities for mapping
-        const facilitiesRes = await getFacilities();
-        const facilities: Facility[] = facilitiesRes?.data || [];
-        const idToName = facilities.reduce((acc, f) => {
-          acc[f.id.toString()] = f.name;
-          return acc;
-        }, {} as Record<string, string>);
-        setFacilityIdToName(idToName);
+      // Fetch facilities for mapping
+      const facilitiesRes = await getFacilities();
+      const facilities: Facility[] = facilitiesRes?.data || [];
+      const idToName = facilities.reduce((acc, f) => {
+        acc[f.id.toString()] = f.name;
+        return acc;
+      }, {} as Record<string, string>);
+      setFacilityIdToName(idToName);
 
-        // Fetch assessments and find the one for this institution
-        if (id) {
-          // Fetch maintenance
-          const maintenanceRes = await getMaintenanceReports();
-          const maintenanceData = maintenanceRes?.data || [];
-          const institutionMaintenance = maintenanceData.filter((report: any) => report.institution_id == parseInt(id));
-          const mappedMaintenance = institutionMaintenance.map(report => mapMaintenanceReport(report, idToName));
-          setAllAssessments(mappedMaintenance);
+      // Fetch assessments and find the one for this institution
+      if (id) {
+        // Fetch maintenance
+        const maintenanceRes = await getMaintenanceReports();
+        const maintenanceData = maintenanceRes?.data || [];
+        const institutionMaintenance = maintenanceData.filter((report: any) => report.institution_id == parseInt(id));
+        const mappedMaintenance = institutionMaintenance.map(report => mapMaintenanceReport(report, idToName));
+        setAllAssessments(mappedMaintenance);
 
-          // Fetch safety
-          const safetyRes = await getSafetyReports();
-          const safetyData = safetyRes?.data || [];
-          const institutionSafety = safetyData.filter((report: any) => report.institution_id == parseInt(id));
-          const mappedSafety = institutionSafety.map(report => mapMaintenanceReport(report, idToName));
-          setSafetyAssessments(mappedSafety);
+        // Fetch safety
+        const safetyRes = await getSafetyReports();
+        const safetyData = safetyRes?.data || [];
+        const institutionSafety = safetyData.filter((report: any) => report.institution_id == parseInt(id));
+        const mappedSafety = institutionSafety.map(report => mapMaintenanceReport(report, idToName));
+        setSafetyAssessments(mappedSafety);
 
-          // Take the most recent maintenance assessment for cards
-          if (mappedMaintenance.length > 0) {
-            const latestAssessment = mappedMaintenance.sort((a, b) =>
-              new Date(b.created_at || b.assessmentDate).getTime() - new Date(a.created_at || a.assessmentDate).getTime()
-            )[0];
-            setAssessment(latestAssessment);
-          }
+        // Take the most recent maintenance assessment for cards
+        if (mappedMaintenance.length > 0) {
+          const latestAssessment = mappedMaintenance.sort((a, b) =>
+            new Date(b.created_at || b.assessmentDate).getTime() - new Date(a.created_at || a.assessmentDate).getTime()
+          )[0];
+          setAssessment(latestAssessment);
         }
-      } catch (error) {
-        toast({ title: "Error", description: "Failed to load assessment", variant: "destructive" });
-      } finally {
-        setLoading(false);
       }
-    };
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to load assessment", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchData();
   }, [id, toast]);
 
@@ -235,7 +235,7 @@ const AssessmentViewPage: React.FC = () => {
       toast({ title: "Success", description: "Detail updated successfully" });
       setIsEditModalOpen(false);
       // Refresh data
-      window.location.reload();
+      await fetchData();
     } catch (error) {
       toast({ title: "Error", description: "Failed to update detail", variant: "destructive" });
     }
@@ -270,7 +270,7 @@ const AssessmentViewPage: React.FC = () => {
       toast({ title: "Success", description: "Review submitted successfully" });
       setIsReviewModalOpen(false);
       // Refresh assessment data
-      window.location.reload();
+      await fetchData();
     } catch (error) {
       toast({ title: "Error", description: "Failed to submit review", variant: "destructive" });
     }
