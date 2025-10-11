@@ -8,13 +8,32 @@ export interface User {
   name: string;
   email: string;
   phone?: string;
-
-
-
   gender?: string;
   role?: string;
   status?: string;
   institution_id?: number;
+  institution?: {
+    id: number;
+    name: string;
+    type: string;
+    county: string;
+    subcounty: string;
+    ward: string;
+    county_code: string;
+    address: string;
+    phone_number: string;
+    latitude: any;
+    longitude: any;
+    email: string;
+    status: string;
+    boarding_type: string;
+    total_students: number;
+    total_teachers: string;
+    gender_based: string;
+    created_by: number;
+    created_at: string;
+    updated_at: string;
+  };
   created_at?: string;
   updated_at?: string;
 }

@@ -467,6 +467,7 @@ const Users = () => {
   const [openInstitution, setOpenInstitution] = useState(false);
   const [institutionSearch, setInstitutionSearch] = useState('');
   const [transferInstitutionSearch, setTransferInstitutionSearch] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
   const { currentUser } = useRole();
   const { toast } = useToast();
 
@@ -601,9 +602,23 @@ const Users = () => {
     }
   };
 
+  const filteredUsers = React.useMemo(
+    () => {
+      if (!searchTerm) return users;
+      return users.filter(user =>
+        user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (user.role && user.role.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (user.institution?.name && user.institution.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (user.county && user.county.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
+    },
+    [users, searchTerm]
+  );
+
   const visibleUsers = React.useMemo(
-    () => users.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage),
-    [users, page, rowsPerPage]
+    () => filteredUsers.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage),
+    [filteredUsers, page, rowsPerPage]
   );
 
   const handleOpenModal = () => {
@@ -940,9 +955,9 @@ const Users = () => {
             <User className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{users.length}</div>
+            <div className="text-2xl font-bold">{searchTerm ? filteredUsers.length : users.length}</div>
             <p className="text-xs text-muted-foreground">
-              Active system users
+              {searchTerm ? `Filtered from ${users.length} total` : 'Active system users'}
             </p>
           </CardContent>
         </Card>
@@ -953,7 +968,7 @@ const Users = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {users.filter(user => user.role === 'admin').length}
+              {(searchTerm ? filteredUsers : users).filter(user => user.role === 'admin').length}
             </div>
             <p className="text-xs text-muted-foreground">
               Administrators
@@ -967,7 +982,7 @@ const Users = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {users.filter(user => user.status === 'Active').length}
+              {(searchTerm ? filteredUsers : users).filter(user => user.status === 'Active').length}
             </div>
             <p className="text-xs text-muted-foreground">
               Currently active users
@@ -1298,11 +1313,36 @@ const Users = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {/* Search Input */}
+          <div className="flex items-center space-x-2 mb-4">
+            <Input
+              placeholder="Search users by name, email, role, institution, or county..."
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setPage(0); // Reset to first page when searching
+              }}
+              className="max-w-sm"
+            />
+            {searchTerm && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setSearchTerm('');
+                  setPage(0);
+                }}
+              >
+                Clear
+              </Button>
+            )}
+          </div>
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>User</TableHead>
                 <TableHead>Role</TableHead>
+                <TableHead>School</TableHead>
                 <TableHead>Jurisdiction</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Last Login</TableHead>
@@ -1312,11 +1352,11 @@ const Users = () => {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center">Loading...</TableCell>
+                  <TableCell colSpan={7} className="text-center">Loading...</TableCell>
                 </TableRow>
               ) : users.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center">No users found.</TableCell>
+                  <TableCell colSpan={7} className="text-center">No users found.</TableCell>
                 </TableRow>
               ) : (
                 visibleUsers.map((user) => (
@@ -1339,6 +1379,9 @@ const Users = () => {
                       <Badge className={getRoleBadgeVariant(user.role || '')}>
                         {formatRole(user.role || '')}
                       </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {user.institution?.name || '-'}
                     </TableCell>
                     <TableCell>
                       <div>
@@ -1400,7 +1443,7 @@ const Users = () => {
           </Table>
 
           {/* Pagination */}
-          {!loading && users.length > 0 && (
+          {!loading && filteredUsers.length > 0 && (
             <div className="flex items-center justify-between px-2 py-4">
               <div className="flex items-center space-x-2">
                 <label className="text-sm font-medium">Rows per page:</label>
@@ -1417,7 +1460,8 @@ const Users = () => {
               </div>
               <div className="flex items-center space-x-2">
                 <span className="text-sm">
-                  {page * rowsPerPage + 1}-{Math.min((page + 1) * rowsPerPage, users.length)} of {users.length}
+                  {page * rowsPerPage + 1}-{Math.min((page + 1) * rowsPerPage, filteredUsers.length)} of {filteredUsers.length}
+                  {searchTerm && ` (filtered from ${users.length} total)`}
                 </span>
                 <div className="flex space-x-1">
                   <Button
@@ -1432,7 +1476,7 @@ const Users = () => {
                     variant="outline"
                     size="sm"
                     onClick={() => handleChangePage(page + 1)}
-                    disabled={(page + 1) * rowsPerPage >= users.length}
+                    disabled={(page + 1) * rowsPerPage >= filteredUsers.length}
                   >
                     Next
                   </Button>

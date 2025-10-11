@@ -82,6 +82,8 @@ const RolesPermissions = () => {
   });
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [permissionsSearchTerm, setPermissionsSearchTerm] = useState('');
+  const [rolesSearchTerm, setRolesSearchTerm] = useState('');
   const { toast } = useToast();
   const { currentUser } = useRole();
 
@@ -126,14 +128,34 @@ const RolesPermissions = () => {
     ? roles.filter(r => r.name === 'school_admin')
     : roles;
 
+  const filteredPermissions = React.useMemo(
+    () => {
+      if (!permissionsSearchTerm) return permissions;
+      return permissions.filter(permission =>
+        permission.name.toLowerCase().includes(permissionsSearchTerm.toLowerCase())
+      );
+    },
+    [permissions, permissionsSearchTerm]
+  );
+
   const visiblePermissions = React.useMemo(
-    () => permissions.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage),
-    [permissions, page, rowsPerPage]
+    () => filteredPermissions.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage),
+    [filteredPermissions, page, rowsPerPage]
+  );
+
+  const filteredRoles = React.useMemo(
+    () => {
+      if (!rolesSearchTerm) return roles;
+      return roles.filter(role =>
+        role.name.toLowerCase().includes(rolesSearchTerm.toLowerCase())
+      );
+    },
+    [roles, rolesSearchTerm]
   );
 
   const visibleRoles = React.useMemo(
-    () => roles.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage),
-    [roles, page, rowsPerPage]
+    () => filteredRoles.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage),
+    [filteredRoles, page, rowsPerPage]
   );
 
   const handleChangePage = (newPage: number) => {
@@ -379,9 +401,9 @@ const RolesPermissions = () => {
             <Shield className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{roles.length}</div>
+            <div className="text-2xl font-bold">{rolesSearchTerm ? filteredRoles.length : roles.length}</div>
             <p className="text-xs text-muted-foreground">
-              Active system roles
+              {rolesSearchTerm ? `Filtered from ${roles.length} total` : 'Active system roles'}
             </p>
           </CardContent>
         </Card>
@@ -391,9 +413,9 @@ const RolesPermissions = () => {
             <Lock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{permissions.length}</div>
+            <div className="text-2xl font-bold">{permissionsSearchTerm ? filteredPermissions.length : permissions.length}</div>
             <p className="text-xs text-muted-foreground">
-              System permissions
+              {permissionsSearchTerm ? `Filtered from ${permissions.length} total` : 'System permissions'}
             </p>
           </CardContent>
         </Card>
@@ -426,6 +448,30 @@ const RolesPermissions = () => {
             </div>
           </CardHeader>
           <CardContent>
+            {/* Search Input */}
+            <div className="flex items-center space-x-2 mb-4">
+              <Input
+                placeholder="Search roles..."
+                value={rolesSearchTerm}
+                onChange={(e) => {
+                  setRolesSearchTerm(e.target.value);
+                  setPage(0); // Reset to first page when searching
+                }}
+                className="max-w-sm"
+              />
+              {rolesSearchTerm && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setRolesSearchTerm('');
+                    setPage(0);
+                  }}
+                >
+                  Clear
+                </Button>
+              )}
+            </div>
             {isLoading ? (
               <div className="flex items-center justify-center p-4">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -484,7 +530,7 @@ const RolesPermissions = () => {
                 </Table>
 
                 {/* Pagination for roles */}
-                {roles.length > 0 && (
+                {filteredRoles.length > 0 && (
                   <div className="flex items-center justify-between px-2 py-4">
                     <div className="flex items-center space-x-2">
                       <label className="text-sm font-medium">Rows per page:</label>
@@ -501,7 +547,8 @@ const RolesPermissions = () => {
                     </div>
                     <div className="flex items-center space-x-2">
                       <span className="text-sm">
-                        {page * rowsPerPage + 1}-{Math.min((page + 1) * rowsPerPage, roles.length)} of {roles.length}
+                        {page * rowsPerPage + 1}-{Math.min((page + 1) * rowsPerPage, filteredRoles.length)} of {filteredRoles.length}
+                        {rolesSearchTerm && ` (filtered from ${roles.length} total)`}
                       </span>
                       <div className="flex space-x-1">
                         <Button
@@ -516,7 +563,7 @@ const RolesPermissions = () => {
                           variant="outline"
                           size="sm"
                           onClick={() => handleChangePage(page + 1)}
-                          disabled={(page + 1) * rowsPerPage >= roles.length}
+                          disabled={(page + 1) * rowsPerPage >= filteredRoles.length}
                         >
                           Next
                         </Button>
@@ -546,6 +593,30 @@ const RolesPermissions = () => {
             </div>
           </CardHeader>
           <CardContent>
+            {/* Search Input */}
+            <div className="flex items-center space-x-2 mb-4">
+              <Input
+                placeholder="Search permissions..."
+                value={permissionsSearchTerm}
+                onChange={(e) => {
+                  setPermissionsSearchTerm(e.target.value);
+                  setPage(0); // Reset to first page when searching
+                }}
+                className="max-w-sm"
+              />
+              {permissionsSearchTerm && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setPermissionsSearchTerm('');
+                    setPage(0);
+                  }}
+                >
+                  Clear
+                </Button>
+              )}
+            </div>
             {isLoading ? (
               <div className="flex items-center justify-center p-4">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -617,7 +688,7 @@ const RolesPermissions = () => {
                 </Table>
 
                 {/* Pagination */}
-                {permissions.length > 0 && (
+                {filteredPermissions.length > 0 && (
                   <div className="flex items-center justify-between px-2 py-4">
                     <div className="flex items-center space-x-2">
                       <label className="text-sm font-medium">Rows per page:</label>
@@ -634,7 +705,8 @@ const RolesPermissions = () => {
                     </div>
                     <div className="flex items-center space-x-2">
                       <span className="text-sm">
-                        {page * rowsPerPage + 1}-{Math.min((page + 1) * rowsPerPage, permissions.length)} of {permissions.length}
+                        {page * rowsPerPage + 1}-{Math.min((page + 1) * rowsPerPage, filteredPermissions.length)} of {filteredPermissions.length}
+                        {permissionsSearchTerm && ` (filtered from ${permissions.length} total)`}
                       </span>
                       <div className="flex space-x-1">
                         <Button
@@ -649,7 +721,7 @@ const RolesPermissions = () => {
                           variant="outline"
                           size="sm"
                           onClick={() => handleChangePage(page + 1)}
-                          disabled={(page + 1) * rowsPerPage >= permissions.length}
+                          disabled={(page + 1) * rowsPerPage >= filteredPermissions.length}
                         >
                           Next
                         </Button>

@@ -1,5 +1,6 @@
 // import React, { useEffect, useState } from 'react';
 // import { User, Mail, Shield, Edit, X, Trash2, AlertCircle, Phone, MoreHorizontal, Check, ChevronsUpDown, ArrowRightLeft } from 'lucide-react';
+// import dataJson from '@/constants/data.json';
 // import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 // import { Badge } from '@/components/ui/badge';
 // import { Button } from '@/components/ui/button';
@@ -15,6 +16,7 @@
 //   AlertDialogTitle,
 // } from "@/components/ui/alert-dialog";
 // import { Input } from '@/components/ui/input';
+// import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 // import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 // import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 // import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
@@ -29,6 +31,25 @@
 // import { Toaster } from "@/components/ui/toaster";
 // import data from '@/constants/data.json';
 // import api from '@/utils/api';
+
+// // Define types for data.json structures
+// interface County {
+//   county_id: string;
+//   county_name: string;
+// }
+
+// interface Subcounty {
+//   subcounty_id: string;
+//   county_id: string;
+//   constituency_name: string;
+// }
+
+// interface Station {
+//   station_id: string;
+//   subcounty_id: string;
+//   constituency_name: string;
+//   ward: string;
+// }
 
 // // Extract counties, subcounties, and wards from JSON
 // const counties = data.find((t) => t.name === 'counties').data;
@@ -439,6 +460,8 @@
 //     new_ward: '',
 //     new_institution_id: '',
 //   });
+//   const [selectedCounty, setSelectedCounty] = useState('');
+//   const [selectedSubcounty, setSelectedSubcounty] = useState('');
 //   const [page, setPage] = useState(0);
 //   const [rowsPerPage, setRowsPerPage] = useState(5);
 //   const [openInstitution, setOpenInstitution] = useState(false);
@@ -615,6 +638,24 @@
 //       new_institution_id: '',
 //     });
 //     setTransferInstitutionSearch('');
+//     setSelectedCounty('');
+//     setSelectedSubcounty('');
+//   };
+
+//   // Helper functions to get data from data.json
+//   const getCounties = (): County[] => {
+//     const countiesTable = dataJson.find((table: any) => table.name === 'counties') as { data: County[] } | undefined;
+//     return countiesTable?.data || [];
+//   };
+
+//   const getSubcounties = (countyId: string): Subcounty[] => {
+//     const subcountiesTable = dataJson.find((table: any) => table.name === 'subcounties') as { data: Subcounty[] } | undefined;
+//     return subcountiesTable?.data.filter((subcounty) => subcounty.county_id === countyId) || [];
+//   };
+
+//   const getWards = (subcountyId: string): Station[] => {
+//     const stationTable = dataJson.find((table: any) => table.name === 'station') as { data: Station[] } | undefined;
+//     return stationTable?.data.filter((station) => station.subcounty_id === subcountyId) || [];
 //   };
 
 //   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -710,14 +751,14 @@
 //       const transferData: any = {};
 
 //       if (selectedUser.role === 'agent') {
-//         // For agents, collect county information
-//         transferData.new_county_code = transferForm.new_county_code;
-//         transferData.new_county = transferForm.new_county;
-//         transferData.new_subcounty = transferForm.new_subcounty;
-//         transferData.new_ward = transferForm.new_ward;
+//         // For agents, collect county information (county is required, subcounty and ward are optional)
+//         if (transferForm.new_county_code) transferData.new_county_code = transferForm.new_county_code;
+//         if (transferForm.new_county) transferData.new_county = transferForm.new_county;
+//         if (transferForm.new_subcounty) transferData.new_subcounty = transferForm.new_subcounty;
+//         if (transferForm.new_ward) transferData.new_ward = transferForm.new_ward;
 //       } else if (selectedUser.role === 'school_admin') {
 //         // For school admins, collect institution information
-//         transferData.new_institution_id = parseInt(transferForm.new_institution_id);
+//         if (transferForm.new_institution_id) transferData.new_institution_id = parseInt(transferForm.new_institution_id);
 //       }
 
 //       await transferUser(selectedUser.id, transferData);
@@ -1262,6 +1303,7 @@
 //               <TableRow>
 //                 <TableHead>User</TableHead>
 //                 <TableHead>Role</TableHead>
+//                 <TableHead>School</TableHead>
 //                 <TableHead>Jurisdiction</TableHead>
 //                 <TableHead>Status</TableHead>
 //                 <TableHead>Last Login</TableHead>
@@ -1271,11 +1313,11 @@
 //             <TableBody>
 //               {loading ? (
 //                 <TableRow>
-//                   <TableCell colSpan={6} className="text-center">Loading...</TableCell>
+//                   <TableCell colSpan={7} className="text-center">Loading...</TableCell>
 //                 </TableRow>
 //               ) : users.length === 0 ? (
 //                 <TableRow>
-//                   <TableCell colSpan={6} className="text-center">No users found.</TableCell>
+//                   <TableCell colSpan={7} className="text-center">No users found.</TableCell>
 //                 </TableRow>
 //               ) : (
 //                 visibleUsers.map((user) => (
@@ -1298,6 +1340,9 @@
 //                       <Badge className={getRoleBadgeVariant(user.role || '')}>
 //                         {formatRole(user.role || '')}
 //                       </Badge>
+//                     </TableCell>
+//                     <TableCell>
+//                       {user.institution?.name || '-'}
 //                     </TableCell>
 //                     <TableCell>
 //                       <div>
@@ -1418,45 +1463,77 @@
 //               {selectedUser.role === 'agent' ? (
 //                 // Agent transfer form
 //                 <>
-//                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-//                     <div>
-//                       <label className="block text-sm font-medium mb-1">New County Code <span className="text-destructive">*</span></label>
-//                       <Input
-//                         type="number"
-//                         value={transferForm.new_county_code}
-//                         onChange={(e) => setTransferForm({ ...transferForm, new_county_code: e.target.value })}
-//                         placeholder="e.g., 23"
-//                         required
-//                       />
-//                     </div>
-//                     <div>
-//                       <label className="block text-sm font-medium mb-1">New County <span className="text-destructive">*</span></label>
-//                       <Input
-//                         value={transferForm.new_county}
-//                         onChange={(e) => setTransferForm({ ...transferForm, new_county: e.target.value })}
-//                         placeholder="e.g., Nairobi"
-//                         required
-//                       />
-//                     </div>
+//                   <div>
+//                     <label className="block text-sm font-medium mb-1">New County</label>
+//                     <Select
+//                       value={selectedCounty}
+//                       onValueChange={(value) => {
+//                         setSelectedCounty(value);
+//                         setSelectedSubcounty('');
+//                         const county = getCounties().find((c: any) => c.county_id === value);
+//                         setTransferForm({
+//                           ...transferForm,
+//                           new_county_code: value,
+//                           new_county: county?.county_name || '',
+//                           new_subcounty: '',
+//                           new_ward: ''
+//                         });
+//                       }}
+//                     >
+//                       <SelectTrigger>
+//                         <SelectValue placeholder="Select county" />
+//                       </SelectTrigger>
+//                       <SelectContent>
+//                         {getCounties().map((county: any) => (
+//                           <SelectItem key={county.county_id} value={county.county_id}>
+//                             {county.county_name}
+//                           </SelectItem>
+//                         ))}
+//                       </SelectContent>
+//                     </Select>
 //                   </div>
 //                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 //                     <div>
-//                       <label className="block text-sm font-medium mb-1">New Subcounty <span className="text-destructive">*</span></label>
-//                       <Input
-//                         value={transferForm.new_subcounty}
-//                         onChange={(e) => setTransferForm({ ...transferForm, new_subcounty: e.target.value })}
-//                         placeholder="e.g., Westlands"
-//                         required
-//                       />
+//                       <label className="block text-sm font-medium mb-1">New Subcounty</label>
+//                       <Select
+//                         value={selectedSubcounty}
+//                         onValueChange={(value) => {
+//                           setSelectedSubcounty(value);
+//                           const subcounty = getSubcounties(selectedCounty).find(s => s.subcounty_id === value);
+//                           setTransferForm({ ...transferForm, new_subcounty: subcounty?.constituency_name || '', new_ward: '' });
+//                         }}
+//                         disabled={!selectedCounty}
+//                       >
+//                         <SelectTrigger>
+//                           <SelectValue placeholder="Select subcounty" />
+//                         </SelectTrigger>
+//                         <SelectContent>
+//                           {selectedCounty && getSubcounties(selectedCounty).map((subcounty: Subcounty) => (
+//                             <SelectItem key={subcounty.subcounty_id} value={subcounty.subcounty_id}>
+//                               {subcounty.constituency_name}
+//                             </SelectItem>
+//                           ))}
+//                         </SelectContent>
+//                       </Select>
 //                     </div>
 //                     <div>
-//                       <label className="block text-sm font-medium mb-1">New Ward <span className="text-destructive">*</span></label>
-//                       <Input
+//                       <label className="block text-sm font-medium mb-1">New Ward</label>
+//                       <Select
 //                         value={transferForm.new_ward}
-//                         onChange={(e) => setTransferForm({ ...transferForm, new_ward: e.target.value })}
-//                         placeholder="e.g., Kileleshwa"
-//                         required
-//                       />
+//                         onValueChange={(value) => setTransferForm({ ...transferForm, new_ward: value })}
+//                         disabled={!selectedSubcounty}
+//                       >
+//                         <SelectTrigger>
+//                           <SelectValue placeholder="Select ward" />
+//                         </SelectTrigger>
+//                         <SelectContent>
+//                           {selectedSubcounty && getWards(selectedSubcounty).map((ward: any) => (
+//                             <SelectItem key={ward.station_id} value={ward.ward}>
+//                               {ward.ward}
+//                             </SelectItem>
+//                           ))}
+//                         </SelectContent>
+//                       </Select>
 //                     </div>
 //                   </div>
 //                 </>
