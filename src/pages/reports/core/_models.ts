@@ -65,6 +65,7 @@ export interface Incident {
 export interface IncidentListResponse {
   status: string;
   title: string;
+  attachment_path: string;
   incidents: {
     current_page: number;
     data: Incident[];

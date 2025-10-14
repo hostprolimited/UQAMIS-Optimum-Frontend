@@ -19,11 +19,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Search, AlertTriangle, Clock, CheckCircle, User, MoreHorizontal, Edit, Trash2, X } from 'lucide-react';
+import { Search, AlertTriangle, Clock, CheckCircle, User, MoreHorizontal, Edit, Trash2, X, FileText } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { getIncidents, updateIncident } from '../core/requests';
 import { Incident, IncidentListResponse } from '../core/_models';
 import { useRole } from '@/contexts/RoleContext';
+import { API_BASE_URL } from '@/constants/urls';
 
 // Helper function to format relative time
 const getRelativeTime = (dateString: string): string => {
@@ -170,11 +171,18 @@ const headCells: readonly HeadCell[] = [
     width: '15%',
   },
   {
+    id: 'document',
+    numeric: false,
+    disablePadding: false,
+    label: 'Document',
+    width: '10%',
+  },
+  {
     id: 'actions',
     numeric: false,
     disablePadding: false,
     label: 'Actions',
-    width: '15%',
+    width: '5%',
   },
 ];
 
@@ -492,6 +500,9 @@ const IncidentListPage = () => {
     cell.id !== 'schoolName' || (currentUser?.role === 'agent' || currentUser?.role === 'ministry_admin')
   );
 
+  // Get the number of visible columns for colspan calculations
+  const visibleColumnCount = filteredHeadCells.length;
+
 
   return (
     <div className="space-y-6">
@@ -539,7 +550,7 @@ const IncidentListPage = () => {
                   <TableBody>
                     {loading ? (
                       <TableRow>
-                        <TableCell colSpan={6} align="center" className="py-10">
+                        <TableCell colSpan={visibleColumnCount} align="center" className="py-10">
                           <div className="flex justify-center items-center space-x-2">
                             <svg className="animate-spin h-5 w-5 text-primary" viewBox="0 0 24 24">
                               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -551,7 +562,7 @@ const IncidentListPage = () => {
                       </TableRow>
                     ) : visibleRows.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} align="center" className="py-10">
+                        <TableCell colSpan={visibleColumnCount} align="center" className="py-10">
                           <div className="flex flex-col items-center space-y-2 text-muted-foreground">
                             <AlertTriangle className="h-8 w-8" />
                             <p className="font-medium">No incidents found</p>
@@ -582,14 +593,28 @@ const IncidentListPage = () => {
                             </TableCell>
                           )}
                           <TableCell sx={{ width: '15%' }}>
-                            <span>{getRelativeTime(row.created_at)}</span>
+                            <span>{new Date(row.created_at).toLocaleString()}</span>
                           </TableCell>
                           <TableCell sx={{ width: '15%' }}>
                             <Badge className={getSeverityColor(row.severity_level)}>
                               {row.severity_level.charAt(0).toUpperCase() + row.severity_level.slice(1)}
                             </Badge>
                           </TableCell>
-                          <TableCell sx={{ width: '15%' }}>
+                          <TableCell sx={{ width: '10%' }}>
+                            {row.attachment_path ? (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0"
+                                onClick={() => window.open(`${API_BASE_URL.replace('/api/v1', '')}/${row.attachment_path}`, '_blank')}
+                              >
+                                <FileText className="h-4 w-4 text-blue-600" />
+                              </Button>
+                            ) : (
+                              <span className="text-muted-foreground text-sm">No document</span>
+                            )}
+                          </TableCell>
+                          <TableCell sx={{ width: '5%' }}>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button
@@ -624,7 +649,7 @@ const IncidentListPage = () => {
                     )}
                     {emptyRows > 0 && !loading && (
                       <TableRow style={{ height: 53 * emptyRows }}>
-                        <TableCell colSpan={6} />
+                        <TableCell colSpan={visibleColumnCount} />
                       </TableRow>
                     )}
                   </TableBody>

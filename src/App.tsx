@@ -109,7 +109,7 @@ const App = () => (
                   } />
 
                   <Route path="/incidents" element={
-                    <ProtectedRoute page="reports">
+                    <ProtectedRoute page="incidents">
                       <IncidentlistPage />
                     </ProtectedRoute>
                   } />
