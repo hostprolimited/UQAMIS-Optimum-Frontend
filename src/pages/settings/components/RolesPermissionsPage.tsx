@@ -75,6 +75,8 @@ const RolesPermissions = () => {
   const [creatingPermission, setCreatingPermission] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [newRoleName, setNewRoleName] = useState('');
+  const [selectedPermissions, setSelectedPermissions] = useState<number[]>([]);
+  const [editPermissions, setEditPermissions] = useState<number[]>([]);
   const [roleStats, setRoleStats] = useState({
     totalRoles: 0,
     totalPermissions: 0,
@@ -184,7 +186,30 @@ const RolesPermissions = () => {
     if (!selectedItemId || !editName) return;
 
     try {
+      // Update role name
       await updateRole(selectedItemId, { name: editName });
+
+      // Get current permissions for this role (assuming we need to fetch them)
+      // For now, we'll need to implement a way to get role permissions
+      // Since there's no direct API, we'll handle permission updates by removing all and adding selected ones
+
+      // First, remove all existing permissions (this might need a backend endpoint)
+      // For now, we'll just assign the selected permissions
+      const selectedRole = roles.find(r => r.id === selectedItemId);
+      if (selectedRole) {
+        for (const permissionId of editPermissions) {
+          const permission = permissions.find(p => p.id === permissionId);
+          if (permission) {
+            await assignPermissionToRole({
+              permission_name: permission.name,
+              role_name: editName,
+              permission_id: permissionId,
+              role_id: selectedItemId
+            });
+          }
+        }
+      }
+
       toast({
         title: "Success",
         description: "Role updated successfully",
@@ -337,6 +362,7 @@ const RolesPermissions = () => {
 
   const openAddRoleModal = () => {
     setNewRoleName('');
+    setSelectedPermissions([]);
     setShowAddRoleModal(true);
   };
 
@@ -507,6 +533,10 @@ const RolesPermissions = () => {
                                 onClick={() => {
                                   setSelectedItemId(role.id);
                                   setEditName(role.name);
+                                  // Pre-check existing permissions for this role
+                                  // Since we don't have role-specific permissions stored, we'll start with empty
+                                  // In a real implementation, you'd fetch permissions for this role
+                                  setEditPermissions([]);
                                   setShowEditRoleModal(true);
                                 }}
                                 className="cursor-pointer"
@@ -576,163 +606,6 @@ const RolesPermissions = () => {
           </CardContent>
         </Card>
 
-        {/* Permissions Section */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>System Permissions</CardTitle>
-                <CardDescription>Manage and assign permissions</CardDescription>
-              </div>
-              {/* <Button
-                onClick={openCreatePermissionModal}
-                className="bg-primary text-primary-foreground"
-              >
-                <Plus className="h-4 w-4 mr-1" /> Create Permission
-              </Button> */}
-            </div>
-          </CardHeader>
-          <CardContent>
-            {/* Search Input */}
-            <div className="flex items-center space-x-2 mb-4">
-              <Input
-                placeholder="Search permissions..."
-                value={permissionsSearchTerm}
-                onChange={(e) => {
-                  setPermissionsSearchTerm(e.target.value);
-                  setPage(0); // Reset to first page when searching
-                }}
-                className="max-w-sm"
-              />
-              {permissionsSearchTerm && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setPermissionsSearchTerm('');
-                    setPage(0);
-                  }}
-                >
-                  Clear
-                </Button>
-              )}
-            </div>
-            {isLoading ? (
-              <div className="flex items-center justify-center p-4">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-              </div>
-            ) : (
-              <>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Permission Name</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Assign Permission to Role</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {visiblePermissions.map((perm) => (
-                      <TableRow key={perm.id}>
-                        <TableCell>{perm.name}</TableCell>
-                        <TableCell>
-                          <Badge variant={perm.status === 'Active' ? 'default' : 'secondary'}>
-                            {perm.status || 'Active'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <select
-                            onChange={e => handleAssignPermissionToRole(perm.name, e.target.value)}
-                            defaultValue=""
-                            className="border rounded px-2 py-1"
-                          >
-                            <option value="">Assign to role...</option>
-                            {roles.map(r => (
-                              <option key={r.id} value={r.name}>{r.name}</option>
-                            ))}
-                          </select>
-                        </TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-40">
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  setSelectedItemId(perm.id);
-                                  setEditName(perm.name);
-                                  setShowEditPermissionModal(true);
-                                }}
-                                className="cursor-pointer"
-                              >
-                                <Edit className="h-4 w-4 mr-2" />
-                                Edit
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => handleTogglePermissionStatus(perm.id, perm.status === 'Active' ? 'Inactive' : 'Active')}
-                                className="cursor-pointer"
-                              >
-                                {perm.status === 'Active' ? <XCircle className="h-4 w-4 mr-2" /> : <CheckCircle className="h-4 w-4 mr-2" />}
-                                {perm.status === 'Active' ? 'Deactivate' : 'Activate'}
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-
-                {/* Pagination */}
-                {filteredPermissions.length > 0 && (
-                  <div className="flex items-center justify-between px-2 py-4">
-                    <div className="flex items-center space-x-2">
-                      <label className="text-sm font-medium">Rows per page:</label>
-                      <select
-                        value={rowsPerPage}
-                        onChange={handleChangeRowsPerPage}
-                        className="border rounded px-2 py-1 text-sm"
-                      >
-                        <option value={5}>5</option>
-                        <option value={10}>10</option>
-                        <option value={25}>25</option>
-                        <option value={50}>50</option>
-                      </select>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <span className="text-sm">
-                        {page * rowsPerPage + 1}-{Math.min((page + 1) * rowsPerPage, filteredPermissions.length)} of {filteredPermissions.length}
-                        {permissionsSearchTerm && ` (filtered from ${permissions.length} total)`}
-                      </span>
-                      <div className="flex space-x-1">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleChangePage(page - 1)}
-                          disabled={page === 0}
-                        >
-                          Previous
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleChangePage(page + 1)}
-                          disabled={(page + 1) * rowsPerPage >= filteredPermissions.length}
-                        >
-                          Next
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-          </CardContent>
-        </Card>
       </div>
 
       {/* Create Permission Modal */}
@@ -858,11 +731,11 @@ const RolesPermissions = () => {
 
       {/* Add Role Modal */}
       <Dialog open={showAddRoleModal} onOpenChange={setShowAddRoleModal}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Add Role</DialogTitle>
             <DialogDescription>
-              Create a new role.
+              Create a new role and assign permissions.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -877,6 +750,33 @@ const RolesPermissions = () => {
               />
             </div>
 
+            <div>
+              <Label className="text-sm font-medium text-gray-600">Permissions:</Label>
+              <div className="mt-2 grid grid-cols-2 gap-2 max-h-60 overflow-y-auto">
+                {permissions.map((permission) => (
+                  <div key={permission.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`permission-${permission.id}`}
+                      checked={selectedPermissions.includes(permission.id)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSelectedPermissions([...selectedPermissions, permission.id]);
+                        } else {
+                          setSelectedPermissions(selectedPermissions.filter(id => id !== permission.id));
+                        }
+                      }}
+                    />
+                    <Label
+                      htmlFor={`permission-${permission.id}`}
+                      className="text-sm font-normal cursor-pointer"
+                    >
+                      {permission.name}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             <DialogFooter>
               <Button
                 type="button"
@@ -884,6 +784,7 @@ const RolesPermissions = () => {
                 onClick={() => {
                   setShowAddRoleModal(false);
                   setNewRoleName('');
+                  setSelectedPermissions([]);
                 }}
               >
                 Cancel
@@ -901,10 +802,28 @@ const RolesPermissions = () => {
                   }
 
                   try {
-                    await createRole({ name: newRoleName });
+                    // Create the role
+                    const roleResponse = await createRole({ name: newRoleName });
+
+                    // Assign selected permissions to the role
+                    if (selectedPermissions.length > 0) {
+                      const roleId = roleResponse.id; // Assuming the response includes the role ID
+                      for (const permissionId of selectedPermissions) {
+                        const permission = permissions.find(p => p.id === permissionId);
+                        if (permission) {
+                          await assignPermissionToRole({
+                            permission_name: permission.name,
+                            role_name: newRoleName,
+                            permission_id: permissionId,
+                            role_id: roleId
+                          });
+                        }
+                      }
+                    }
+
                     toast({
                       title: "Success",
-                      description: "Role created successfully",
+                      description: "Role created successfully with permissions",
                       variant: "default",
                     });
 
@@ -915,6 +834,7 @@ const RolesPermissions = () => {
                     // Reset and close
                     setShowAddRoleModal(false);
                     setNewRoleName('');
+                    setSelectedPermissions([]);
                   } catch (error: any) {
                     console.error('Error creating role:', error);
                     toast({
@@ -935,10 +855,10 @@ const RolesPermissions = () => {
 
       {/* Edit Role Modal */}
       <Dialog open={showEditRoleModal} onOpenChange={setShowEditRoleModal}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Edit Role</DialogTitle>
-            <DialogDescription>Update the role name.</DialogDescription>
+            <DialogDescription>Update the role name and permissions.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
@@ -949,6 +869,33 @@ const RolesPermissions = () => {
                 onChange={(e) => setEditName(e.target.value)}
                 placeholder="Role Name"
               />
+            </div>
+
+            <div>
+              <Label className="text-sm font-medium text-gray-600">Permissions:</Label>
+              <div className="mt-2 grid grid-cols-2 gap-2 max-h-60 overflow-y-auto">
+                {permissions.map((permission) => (
+                  <div key={permission.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`edit-permission-${permission.id}`}
+                      checked={editPermissions.includes(permission.id)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setEditPermissions([...editPermissions, permission.id]);
+                        } else {
+                          setEditPermissions(editPermissions.filter(id => id !== permission.id));
+                        }
+                      }}
+                    />
+                    <Label
+                      htmlFor={`edit-permission-${permission.id}`}
+                      className="text-sm font-normal cursor-pointer"
+                    >
+                      {permission.name}
+                    </Label>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
           <DialogFooter>

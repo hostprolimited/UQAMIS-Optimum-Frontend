@@ -1,805 +1,163 @@
 // import React, { useEffect, useState } from 'react';
-// import { User, Mail, Shield, Edit, X, Trash2, AlertCircle, Phone, MoreHorizontal, Check, ChevronsUpDown, ArrowRightLeft } from 'lucide-react';
-// import dataJson from '@/constants/data.json';
-// import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-// import { Badge } from '@/components/ui/badge';
-// import { Button } from '@/components/ui/button';
-// import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+// import { Shield, Users, School, CheckCircle, XCircle, Plus, X, Lock, MoreHorizontal, Edit, Trash2 } from 'lucide-react';
 // import {
-//   AlertDialog,
-//   AlertDialogAction,
-//   AlertDialogCancel,
-//   AlertDialogContent,
-//   AlertDialogDescription,
-//   AlertDialogFooter,
-//   AlertDialogHeader,
-//   AlertDialogTitle,
-// } from "@/components/ui/alert-dialog";
-// import { Input } from '@/components/ui/input';
-// import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-// import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-// import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-// import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
-// import { cn } from "@/lib/utils";
-// import { getUsers, createUser, deleteUser, updateUser, transferUser } from '../core/_requests';
-// import { Urls } from '@/constants/urls';
-// import { getInstitutions } from '@/pages/onboarding/core/_requests';
-// import { getPermissions } from '../core/_requests';
-// import { User as UserModel, CreateUserInput } from '../core/_models';
+//   Card,
+//   CardContent,
+//   CardDescription,
+//   CardHeader,
+//   CardTitle,
+// } from '@/components/ui/card';
+// import { Badge } from '@/components/ui/badge';
+// import {
+//   Table,
+//   TableBody,
+//   TableCell,
+//   TableHead,
+//   TableHeader,
+//   TableRow,
+// } from '@/components/ui/table';
+// import { Button } from '@/components/ui/button';
+// import {
+//   getUsers,
+//   getPermissions,
+//   createPermission,
+//   createRole,
+//   assignPermissionToRole,
+//   assignUserRole,
+//   getUserRole,
+//   updateRole,
+//   removeRole,
+//   updatePermission,
+//   deletePermission,
+// } from '../core/_requests';
+// import { User, Role, Permission } from '../core/_models';
 // import { useRole } from '@/contexts/RoleContext';
 // import { useToast } from "@/components/ui/use-toast";
 // import { Toaster } from "@/components/ui/toaster";
-// import data from '@/constants/data.json';
+// import { Urls } from '@/constants/urls';
 // import api from '@/utils/api';
+// import { Checkbox } from "@/components/ui/checkbox";
+// import { Label } from "@/components/ui/label";
+// import { Input } from "@/components/ui/input";
+// import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+// import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+// import { Form, FormControl, FormField, FormItem, FormLabel as FormLabelComponent, FormMessage } from "@/components/ui/form";
+// import { useForm } from "react-hook-form";
+// import { zodResolver } from "@hookform/resolvers/zod";
+// import * as z from "zod";
 
-// // Define types for data.json structures
-// interface County {
-//   county_id: string;
-//   county_name: string;
-// }
+// // Simple icon for permission matrix
+// const PermissionIcon = ({ hasPermission }: { hasPermission: boolean }) => (
+//   hasPermission ? (
+//     <CheckCircle className="text-green-500 w-4 h-4" />
+//   ) : (
+//     <XCircle className="text-red-500 w-4 h-4" />
+//   )
+// );
 
-// interface Subcounty {
-//   subcounty_id: string;
-//   county_id: string;
-//   constituency_name: string;
-// }
 
-// interface Station {
-//   station_id: string;
-//   subcounty_id: string;
-//   constituency_name: string;
-//   ward: string;
-// }
-
-// // Extract counties, subcounties, and wards from JSON
-// const counties = data.find((t) => t.name === 'counties').data;
-// const subcounties = data.find((t) => t.name === 'subcounties').data;
-// const wards = data.find((t) => t.name === 'station').data;
-
-// // School Admin Users Component
-// const SchoolAdminUsers: React.FC = () => {
-//   const [users, setUsers] = useState<UserModel[]>([]);
-//   const [loading, setLoading] = useState(true);
-//   const [showModal, setShowModal] = useState(false);
-//   const [form, setForm] = useState({ name: '', email: '', phone: '', gender: '', role: '', password: '' });
-//   const [submitting, setSubmitting] = useState(false);
-//   const [error, setError] = useState<string | null>(null);
-//   const [roles, setRoles] = useState<any[]>([]);
-//   const { currentUser } = useRole();
-//   const { toast } = useToast();
-
-//   const fetchSchoolUsers = async () => {
-//     setLoading(true);
-//     try {
-//       const data = await getUsers();
-//       if (Array.isArray(data)) {
-//         // Filter users by institution_id
-//         const schoolUsers = data.filter(user => user.institution_id === currentUser?.institution_id);
-//         setUsers(schoolUsers);
-//       } else if (data && typeof data === 'object' && 'users' in data && Array.isArray((data as { users: UserModel[] }).users)) {
-//         const schoolUsers = (data as { users: UserModel[] }).users.filter(user => user.institution_id === currentUser?.institution_id);
-//         setUsers(schoolUsers);
-//       } else {
-//         setUsers([]);
-//       }
-//     } catch (error: any) {
-//       console.error('Error fetching users:', error);
-//       let errorMessage = 'Failed to load users.';
-//       if (error?.response?.status === 403 || error?.response?.status === 401) {
-//         errorMessage = 'You do not have permission to view users.';
-//       } else if (error?.response?.data?.message) {
-//         errorMessage = error.response.data.message;
-//       }
-//       toast({
-//         title: 'Error',
-//         description: errorMessage,
-//         variant: 'destructive',
-//       });
-//       setUsers([]);
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-//   const fetchRoles = async () => {
-//     try {
-//       const data = await getPermissions();
-//       setRoles(data.roles?.map(r => ({ ...r, status: r.status || 'Active' })) || []);
-//     } catch (error: any) {
-//       console.error('Error fetching roles:', error);
-//       let errorMessage = 'Failed to load roles.';
-//       if (error?.response?.status === 403 || error?.response?.status === 401) {
-//         errorMessage = 'You do not have permission to view roles.';
-//       } else if (error?.response?.data?.message) {
-//         errorMessage = error.response.data.message;
-//       }
-//       toast({
-//         title: 'Error',
-//         description: errorMessage,
-//         variant: 'destructive',
-//       });
-//       setRoles([]);
-//     }
-//   };
-
-//   useEffect(() => {
-//     fetchSchoolUsers();
-//     fetchRoles();
-//   }, [currentUser?.institution_id]);
-
-//   const handleOpenModal = () => {
-//     setForm({ name: '', email: '', phone: '', gender: '', role: '', password: '' });
-//     setError(null);
-//     setShowModal(true);
-//   };
-
-//   const handleCloseModal = () => {
-//     setShowModal(false);
-//     setError(null);
-//     setForm({ name: '', email: '', phone: '', gender: '', role: '', password: '' });
-//   };
-
-//   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-//     const { name, value } = e.target;
-//     if (name === 'phone') {
-//       const numericValue = value.replace(/\D/g, '');
-//       setForm({ ...form, [name]: numericValue });
-//     } else {
-//       setForm({ ...form, [name]: value });
-//     }
-//   };
-
-//   const handleSubmit = async (e: React.FormEvent) => {
-//     e.preventDefault();
-//     setSubmitting(true);
-//     setError(null);
-
-//     // Validation for phone number
-//     if (form.phone && !/^07\d{8}$/.test(form.phone)) {
-//       setError('Phone number must be a valid Kenyan number: 10 digits starting with 07');
-//       setSubmitting(false);
-//       return;
-//     }
-
-//     try {
-//       const createData = {
-//         ...form,
-//         institution_id: currentUser?.institution_id,
-//       };
-//       await createUser(createData);
-//       toast({
-//         title: "Success",
-//         description: "User created successfully",
-//         variant: "default",
-//       });
-//       setShowModal(false);
-//       fetchSchoolUsers();
-//     } catch (err: any) {
-//       const errorResponse = err?.response?.data;
-//       if (errorResponse?.errors) {
-//         const validationErrors = Object.entries(errorResponse.errors)
-//           .map(([field, messages]) => `${field}: ${(messages as string[]).join(', ')}`)
-//           .join('\n');
-//         toast({
-//           title: "Validation Error",
-//           description: validationErrors,
-//           variant: "destructive",
-//         });
-//         setError(validationErrors);
-//       } else {
-//         const errorMessage = errorResponse?.message || 'Failed to create user';
-//         toast({
-//           title: "Error",
-//           description: errorMessage,
-//           variant: "destructive",
-//         });
-//         setError(errorMessage);
-//       }
-//     } finally {
-//       setSubmitting(false);
-//     }
-//   };
-
-//   const formatRole = (role: string) => {
-//     return role.split('_').map(word =>
-//       word.charAt(0).toUpperCase() + word.slice(1)
-//     ).join(' ');
-//   };
-
-//   const getStatusBadge = (status: string) => {
-//     switch (status) {
-//       case 'Active':
-//         return <Badge className="bg-success text-success-foreground">Active</Badge>;
-//       case 'Inactive':
-//         return <Badge className="bg-muted text-muted-foreground">Inactive</Badge>;
-//       case 'Suspended':
-//         return <Badge className="bg-destructive text-destructive-foreground">Suspended</Badge>;
-//       default:
-//         return <Badge variant="outline">{status}</Badge>;
-//     }
-//   };
-
-//   return (
-//     <>
-//       <div className="space-y-6">
-//         <div className="flex items-center justify-between">
-//           <div>
-//             <h1 className="text-2xl font-bold text-foreground">School Staff Management</h1>
-//             <p className="text-muted-foreground">
-//               Manage staff members for {currentUser?.institution?.name || 'your school'}
-//             </p>
-//           </div>
-//           <Button className="bg-primary hover:bg-primary-hover text-primary-foreground" onClick={handleOpenModal}>
-//             <User className="h-4 w-4 mr-2" />
-//             Add Staff Member
-//           </Button>
-//         </div>
-
-//         {/* Statistics Cards */}
-//         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 my-6">
-//           <Card>
-//             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-//               <CardTitle className="text-sm font-medium">Total Staff</CardTitle>
-//               <User className="h-4 w-4 text-muted-foreground" />
-//             </CardHeader>
-//             <CardContent>
-//               <div className="text-2xl font-bold">{users.length}</div>
-//               <p className="text-xs text-muted-foreground">
-//                 School staff members
-//               </p>
-//             </CardContent>
-//           </Card>
-//           <Card>
-//             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-//               <CardTitle className="text-sm font-medium">Teachers</CardTitle>
-//               <User className="h-4 w-4 text-muted-foreground" />
-//             </CardHeader>
-//             <CardContent>
-//               <div className="text-2xl font-bold">
-//                 {users.filter(user => user.role === 'teacher').length}
-//               </div>
-//               <p className="text-xs text-muted-foreground">
-//                 Teaching staff
-//               </p>
-//             </CardContent>
-//           </Card>
-//           <Card>
-//             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-//               <CardTitle className="text-sm font-medium">Active Staff</CardTitle>
-//               <User className="h-4 w-4 text-muted-foreground" />
-//             </CardHeader>
-//             <CardContent>
-//               <div className="text-2xl font-bold">
-//                 {users.filter(user => user.status === 'Active').length}
-//               </div>
-//               <p className="text-xs text-muted-foreground">
-//                 Currently active staff
-//               </p>
-//             </CardContent>
-//           </Card>
-//         </div>
-
-//         {/* Modal for creating staff */}
-//         {showModal && (
-//           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-//             <div className="bg-white rounded-lg shadow-lg w-full p-6 relative" style={{ maxWidth: '500px' }}>
-//               <button className="absolute top-2 right-2 text-muted-foreground" onClick={handleCloseModal}>
-//                 <X className="h-5 w-5" />
-//               </button>
-//               <h2 className="text-xl font-bold mb-4">Add Staff Member</h2>
-//               <form onSubmit={handleSubmit} className="space-y-4">
-//                 {/* First Row */}
-//                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-//                   <div>
-//                     <label className="block text-sm font-medium mb-1">Name <span className="text-destructive">*</span></label>
-//                     <Input name="name" value={form.name} onChange={handleChange} required disabled={submitting} />
-//                   </div>
-//                   <div>
-//                     <label className="block text-sm font-medium mb-1">Email <span className="text-destructive">*</span></label>
-//                     <Input name="email" type="email" value={form.email} onChange={handleChange} required disabled={submitting} />
-//                   </div>
-//                 </div>
-
-//                 {/* Second Row */}
-//                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-//                   <div>
-//                     <label className="block text-sm font-medium mb-1 flex items-center space-x-2">
-//                       <Phone className="h-4 w-4" />
-//                       <span>Phone Number</span>
-//                     </label>
-//                     <Input name="phone" value={form.phone} onChange={handleChange} placeholder="e.g., 0712345678" disabled={submitting} />
-//                   </div>
-//                   <div>
-//                     <label className="block text-sm font-medium mb-1">Gender</label>
-//                     <select name="gender" value={form.gender} onChange={handleChange} className="w-full border rounded px-2 py-1" disabled={submitting}>
-//                       <option value="">Select gender</option>
-//                       <option value="male">Male</option>
-//                       <option value="female">Female</option>
-//                       <option value="other">Other</option>
-//                     </select>
-//                   </div>
-//                 </div>
-
-//                 {/* Third Row */}
-//                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-//                   <div>
-//                     <label className="block text-sm font-medium mb-1">Role <span className="text-destructive">*</span></label>
-//                     <select name="role" value={form.role} onChange={handleChange} className="w-full border rounded px-2 py-1" required disabled={submitting}>
-//                       <option value="">Select role</option>
-//                       {roles.map(role => (
-//                         <option key={role.id} value={role.name}>
-//                           {formatRole(role.name)}
-//                         </option>
-//                       ))}
-//                     </select>
-//                   </div>
-//                   <div>
-//                     <label className="block text-sm font-medium mb-1">Password <span className="text-destructive">*</span></label>
-//                     <Input name="password" type="password" value={form.password} onChange={handleChange} required disabled={submitting} />
-//                   </div>
-//                 </div>
-
-//                 {error && <div className="text-destructive text-sm">{error}</div>}
-//                 <div className="flex justify-end">
-//                   <Button type="button" variant="outline" className="mr-2" onClick={handleCloseModal} disabled={submitting}>Cancel</Button>
-//                   <Button type="submit" disabled={submitting} className="bg-primary text-primary-foreground">
-//                     {submitting ? 'Creating...' : 'Create Staff Member'}
-//                   </Button>
-//                 </div>
-//               </form>
-//             </div>
-//           </div>
-//         )}
-
-//         {/* Staff Table */}
-//         <Card>
-//           <CardHeader>
-//             <CardTitle>School Staff</CardTitle>
-//             <CardDescription>
-//               View and manage staff members at your school
-//             </CardDescription>
-//           </CardHeader>
-//           <CardContent>
-//             <Table>
-//               <TableHeader>
-//                 <TableRow>
-//                   <TableHead>Staff Member</TableHead>
-//                   <TableHead>Role</TableHead>
-//                   <TableHead>Status</TableHead>
-//                   <TableHead>Last Login</TableHead>
-//                 </TableRow>
-//               </TableHeader>
-//               <TableBody>
-//                 {loading ? (
-//                   <TableRow>
-//                     <TableCell colSpan={4} className="text-center">Loading...</TableCell>
-//                   </TableRow>
-//                 ) : users.length === 0 ? (
-//                   <TableRow>
-//                     <TableCell colSpan={4} className="text-center">No staff members found.</TableCell>
-//                   </TableRow>
-//                 ) : (
-//                   users.map((user) => (
-//                     <TableRow key={user.id} className="hover:bg-muted/50">
-//                       <TableCell>
-//                         <div className="flex items-center space-x-3">
-//                           <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
-//                             <User className="h-5 w-5 text-primary-foreground" />
-//                           </div>
-//                           <div>
-//                             <div className="font-semibold">{user.name}</div>
-//                             <div className="text-sm text-muted-foreground flex items-center">
-//                               <Mail className="h-3 w-3 mr-1" />
-//                               {user.email}
-//                             </div>
-//                           </div>
-//                         </div>
-//                       </TableCell>
-//                       <TableCell>
-//                         <Badge className="bg-muted text-muted-foreground">
-//                           {formatRole(user.role || '')}
-//                         </Badge>
-//                       </TableCell>
-//                       <TableCell>
-//                         {getStatusBadge(user.status || '')}
-//                       </TableCell>
-//                       <TableCell>
-//                         <div className="text-sm">
-//                           {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : '-'}
-//                         </div>
-//                         <div className="text-xs text-muted-foreground">
-//                           {user.lastLogin ? new Date(user.lastLogin).toLocaleTimeString() : ''}
-//                         </div>
-//                       </TableCell>
-//                     </TableRow>
-//                   ))
-//                 )}
-//               </TableBody>
-//             </Table>
-//           </CardContent>
-//         </Card>
-//       </div>
-//       <Toaster />
-//     </>
-//   );
-// };
-
-// // Utility functions
-// function getSubCountiesByCountyId(county_id) {
-//   return subcounties
-//     .filter((s): s is { subcounty_id: string; county_id: string; constituency_name: string } => 'county_id' in s && 'constituency_name' in s)
-//     .filter((s) => s.county_id === county_id);
-// }
-// function getWardsBySubCountyId(subCountyId) {
-//   return wards
-//     .filter((w): w is { station_id: string; subcounty_id: string; constituency_name: string; ward: string } =>
-//       typeof w === 'object' && 'subcounty_id' in w && typeof w.subcounty_id === 'string'
-//     )
-//     .filter((w) => w.subcounty_id === subCountyId);
-// }
-
-// const Users = () => {
-//   const [users, setUsers] = useState<UserModel[]>([]);
-//   const [loading, setLoading] = useState(true);
-//   const [showModal, setShowModal] = useState(false);
-//   const [form, setForm] = useState<CreateUserInput & { subcounty_ids?: string[]; ward_ids?: string[] }>({ name: '', email: '', password: '', phone: '', role: '', county_code: '', subcounty_ids: [], ward_ids: [] });
-//   const [submitting, setSubmitting] = useState(false);
-//   const [error, setError] = useState<string | null>(null);
-//   const [institutions, setInstitutions] = useState<any[]>([]);
-//   const [subcounties, setSubcounties] = useState<any[]>([]);
-//   const [wards, setWards] = useState<any[]>([]);
-//   const [roles, setRoles] = useState<any[]>([]);
-//   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-//   const [selectedUser, setSelectedUser] = useState<UserModel | null>(null);
-//   const [isEditing, setIsEditing] = useState(false);
-//   const [showTransferModal, setShowTransferModal] = useState(false);
-//   const [transferForm, setTransferForm] = useState({
-//     new_county_code: '',
-//     new_county: '',
-//     new_subcounty: '',
-//     new_ward: '',
-//     new_institution_id: '',
+// const RolesPermissions = () => {
+//   const [users, setUsers] = useState<User[]>([]);
+//   const [roles, setRoles] = useState<Role[]>([]);
+//   const [permissions, setPermissions] = useState<Permission[]>([]);
+//   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+//   const [selectedRole, setSelectedRole] = useState('');
+//   const [selectedPermission, setSelectedPermission] = useState('');
+//   const [showAssignRoleModal, setShowAssignRoleModal] = useState(false);
+//   const [showCreatePermissionModal, setShowCreatePermissionModal] = useState(false);
+//   const [showEditRoleModal, setShowEditRoleModal] = useState(false);
+//   const [showEditPermissionModal, setShowEditPermissionModal] = useState(false);
+//   const [showAddRoleModal, setShowAddRoleModal] = useState(false);
+//   const [newPermissionName, setNewPermissionName] = useState('');
+//   const [editName, setEditName] = useState('');
+//   const [selectedItemId, setSelectedItemId] = useState<number | null>(null);
+//   const [assigning, setAssigning] = useState(false);
+//   const [creatingPermission, setCreatingPermission] = useState(false);
+//   const [isLoading, setIsLoading] = useState(true);
+//   const [newRoleName, setNewRoleName] = useState('');
+//   const [selectedPermissions, setSelectedPermissions] = useState<number[]>([]);
+//   const [roleStats, setRoleStats] = useState({
+//     totalRoles: 0,
+//     totalPermissions: 0,
+//     totalUsers: 0
 //   });
-//   const [selectedCounty, setSelectedCounty] = useState('');
-//   const [selectedSubcounty, setSelectedSubcounty] = useState('');
 //   const [page, setPage] = useState(0);
 //   const [rowsPerPage, setRowsPerPage] = useState(5);
-//   const [openInstitution, setOpenInstitution] = useState(false);
-//   const [institutionSearch, setInstitutionSearch] = useState('');
-//   const [transferInstitutionSearch, setTransferInstitutionSearch] = useState('');
-//   const { currentUser } = useRole();
+//   const [permissionsSearchTerm, setPermissionsSearchTerm] = useState('');
+//   const [rolesSearchTerm, setRolesSearchTerm] = useState('');
 //   const { toast } = useToast();
-
-
-//   // If current user is school admin, show school admin interface
-//   if (currentUser?.role === 'school_admin') {
-//     return <SchoolAdminUsers />;
-//   }
-
-//   const fetchUsers = async () => {
-//     setLoading(true);
-//     try {
-//       const data = await getUsers();
-//       if (Array.isArray(data)) {
-//         setUsers(data);
-//       } else if (
-//         data &&
-//         typeof data === 'object' &&
-//         'users' in data &&
-//         Array.isArray((data as { users: UserModel[] }).users)
-//       ) {
-//         setUsers((data as { users: UserModel[] }).users);
-//       } else {
-//         setUsers([]);
-//       }
-//     } catch (error) {
-//       setUsers([]);
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-//   // Fetch institutions for select and listing
-//   const fetchInstitutions = async () => {
-//     setLoading(true);
-//     try {
-//       const data = await getInstitutions();
-//       setInstitutions(Array.isArray(data.institutions) ? data.institutions : []);
-//     } catch (e) {
-//       setInstitutions([]);
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-//   // Fetch roles for dropdown
-//   const fetchRoles = async () => {
-//     try {
-//       const data = await getPermissions();
-//       setRoles(data.roles || []);
-//     } catch (e) {
-//       setRoles([]);
-//     }
-//   };
-
-//   // Fetch subcounties for the agent's county
-//    const fetchSubcounties = async (countyId: string) => {
-//      try {
-//        // Filter subcounties from data.json based on county_id
-//        const subcountiesData = getSubCountiesByCountyId(countyId).map((subcounty: any) => ({
-//          id: subcounty.subcounty_id,
-//          name: subcounty.constituency_name,
-//          county_id: subcounty.county_id
-//        }));
-//        setSubcounties(subcountiesData);
-//      } catch (e) {
-//        setSubcounties([]);
-//      }
-//    };
-
-//   // Fetch wards for the selected subcounty
-//    const fetchWards = async (subcountyId: string) => {
-//      try {
-//        // Filter wards from data.json based on subcounty_id
-//        const wardsData = getWardsBySubCountyId(subcountyId).map((ward: any) => ({
-//          id: ward.station_id,
-//          name: ward.ward,
-//          subcounty_id: ward.subcounty_id
-//        }));
-//        setWards(wardsData);
-//      } catch (e) {
-//        setWards([]);
-//      }
-//    };
+//   const { currentUser } = useRole();
 
 //   useEffect(() => {
-//     fetchUsers();
-//     fetchInstitutions();
-//     fetchRoles();
-//   }, []);
+//     const fetchData = async () => {
+//       setIsLoading(true);
+//       try {
+//         const [usersResponse, permissionsData] = await Promise.all([
+//           getUsers(),
+//           getPermissions()
+//         ]);
 
-//   // Fetch wards when subcounties change
-//    useEffect(() => {
-//      if (form.subcounty_ids && form.subcounty_ids.length > 0) {
-//        // For now, fetch wards for the first selected subcounty
-//        // In a real implementation, you might want to fetch wards for all selected subcounties
-//        fetchWards(form.subcounty_ids[0]);
-//      } else {
-//        setWards([]);
-//      }
-//    }, [form.subcounty_ids]);
+//         setUsers(usersResponse.users || []); // Access the users array from the response
+//         setPermissions(permissionsData.permissions?.map(p => ({ ...p, status: p.status || 'Active' })) || []);
+//         setRoles(permissionsData.roles?.map(r => ({ ...r, status: r.status || 'Active' })) || []);
+//       } catch (error: any) {
+//         console.error('Error fetching data:', error);
+//         let errorMessage = 'Failed to load data. Please try again.';
+//         if (error?.response?.status === 403 || error?.response?.status === 401) {
+//           errorMessage = 'You do not have permission to access this data.';
+//         } else if (error?.response?.data?.message) {
+//           errorMessage = error.response.data.message;
+//         }
+//         toast({
+//           title: 'Error',
+//           description: errorMessage,
+//           variant: 'destructive',
+//         });
+//         // Set empty arrays as fallback
+//         setUsers([]);
+//         setPermissions([]);
+//         setRoles([]);
+//       } finally {
+//         setIsLoading(false);
+//       }
+//     };
 
-//   const formatRole = (role: string) => {
-//     return role.split('_').map(word => 
-//       word.charAt(0).toUpperCase() + word.slice(1)
-//     ).join(' ');
-//   };
+//     fetchData();
+//   }, [toast]);
 
-//   const getRoleBadgeVariant = (role: string) => {
-//     switch (role) {
-//       case 'admin':
-//         return 'bg-destructive text-destructive-foreground';
-//       case 'county_admin':
-//         return 'bg-warning text-warning-foreground';
-//       case 'school_admin':
-//         return 'bg-success text-success-foreground';
-//       default:
-//         return 'bg-muted text-muted-foreground';
-//     }
-//   };
+//   const availableRoles = currentUser?.role === 'agent'
+//     ? roles.filter(r => r.name === 'school_admin')
+//     : roles;
 
-//   const getStatusBadge = (status: string) => {
-//     switch (status) {
-//       case 'Active':
-//         return <Badge className="bg-success text-success-foreground">Active</Badge>;
-//       case 'Inactive':
-//         return <Badge className="bg-muted text-muted-foreground">Inactive</Badge>;
-//       case 'Suspended':
-//         return <Badge className="bg-destructive text-destructive-foreground">Suspended</Badge>;
-//       default:
-//         return <Badge variant="outline">{status}</Badge>;
-//     }
-//   };
-
-//   const visibleUsers = React.useMemo(
-//     () => users.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage),
-//     [users, page, rowsPerPage]
+//   const filteredPermissions = React.useMemo(
+//     () => {
+//       if (!permissionsSearchTerm) return permissions;
+//       return permissions.filter(permission =>
+//         permission.name.toLowerCase().includes(permissionsSearchTerm.toLowerCase())
+//       );
+//     },
+//     [permissions, permissionsSearchTerm]
 //   );
 
-//   const handleOpenModal = () => {
-//     setForm({ name: '', email: '', password: '', phone: '', role: '', county_code: '', subcounty_ids: [], ward_ids: [] });
-//     setError(null);
-//     setShowModal(true);
+//   const visiblePermissions = React.useMemo(
+//     () => filteredPermissions.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage),
+//     [filteredPermissions, page, rowsPerPage]
+//   );
 
-//     // If current user is agent, fetch subcounties for their county
-//     if (currentUser?.role === 'agent' && currentUser?.county_code) {
-//       fetchSubcounties(currentUser.county_code);
-//     }
-//   };
+//   const filteredRoles = React.useMemo(
+//     () => {
+//       if (!rolesSearchTerm) return roles;
+//       return roles.filter(role =>
+//         role.name.toLowerCase().includes(rolesSearchTerm.toLowerCase())
+//       );
+//     },
+//     [roles, rolesSearchTerm]
+//   );
 
-//   const handleCloseModal = () => {
-//     setShowModal(false);
-//     setError(null);
-//     setIsEditing(false);
-//     setSelectedUser(null);
-//     setForm({ name: '', email: '', password: '', phone: '', role: '', county_code: '', subcounty_ids: [], ward_ids: [] });
-//     setSubcounties([]);
-//     setWards([]);
-//   };
-
-//   const handleCloseTransferModal = () => {
-//     setShowTransferModal(false);
-//     setSelectedUser(null);
-//     setTransferForm({
-//       new_county_code: '',
-//       new_county: '',
-//       new_subcounty: '',
-//       new_ward: '',
-//       new_institution_id: '',
-//     });
-//     setTransferInstitutionSearch('');
-//     setSelectedCounty('');
-//     setSelectedSubcounty('');
-//   };
-
-//   // Helper functions to get data from data.json
-//   const getCounties = (): County[] => {
-//     const countiesTable = dataJson.find((table: any) => table.name === 'counties') as { data: County[] } | undefined;
-//     return countiesTable?.data || [];
-//   };
-
-//   const getSubcounties = (countyId: string): Subcounty[] => {
-//     const subcountiesTable = dataJson.find((table: any) => table.name === 'subcounties') as { data: Subcounty[] } | undefined;
-//     return subcountiesTable?.data.filter((subcounty) => subcounty.county_id === countyId) || [];
-//   };
-
-//   const getWards = (subcountyId: string): Station[] => {
-//     const stationTable = dataJson.find((table: any) => table.name === 'station') as { data: Station[] } | undefined;
-//     return stationTable?.data.filter((station) => station.subcounty_id === subcountyId) || [];
-//   };
-
-//   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-//     const { name, value } = e.target;
-
-//     if (name === 'subcounty_ids') {
-//       // Reset wards when subcounties change
-//       setForm({ ...form, [name]: value ? [value] : [], ward_ids: [] });
-//     } else if (name === 'role') {
-//       // Reset institution when role changes to non-school_admin
-//       if (value !== 'school_admin') {
-//         setForm({ ...form, [name]: value, institution_id: undefined });
-//       } else {
-//         setForm({ ...form, [name]: value });
-//       }
-//     } else if (name === 'phone') {
-//       // Allow only digits for phone number
-//       const numericValue = value.replace(/\D/g, '');
-//       setForm({ ...form, [name]: numericValue });
-//     } else {
-//       setForm({ ...form, [name]: value });
-//     }
-//   };
-
-//   const handleEdit = (user: UserModel) => {
-//     setSelectedUser(user);
-//     setForm({
-//       name: user.name,
-//       email: user.email,
-//       phone: user.phone || '',
-//       role: user.role || '',
-//       gender: user.gender,
-//       institution_id: user.institution_id,
-//       subcounty_ids: (user as any).subcounty_id ? [(user as any).subcounty_id] : [],
-//       ward_ids: (user as any).ward_id ? [(user as any).ward_id] : [],
-//       county_code: (user as any).county_code || '',
-//       password: '' // Password is optional for updates
-//     });
-
-//     // If current user is agent, fetch subcounties and wards for editing any user
-//     if (currentUser?.role === 'agent' && currentUser?.county_code) {
-//       fetchSubcounties(currentUser.county_code);
-//       if ((user as any).subcounty_id) {
-//         fetchWards((user as any).subcounty_id);
-//       }
-//     }
-
-//     setIsEditing(true);
-//     setShowModal(true);
-//   };
-
-//   const handleToggleStatus = async (user: UserModel) => {
-//     const newStatus = user.status === 'Active' ? 'Inactive' : 'Active';
-//     try {
-//       await api.patch(Urls.CHANGE_USER_STATUS(user.id));
-//       toast({
-//         title: "Success",
-//         description: `User ${newStatus.toLowerCase()}d successfully`,
-//         variant: "default",
-//       });
-//       fetchUsers();
-//     } catch (error: any) {
-//       toast({
-//         title: "Error",
-//         description: error.response?.data?.message || "Failed to update user status",
-//         variant: "destructive",
-//       });
-//     }
-//   };
-
-//   const handleTransfer = (user: UserModel) => {
-//     setSelectedUser(user);
-//     setTransferForm({
-//       new_county_code: '',
-//       new_county: '',
-//       new_subcounty: '',
-//       new_ward: '',
-//       new_institution_id: '',
-//     });
-//     setShowTransferModal(true);
-//   };
-
-//   const handleDelete = (user: UserModel) => {
-//     setSelectedUser(user);
-//     setShowDeleteDialog(true);
-//   };
-
-//   const handleTransferSubmit = async (e: React.FormEvent) => {
-//     e.preventDefault();
-//     if (!selectedUser) return;
-
-//     try {
-//       const transferData: any = {};
-
-//       if (selectedUser.role === 'agent') {
-//         // For agents, collect county information (county is required, subcounty and ward are optional)
-//         if (transferForm.new_county_code) transferData.new_county_code = transferForm.new_county_code;
-//         if (transferForm.new_county) transferData.new_county = transferForm.new_county;
-//         if (transferForm.new_subcounty) transferData.new_subcounty = transferForm.new_subcounty;
-//         if (transferForm.new_ward) transferData.new_ward = transferForm.new_ward;
-//       } else if (selectedUser.role === 'school_admin') {
-//         // For school admins, collect institution information
-//         if (transferForm.new_institution_id) transferData.new_institution_id = parseInt(transferForm.new_institution_id);
-//       }
-
-//       await transferUser(selectedUser.id, transferData);
-//       toast({
-//         title: "Success",
-//         description: "User transferred successfully",
-//         variant: "default",
-//       });
-//       setShowTransferModal(false);
-//       fetchUsers(); // Refresh the users list
-//     } catch (error: any) {
-//       toast({
-//         title: "Error",
-//         description: error.response?.data?.message || "Failed to transfer user",
-//         variant: "destructive",
-//       });
-//     }
-//   };
-
-//   const confirmDelete = async () => {
-//     if (!selectedUser) return;
-
-//     try {
-//       await deleteUser(selectedUser.id);
-//       toast({
-//         title: "Success",
-//         description: "User deleted successfully",
-//         variant: "default",
-//       });
-//       fetchUsers(); // Refresh the users list
-//     } catch (error: any) {
-//       toast({
-//         title: "Error",
-//         description: error.response?.data?.message || "Failed to delete user",
-//         variant: "destructive",
-//       });
-//     } finally {
-//       setShowDeleteDialog(false);
-//       setSelectedUser(null);
-//     }
-//   };
+//   const visibleRoles = React.useMemo(
+//     () => filteredRoles.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage),
+//     [filteredRoles, page, rowsPerPage]
+//   );
 
 //   const handleChangePage = (newPage: number) => {
 //     setPage(newPage);
@@ -810,827 +168,692 @@
 //     setPage(0);
 //   };
 
-//   const handleSubmit = async (e: React.FormEvent) => {
+//   const openAssignRoleModal = (user: User) => {
+//     setSelectedUser(user);
+//     setSelectedRole('');
+//     setShowAssignRoleModal(true);
+//   };
+
+//   const closeAssignRoleModal = () => {
+//     setShowAssignRoleModal(false);
+//     setSelectedUser(null);
+//     setSelectedRole('');
+//   };
+
+//   const handleEditRole = async (e: React.FormEvent) => {
 //     e.preventDefault();
-//     setSubmitting(true);
-//     setError(null);
-
-//     // Validation for subcounty and ward when current user is agent (now optional)
-//     // No validation needed as they are optional
-
-//     // Validation for county_code when current user is ministry_admin
-//     if (currentUser?.role === 'ministry_admin') {
-//       if (!form.county_code) {
-//         setError('County Code is required');
-//         setSubmitting(false);
-//         return;
-//       }
-//     }
-
-//     // Validation for institution when role is school_admin
-//     if (form.role === 'school_admin' && !form.institution_id) {
-//       setError('Institution is required when role is School Admin');
-//       setSubmitting(false);
-//       return;
-//     }
-
-//     // Validation for phone number
-//     if (form.phone && !/^07\d{8}$/.test(form.phone)) {
-//       setError('Phone number must be a valid 10 digits ');
-//       setSubmitting(false);
-//       return;
-//     }
+//     if (!selectedItemId || !editName) return;
 
 //     try {
-//       if (isEditing && selectedUser) {
-//         // Handle update
-//         const updateData = { ...form };
-//         if (!updateData.password) {
-//           delete updateData.password;
-//         }
-//         // Map subcounty_ids to subcounty name and ward_ids to ward name (take first if multiple)
-//         if (updateData.subcounty_ids && updateData.subcounty_ids.length > 0) {
-//           const selectedSubcounty = subcounties.find(s => s.id === updateData.subcounty_ids[0]);
-//           updateData.subcounty = selectedSubcounty ? selectedSubcounty.name : '';
-//           delete (updateData as any).subcounty_ids;
-//         }
-//         if (updateData.ward_ids && updateData.ward_ids.length > 0) {
-//           const selectedWard = wards.find(w => w.id === updateData.ward_ids[0]);
-//           updateData.ward = selectedWard ? selectedWard.name : '';
-//           delete (updateData as any).ward_ids;
-//         }
-//         await updateUser(selectedUser.id, updateData);
-//         toast({
-//           title: "Success",
-//           description: "User updated successfully",
-//           variant: "default",
-//         });
-//       } else {
-//         // Handle create
-//         const createData = { ...form };
-//         // Map subcounty_ids to subcounty name and ward_ids to ward name (take first if multiple)
-//         if (createData.subcounty_ids && createData.subcounty_ids.length > 0) {
-//           const selectedSubcounty = subcounties.find(s => s.id === createData.subcounty_ids[0]);
-//           createData.subcounty = selectedSubcounty ? selectedSubcounty.name : '';
-//           delete (createData as any).subcounty_ids;
-//         }
-//         if (createData.ward_ids && createData.ward_ids.length > 0) {
-//           const selectedWard = wards.find(w => w.id === createData.ward_ids[0]);
-//           createData.ward = selectedWard ? selectedWard.name : '';
-//           delete (createData as any).ward_ids;
-//         }
-//         await createUser(createData);
-//         toast({
-//           title: "Success",
-//           description: "User created successfully",
-//           variant: "default",
-//         });
+//       await updateRole(selectedItemId, { name: editName });
+//       toast({
+//         title: "Success",
+//         description: "Role updated successfully",
+//         variant: "default",
+//       });
+//       const permissionsData = await getPermissions();
+//       setRoles(permissionsData.roles?.map(r => ({ ...r, status: r.status || 'Active' })) || []);
+//       setShowEditRoleModal(false);
+//     } catch (error: any) {
+//       console.error('Error updating role:', error);
+//       toast({
+//         title: "Error",
+//         description: error.message || "Failed to update role",
+//         variant: "destructive",
+//       });
+//     }
+//   };
+
+//   const handleToggleRoleStatus = async (id: number, newStatus: string) => {
+//     try {
+//       await api.patch(Urls.CHANGE_USER_STATUS(id));
+//       toast({
+//         title: "Success",
+//         description: `Role ${newStatus.toLowerCase()}d successfully`,
+//         variant: "default",
+//       });
+//       const permissionsData = await getPermissions();
+//       setRoles(permissionsData.roles?.map(r => ({ ...r, status: r.status || 'Active' })) || []);
+//     } catch (error: any) {
+//       console.error('Error updating role status:', error);
+//       toast({
+//         title: "Error",
+//         description: error.response?.data?.message || "Failed to update role status",
+//         variant: "destructive",
+//       });
+//     }
+//   };
+
+//   const handleEditPermission = async (e: React.FormEvent) => {
+//     e.preventDefault();
+//     if (!selectedItemId || !editName) return;
+
+//     try {
+//       await updatePermission(selectedItemId, { name: editName });
+//       toast({
+//         title: "Success",
+//         description: "Permission updated successfully",
+//         variant: "default",
+//       });
+//       const permissionsData = await getPermissions();
+//       setPermissions(permissionsData.permissions?.map(p => ({ ...p, status: p.status || 'Active' })) || []);
+//       setShowEditPermissionModal(false);
+//     } catch (error: any) {
+//       console.error('Error updating permission:', error);
+//       toast({
+//         title: "Error",
+//         description: error.message || "Failed to update permission",
+//         variant: "destructive",
+//       });
+//     }
+//   };
+
+//   const handleTogglePermissionStatus = async (id: number, newStatus: string) => {
+//     try {
+//       await api.patch(Urls.CHANGE_USER_STATUS(id));
+//       toast({
+//         title: "Success",
+//         description: `Permission ${newStatus.toLowerCase()}d successfully`,
+//         variant: "default",
+//       });
+//       const permissionsData = await getPermissions();
+//       setPermissions(permissionsData.permissions?.map(p => ({ ...p, status: p.status || 'Active' })) || []);
+//     } catch (error: any) {
+//       console.error('Error updating permission status:', error);
+//       toast({
+//         title: "Error",
+//         description: error.response?.data?.message || "Failed to update permission status",
+//         variant: "destructive",
+//       });
+//     }
+//   };
+
+//   const handleAssignRole = async (e: React.FormEvent) => {
+//     e.preventDefault();
+//     if (!selectedUser || !selectedRole) return;
+    
+//     setAssigning(true);
+//     try {
+//       const selectedRoleObj = roles.find(r => r.name === selectedRole);
+//       if (!selectedRoleObj) {
+//         throw new Error('Selected role not found');
 //       }
-//       setShowModal(false);
-//       fetchUsers();
-//     } catch (err: any) {
-//       const errorResponse = err?.response?.data;
-//       if (errorResponse?.errors) {
-//         // Handle validation errors
-//         const validationErrors = Object.entries(errorResponse.errors)
-//           .map(([field, messages]) => `${field}: ${(messages as string[]).join(', ')}`)
-//           .join('\n');
-        
-//         toast({
-//           title: "Validation Error",
-//           description: validationErrors,
-//           variant: "destructive",
-//         });
-//         setError(validationErrors);
-//       } else {
-//         const errorMessage = errorResponse?.message || `Failed to ${isEditing ? 'update' : 'create'} user`;
-//         toast({
-//           title: "Error",
-//           description: errorMessage,
-//           variant: "destructive",
-//         });
-//         setError(errorMessage);
-//       }
+      
+//       await assignUserRole({
+//         user_id: selectedUser.id,
+//         role_id: selectedRoleObj.id,
+//         role_name: selectedRole
+//       });
+      
+//       toast({
+//         title: "Success",
+//         description: "Role assigned successfully",
+//         variant: "default",
+//       });
+      
+//       await getUsers().then(res => setUsers(res.users || []));
+//       closeAssignRoleModal();
+//     } catch (error: any) {
+//       console.error('Error assigning role:', error);
+//       toast({
+//         title: "Error",
+//         description: error.response?.data?.message || "Failed to assign role",
+//         variant: "destructive",
+//       });
 //     } finally {
-//       setSubmitting(false);
+//       setAssigning(false);
+//     }
+//   };
+
+//   const openCreatePermissionModal = () => {
+//     setNewPermissionName('');
+//     setShowCreatePermissionModal(true);
+//   };
+
+//   const closeCreatePermissionModal = () => {
+//     setShowCreatePermissionModal(false);
+//     setNewPermissionName('');
+//   };
+
+//   const handleCreatePermission = async (e: React.FormEvent) => {
+//     e.preventDefault();
+//     if (!newPermissionName) return;
+//     setCreatingPermission(true);
+//     try {
+//       await createPermission({
+//         name: newPermissionName
+//       });
+//       const updatedPermissions = await getPermissions();
+//       setPermissions(updatedPermissions.permissions?.map(p => ({ ...p, status: p.status || 'Active' })) || []);
+//       toast({
+//         title: "Success",
+//         description: "Permission created successfully",
+//         variant: "default",
+//       });
+//       closeCreatePermissionModal();
+//     } finally {
+//       setCreatingPermission(false);
+//     }
+//   };
+
+//   const openAddRoleModal = () => {
+//     setNewRoleName('');
+//     setSelectedPermissions([]);
+//     setShowAddRoleModal(true);
+//   };
+
+//   const handleAssignPermissionToRole = async (permissionName: string, roleName: string) => {
+//     try {
+//       const selectedPermission = permissions.find(p => p.name === permissionName);
+//       const selectedRole = roles.find(r => r.name === roleName);
+
+//       if (!selectedPermission || !selectedRole) {
+//         throw new Error('Permission or Role not found');
+//       }
+
+//       await assignPermissionToRole({
+//         permission_name: permissionName,
+//         role_name: roleName,
+//         permission_id: selectedPermission.id,
+//         role_id: selectedRole.id
+//       });
+      
+//       toast({
+//         title: "Success",
+//         description: "Permission assigned successfully",
+//         variant: "default",
+//       });
+
+//       // Refresh permissions after assignment
+//       const updatedPermissions = await getPermissions();
+//       setPermissions(updatedPermissions.permissions?.map(p => ({ ...p, status: p.status || 'Active' })) || []);
+//     } catch (error: any) {
+//       // Handle error response
+//       const errorMessage = error.response?.data?.message || "Error assigning permission to role";
+//       toast({
+//         title: "Error",
+//         description: errorMessage,
+//         variant: "destructive",
+//       });
+//       console.error('Error assigning permission to role:', error);
 //     }
 //   };
 
 //   return (
 //     <>
-//     <div className="space-y-6">
-//       <div className="flex items-center justify-between">
+//       <div className="space-y-6">
+//         <div className="flex items-center justify-between mb-4">
 //         <div>
-//           <h1 className="text-2xl font-bold text-foreground">User Management</h1>
-//           <p className="text-muted-foreground">
-//             Manage system users and their access permissions
-//           </p>
+//           <h1 className="text-2xl font-bold text-foreground">Role & Permission Management</h1>
+//           <p className="text-muted-foreground">Manage system roles and their associated permissions</p>
 //         </div>
-//         <Button className="bg-primary hover:bg-primary-hover text-primary-foreground" onClick={handleOpenModal}>
-//           <User className="h-4 w-4 mr-2" />
-//           Add New User
-//         </Button>
+//         {/* <Button
+//           onClick={() => setShowAssignRoleModal(true)}
+//           className="bg-primary text-primary-foreground"
+//         >
+//           <Plus className="h-4 w-4 mr-1" /> Assign Role
+//         </Button> */}
 //       </div>
 
 //       {/* Statistics Cards */}
-//       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 my-6">
+//       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+//         <Card>
+//           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+//             <CardTitle className="text-sm font-medium">Total Roles</CardTitle>
+//             <Shield className="h-4 w-4 text-muted-foreground" />
+//           </CardHeader>
+//           <CardContent>
+//             <div className="text-2xl font-bold">{rolesSearchTerm ? filteredRoles.length : roles.length}</div>
+//             <p className="text-xs text-muted-foreground">
+//               {rolesSearchTerm ? `Filtered from ${roles.length} total` : 'Active system roles'}
+//             </p>
+//           </CardContent>
+//         </Card>
+//         <Card>
+//           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+//             <CardTitle className="text-sm font-medium">Total Permissions</CardTitle>
+//             <Lock className="h-4 w-4 text-muted-foreground" />
+//           </CardHeader>
+//           <CardContent>
+//             <div className="text-2xl font-bold">{permissionsSearchTerm ? filteredPermissions.length : permissions.length}</div>
+//             <p className="text-xs text-muted-foreground">
+//               {permissionsSearchTerm ? `Filtered from ${permissions.length} total` : 'System permissions'}
+//             </p>
+//           </CardContent>
+//         </Card>
 //         <Card>
 //           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
 //             <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-//             <User className="h-4 w-4 text-muted-foreground" />
+//             <Users className="h-4 w-4 text-muted-foreground" />
 //           </CardHeader>
 //           <CardContent>
 //             <div className="text-2xl font-bold">{users.length}</div>
 //             <p className="text-xs text-muted-foreground">
-//               Active system users
-//             </p>
-//           </CardContent>
-//         </Card>
-//         <Card>
-//           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-//             <CardTitle className="text-sm font-medium">System Admins</CardTitle>
-//             <Shield className="h-4 w-4 text-muted-foreground" />
-//           </CardHeader>
-//           <CardContent>
-//             <div className="text-2xl font-bold">
-//               {users.filter(user => user.role === 'admin').length}
-//             </div>
-//             <p className="text-xs text-muted-foreground">
-//               Administrators
-//             </p>
-//           </CardContent>
-//         </Card>
-//         <Card>
-//           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-//             <CardTitle className="text-sm font-medium">Active Users</CardTitle>
-//             <User className="h-4 w-4 text-muted-foreground" />
-//           </CardHeader>
-//           <CardContent>
-//             <div className="text-2xl font-bold">
-//               {users.filter(user => user.status === 'Active').length}
-//             </div>
-//             <p className="text-xs text-muted-foreground">
-//               Currently active users
+//               Active users in system
 //             </p>
 //           </CardContent>
 //         </Card>
 //       </div>
 
-//       {/* Modal for creating user */}
-//       {showModal && (
-//         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-//           <div className="bg-white rounded-lg shadow-lg w-full p-6 relative" style={{ maxWidth: '650px' }}>
-//             <button className="absolute top-2 right-2 text-muted-foreground" onClick={handleCloseModal}>
-//               <X className="h-5 w-5" />
-//             </button>
-//             <h2 className="text-xl font-bold mb-4">{isEditing ? 'Edit User' : 'Create New User'}</h2>
-//             <form onSubmit={handleSubmit} className="space-y-4">
-//               {/* First Row */}
-//               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-//                 <div>
-//                   <label className="block text-sm font-medium mb-1">Name <span className="text-destructive">*</span></label>
-//                   <Input name="name" value={form.name} onChange={handleChange} required disabled={submitting} />
-//                 </div>
-//                 <div>
-//                   <label className="block text-sm font-medium mb-1">Email <span className="text-destructive">*</span></label>
-//                   <Input name="email" type="email" value={form.email} onChange={handleChange} required disabled={submitting} />
-//                 </div>
-//               </div>
-
-//               {/* Second Row */}
-//               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-//                 {/* Phone Number */}
+//       <div className="grid grid-cols-1 gap-6">
+//         {/* User Roles Section */}
+//         <Card>
+//           <CardHeader>
+//             <div className="flex items-center justify-between">
 //               <div>
-//               <label className="block text-sm font-medium mb-1 flex items-center space-x-2">
-//                 <Phone className="h-4 w-4" />
-//                 <span>Phone Number</span>
-//               </label>
-//               <Input name="phone" value={form.phone} onChange={handleChange} placeholder="e.g., 0712345678" disabled={submitting} />
+//                 <CardTitle>User Roles</CardTitle>
+//                 <CardDescription>Available roles and their descriptions</CardDescription>
 //               </div>
-//                 <div>
-//                   <label className="block text-sm font-medium mb-1">Gender</label>
-//                   <select name="gender" value={form.gender} onChange={handleChange} className="w-full border rounded px-2 py-1" disabled={submitting}>
-//                     <option value="">Select gender</option>
-//                     <option value="male">Male</option>
-//                     <option value="female">Female</option>
-//                     <option value="other">Other</option>
-//                   </select>
-//                 </div>
+//               <Button onClick={openAddRoleModal} className="bg-primary text-primary-foreground">
+//                 <Plus className="h-4 w-4 mr-1" /> Add Role
+//               </Button>
+//             </div>
+//           </CardHeader>
+//           <CardContent>
+//             {/* Search Input */}
+//             <div className="flex items-center space-x-2 mb-4">
+//               <Input
+//                 placeholder="Search roles..."
+//                 value={rolesSearchTerm}
+//                 onChange={(e) => {
+//                   setRolesSearchTerm(e.target.value);
+//                   setPage(0); // Reset to first page when searching
+//                 }}
+//                 className="max-w-sm"
+//               />
+//               {rolesSearchTerm && (
+//                 <Button
+//                   variant="outline"
+//                   size="sm"
+//                   onClick={() => {
+//                     setRolesSearchTerm('');
+//                     setPage(0);
+//                   }}
+//                 >
+//                   Clear
+//                 </Button>
+//               )}
+//             </div>
+//             {isLoading ? (
+//               <div className="flex items-center justify-center p-4">
+//                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
 //               </div>
+//             ) : (
+//               <>
+//                 <Table>
+//                   <TableHeader>
+//                     <TableRow>
+//                       <TableHead>Role Name</TableHead>
+//                       <TableHead>Status</TableHead>
+//                       <TableHead>Actions</TableHead>
+//                     </TableRow>
+//                   </TableHeader>
+//                   <TableBody>
+//                     {visibleRoles.map((role) => (
+//                       <TableRow key={role.id}>
+//                         <TableCell>{role.name.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}</TableCell>
+//                         <TableCell>
+//                           <Badge variant={role.status === 'Active' ? 'default' : 'secondary'}>
+//                             {role.status || 'Active'}
+//                           </Badge>
+//                         </TableCell>
+//                         <TableCell>
+//                           <DropdownMenu>
+//                             <DropdownMenuTrigger asChild>
+//                               <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+//                                 <MoreHorizontal className="h-4 w-4" />
+//                               </Button>
+//                             </DropdownMenuTrigger>
+//                             <DropdownMenuContent align="end" className="w-40">
+//                               <DropdownMenuItem
+//                                 onClick={() => {
+//                                   setSelectedItemId(role.id);
+//                                   setEditName(role.name);
+//                                   setShowEditRoleModal(true);
+//                                 }}
+//                                 className="cursor-pointer"
+//                               >
+//                                 <Edit className="h-4 w-4 mr-2" />
+//                                 Edit
+//                               </DropdownMenuItem>
+//                               <DropdownMenuItem
+//                                 onClick={() => handleToggleRoleStatus(role.id, role.status === 'Active' ? 'Inactive' : 'Active')}
+//                                 className="cursor-pointer"
+//                               >
+//                                 {role.status === 'Active' ? <XCircle className="h-4 w-4 mr-2" /> : <CheckCircle className="h-4 w-4 mr-2" />}
+//                                 {role.status === 'Active' ? 'Deactivate' : 'Activate'}
+//                               </DropdownMenuItem>
+//                             </DropdownMenuContent>
+//                           </DropdownMenu>
+//                         </TableCell>
+//                       </TableRow>
+//                     ))}
+//                   </TableBody>
+//                 </Table>
 
-//               {/* Third Row */}
-//               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-//                 <div>
-//                   <label className="block text-sm font-medium mb-1">Password <span className="text-destructive">*</span></label>
-//                   <Input name="password" type="password" value={form.password} onChange={handleChange} required disabled={submitting} />
-//                 </div>
-//                 {form.role === 'school_admin' && (
-//                   <div>
-//                     <label className="block text-sm font-medium mb-1">Institution (School) <span className="text-destructive">*</span></label>
-//                     <Popover open={openInstitution} onOpenChange={setOpenInstitution}>
-//                       <PopoverTrigger asChild>
+//                 {/* Pagination for roles */}
+//                 {filteredRoles.length > 0 && (
+//                   <div className="flex items-center justify-between px-2 py-4">
+//                     <div className="flex items-center space-x-2">
+//                       <label className="text-sm font-medium">Rows per page:</label>
+//                       <select
+//                         value={rowsPerPage}
+//                         onChange={handleChangeRowsPerPage}
+//                         className="border rounded px-2 py-1 text-sm"
+//                       >
+//                         <option value={5}>5</option>
+//                         <option value={10}>10</option>
+//                         <option value={25}>25</option>
+//                         <option value={50}>50</option>
+//                       </select>
+//                     </div>
+//                     <div className="flex items-center space-x-2">
+//                       <span className="text-sm">
+//                         {page * rowsPerPage + 1}-{Math.min((page + 1) * rowsPerPage, filteredRoles.length)} of {filteredRoles.length}
+//                         {rolesSearchTerm && ` (filtered from ${roles.length} total)`}
+//                       </span>
+//                       <div className="flex space-x-1">
 //                         <Button
 //                           variant="outline"
-//                           role="combobox"
-//                           aria-expanded={openInstitution}
-//                           className="w-full justify-between"
-//                           disabled={submitting}
+//                           size="sm"
+//                           onClick={() => handleChangePage(page - 1)}
+//                           disabled={page === 0}
 //                         >
-//                           {form.institution_id
-//                             ? institutions.find((inst) => inst.id === form.institution_id)?.name
-//                             : "Select institution..."}
-//                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+//                           Previous
 //                         </Button>
-//                       </PopoverTrigger>
-//                       <PopoverContent className="w-full p-0">
-//                         <Command>
-//                           <CommandInput
-//                             placeholder="Search institutions..."
-//                             value={transferInstitutionSearch}
-//                             onValueChange={setTransferInstitutionSearch}
-//                           />
-//                           <CommandEmpty>No institution found.</CommandEmpty>
-//                           <CommandGroup>
-//                             {institutions
-//                               .sort((a, b) => a.name.localeCompare(b.name))
-//                               .filter((inst) =>
-//                                 transferInstitutionSearch === '' ||
-//                                 inst.name.toLowerCase().includes(transferInstitutionSearch.toLowerCase())
-//                               )
-//                               .slice(0, 10)
-//                               .map((inst) => (
-//                                 <CommandItem
-//                                   key={inst.id}
-//                                   value={inst.name}
-//                                   onSelect={() => {
-//                                     setForm({ ...form, institution_id: inst.id });
-//                                     setOpenInstitution(false);
-//                                     setInstitutionSearch('');
-//                                   }}
-//                                 >
-//                                   <Check
-//                                     className={cn(
-//                                       "mr-2 h-4 w-4",
-//                                       form.institution_id === inst.id ? "opacity-100" : "opacity-0"
-//                                     )}
-//                                   />
-//                                   {inst.name}
-//                                 </CommandItem>
-//                               ))}
-//                           </CommandGroup>
-//                           {institutions.length > 10 && (
-//                             <div className="p-2 text-xs text-muted-foreground border-t">
-//                               {institutionSearch === ''
-//                                 // ? "Showing first 10 institutions. Type to search more."
-//                                 // : `Showing first 10 matches for "${institutionSearch}". Refine search for better results.`
-//                               }
-//                             </div>
-//                           )}
-//                         </Command>
-//                       </PopoverContent>
-//                     </Popover>
+//                         <Button
+//                           variant="outline"
+//                           size="sm"
+//                           onClick={() => handleChangePage(page + 1)}
+//                           disabled={(page + 1) * rowsPerPage >= filteredRoles.length}
+//                         >
+//                           Next
+//                         </Button>
+//                       </div>
+//                     </div>
 //                   </div>
 //                 )}
-//               </div>
+//               </>
+//             )}
+//           </CardContent>
+//         </Card>
 
-//               {/* Fourth Row */}
-//               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+//       </div>
+
+//       {/* Create Permission Modal */}
+//       {showCreatePermissionModal && (
+//         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+//           <Card className="w-full max-w-md">
+//             <CardHeader>
+//               <CardTitle>Create Permission</CardTitle>
+//               <Button
+//                 className="absolute top-2 right-2 text-muted-foreground"
+//                 variant="ghost"
+//                 onClick={closeCreatePermissionModal}
+//               >
+//                 <X className="h-5 w-5" />
+//               </Button>
+//             </CardHeader>
+//             <CardContent>
+//               <form onSubmit={handleCreatePermission} className="space-y-4">
+//                 <div>
+//                   <label className="block text-sm font-medium mb-1">Permission Name</label>
+//                   <input
+//                     type="text"
+//                     value={newPermissionName}
+//                     onChange={e => setNewPermissionName(e.target.value)}
+//                     className="w-full border rounded px-2 py-1"
+//                     required
+//                     disabled={creatingPermission}
+//                   />
+//                 </div>
+//                 <div className="flex justify-end space-x-2">
+//                   <Button
+//                     type="button"
+//                     variant="outline"
+//                     onClick={closeCreatePermissionModal}
+//                     disabled={creatingPermission}
+//                   >
+//                     Cancel
+//                   </Button>
+//                   <Button
+//                     type="submit"
+//                     disabled={creatingPermission}
+//                     className="bg-primary text-primary-foreground"
+//                   >
+//                     {creatingPermission ? 'Creating...' : 'Create Permission'}
+//                   </Button>
+//                 </div>
+//               </form>
+//             </CardContent>
+//           </Card>
+//         </div>
+//       )}
+
+//       {/* Assign Role Modal */}
+//       {showAssignRoleModal && (
+//         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+//           <Card className="w-full max-w-md">
+//             <CardHeader>
+//               <CardTitle>Assign Role to User</CardTitle>
+//               <Button
+//                 className="absolute top-2 right-2 text-muted-foreground"
+//                 variant="ghost"
+//                 onClick={closeAssignRoleModal}
+//               >
+//                 <X className="h-5 w-5" />
+//               </Button>
+//             </CardHeader>
+//             <CardContent>
+//               <form onSubmit={handleAssignRole} className="space-y-4">
+//                 <div>
+//                   <label className="block text-sm font-medium mb-1">User</label>
+//                   <select
+//                     value={selectedUser?.id || ''}
+//                     onChange={e => setSelectedUser(users.find(u => u.id === Number(e.target.value)) || null)}
+//                     className="w-full border rounded px-2 py-1"
+//                     required
+//                     disabled={assigning}
+//                   >
+//                     <option value="">Select user</option>
+//                     {users.map(u => (
+//                       <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
+//                     ))}
+//                   </select>
+//                 </div>
 //                 <div>
 //                   <label className="block text-sm font-medium mb-1">Role</label>
-//                   <select name="role" value={form.role} onChange={handleChange} className="w-full border rounded px-2 py-1" disabled={submitting}>
+//                   <select
+//                     value={selectedRole}
+//                     onChange={e => setSelectedRole(e.target.value)}
+//                     className="w-full border rounded px-2 py-1"
+//                     required
+//                     disabled={assigning}
+//                   >
 //                     <option value="">Select role</option>
-//                     {roles
-//                       .filter(role =>
-//                         // Agents cannot assign 'agent' or 'ministry_admin' roles
-//                         !(currentUser?.role === 'agent' && (role.name === 'agent' || role.name === 'ministry_admin'))
-//                       )
-//                       .map(role => (
-//                         <option key={role.id} value={role.name}>
-//                           {role.name.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-//                         </option>
-//                       ))}
+//                     {availableRoles.map(r => (
+//                       <option key={r.id} value={r.name}>
+//                         {r.name.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+//                       </option>
+//                     ))}
 //                   </select>
 //                 </div>
-
-//                 {/* Subcounty field for agents */}
-//                 {currentUser?.role === 'agent' && (
-//                   <div>
-//                     <label className="block text-sm font-medium mb-1">Subcounty (Optional)</label>
-//                     <Popover>
-//                       <PopoverTrigger asChild>
-//                         <Button
-//                           variant="outline"
-//                           role="combobox"
-//                           className="w-full justify-between"
-//                           disabled={submitting}
-//                         >
-//                           {form.subcounty_ids && form.subcounty_ids.length > 0
-//                             ? (() => {
-//                                 const selectedNames = form.subcounty_ids.map(id => subcounties.find(s => s.id === id)?.name).filter(Boolean);
-//                                 if (selectedNames.length <= 2) {
-//                                   return selectedNames.join(', ');
-//                                 } else {
-//                                   return `${selectedNames.slice(0, 2).join(', ')} and ${selectedNames.length - 2} more`;
-//                                 }
-//                               })()
-//                             : "Select subcounties..."}
-//                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-//                         </Button>
-//                       </PopoverTrigger>
-//                       <PopoverContent className="w-full p-0">
-//                         <Command>
-//                           <CommandInput placeholder="Search subcounties..." />
-//                           <CommandEmpty>No subcounty found.</CommandEmpty>
-//                           <CommandGroup>
-//                             {subcounties.map((subcounty) => {
-//                               const isSelected = form.subcounty_ids?.includes(subcounty.id) || false;
-//                               return (
-//                                 <CommandItem
-//                                   key={subcounty.id}
-//                                   value={subcounty.name}
-//                                   onSelect={() => {
-//                                     const newValues = isSelected
-//                                       ? (form.subcounty_ids?.filter(id => id !== subcounty.id) || [])
-//                                       : [...(form.subcounty_ids || []), subcounty.id];
-//                                     setForm(prev => ({ ...prev, subcounty_ids: newValues, ward_ids: [] }));
-//                                   }}
-//                                 >
-//                                   <Check
-//                                     className={cn(
-//                                       "mr-2 h-4 w-4",
-//                                       isSelected ? "opacity-100" : "opacity-0"
-//                                     )}
-//                                   />
-//                                   {subcounty.name}
-//                                 </CommandItem>
-//                               );
-//                             })}
-//                           </CommandGroup>
-//                         </Command>
-//                       </PopoverContent>
-//                     </Popover>
-//                   </div>
-//                 )}
-
-//                 {/* County Code field for ministry */}
-//                 {currentUser?.role === 'ministry_admin' && (
-//                   <div>
-//                     <label className="block text-sm font-medium mb-1">County Code <span className="text-destructive">*</span></label>
-//                     <Input
-//                       name="county_code"
-//                       type="number"
-//                       value={form.county_code}
-//                       onChange={handleChange}
-//                       placeholder="e.g., 23"
-//                       disabled={submitting}
-//                       required
-//                       className="w-72"
-//                     />
-//                   </div>
-//                 )}
-//               </div>
-
-//               {/* Fifth Row - Ward field for agents (only show if subcounty is selected) */}
-//               {currentUser?.role === 'agent' && form.subcounty_ids && form.subcounty_ids.length > 0 && (
-//                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-//                   <div>
-//                     <label className="block text-sm font-medium mb-1">Ward (Optional)</label>
-//                     <Popover>
-//                       <PopoverTrigger asChild>
-//                         <Button
-//                           variant="outline"
-//                           role="combobox"
-//                           className="w-full justify-between"
-//                           disabled={submitting}
-//                         >
-//                           {form.ward_ids && form.ward_ids.length > 0
-//                             ? (() => {
-//                                 const selectedNames = form.ward_ids.map(id => wards.find(w => w.id === id)?.name).filter(Boolean);
-//                                 if (selectedNames.length <= 2) {
-//                                   return selectedNames.join(', ');
-//                                 } else {
-//                                   return `${selectedNames.slice(0, 2).join(', ')} and ${selectedNames.length - 2} more`;
-//                                 }
-//                               })()
-//                             : "Select wards..."}
-//                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-//                         </Button>
-//                       </PopoverTrigger>
-//                       <PopoverContent className="w-full p-0">
-//                         <Command>
-//                           <CommandInput placeholder="Search wards..." />
-//                           <CommandEmpty>No ward found.</CommandEmpty>
-//                           <CommandGroup>
-//                             {wards.map((ward) => {
-//                               const isSelected = form.ward_ids?.includes(ward.id) || false;
-//                               return (
-//                                 <CommandItem
-//                                   key={ward.id}
-//                                   value={ward.name}
-//                                   onSelect={() => {
-//                                     const newValues = isSelected
-//                                       ? (form.ward_ids?.filter(id => id !== ward.id) || [])
-//                                       : [...(form.ward_ids || []), ward.id];
-//                                     setForm(prev => ({ ...prev, ward_ids: newValues }));
-//                                   }}
-//                                 >
-//                                   <Check
-//                                     className={cn(
-//                                       "mr-2 h-4 w-4",
-//                                       isSelected ? "opacity-100" : "opacity-0"
-//                                     )}
-//                                   />
-//                                   {ward.name}
-//                                 </CommandItem>
-//                               );
-//                             })}
-//                           </CommandGroup>
-//                         </Command>
-//                       </PopoverContent>
-//                     </Popover>
-//                   </div>
-//                   {/* Empty div to maintain grid layout */}
-//                   <div></div>
+//                 <div className="flex justify-end space-x-2">
+//                   <Button
+//                     type="button"
+//                     variant="outline"
+//                     onClick={closeAssignRoleModal}
+//                     disabled={assigning}
+//                   >
+//                     Cancel
+//                   </Button>
+//                   <Button
+//                     type="submit"
+//                     disabled={assigning}
+//                     className="bg-primary text-primary-foreground"
+//                   >
+//                     {assigning ? 'Assigning...' : 'Assign Role'}
+//                   </Button>
 //                 </div>
-//               )}
-
-//               {error && <div className="text-destructive text-sm">{error}</div>}
-//               <div className="flex justify-end">
-//                 <Button type="button" variant="outline" className="mr-2" onClick={handleCloseModal} disabled={submitting}>Cancel</Button>
-//                 <Button type="submit" disabled={submitting} className="bg-primary text-primary-foreground">
-//                   {submitting ? 'Creating...' : 'Create User'}
-//                 </Button>
-//               </div>
-//             </form>
-//           </div>
+//               </form>
+//             </CardContent>
+//           </Card>
 //         </div>
 //       )}
 
-//       {/* List institutions for this agent/county */}
-//       {/* <div className="mt-8">
-//         <h2 className="text-lg font-bold mb-2">Institutions Onboarded {currentUser?.role === 'agent' ? 'by You' : 'in Your County'}</h2>
-//         <ul className="list-disc pl-6">
-//           {institutions.length === 0 ? (
-//             <li className="text-muted-foreground">No institutions found.</li>
-//           ) : (
-//             institutions
-//               .filter(inst => {
-//                 if (currentUser?.role === 'agent') {
-//                   return inst.created_by === currentUser.id;
-//                 } else if (currentUser?.county_id) {
-//                   return inst.county === currentUser.county_id;
-//                 }
-//                 return true;
-//               })
-//               .map(inst => (
-//                 <li key={inst.id}>{inst.name} <span className="text-xs text-muted-foreground">({inst.county})</span></li>
-//               ))
-//           )}
-//         </ul>
-//       </div> */}
+//       {/* Add Role Modal */}
+//       <Dialog open={showAddRoleModal} onOpenChange={setShowAddRoleModal}>
+//         <DialogContent className="max-w-2xl">
+//           <DialogHeader>
+//             <DialogTitle>Add Role</DialogTitle>
+//             <DialogDescription>
+//               Create a new role and assign permissions.
+//             </DialogDescription>
+//           </DialogHeader>
+//           <div className="space-y-4">
+//             <div>
+//               <Label htmlFor="roleName" className="text-sm font-medium text-gray-600">Role Name:*</Label>
+//               <Input
+//                 id="roleName"
+//                 value={newRoleName}
+//                 onChange={(e) => setNewRoleName(e.target.value)}
+//                 placeholder="Role Name"
+//                 className="mt-2"
+//               />
+//             </div>
 
-//       {/* Users Table */}
-//       <Card>
-//         <CardHeader>
-//           <CardTitle>System Users</CardTitle>
-//           <CardDescription>
-//             View and manage all users in the quality assurance system
-//           </CardDescription>
-//         </CardHeader>
-//         <CardContent>
-//           <Table>
-//             <TableHeader>
-//               <TableRow>
-//                 <TableHead>User</TableHead>
-//                 <TableHead>Role</TableHead>
-//                 <TableHead>School</TableHead>
-//                 <TableHead>Jurisdiction</TableHead>
-//                 <TableHead>Status</TableHead>
-//                 <TableHead>Last Login</TableHead>
-//                 <TableHead>Actions</TableHead>
-//               </TableRow>
-//             </TableHeader>
-//             <TableBody>
-//               {loading ? (
-//                 <TableRow>
-//                   <TableCell colSpan={7} className="text-center">Loading...</TableCell>
-//                 </TableRow>
-//               ) : users.length === 0 ? (
-//                 <TableRow>
-//                   <TableCell colSpan={7} className="text-center">No users found.</TableCell>
-//                 </TableRow>
-//               ) : (
-//                 visibleUsers.map((user) => (
-//                   <TableRow key={user.id} className="hover:bg-muted/50">
-//                     <TableCell>
-//                       <div className="flex items-center space-x-3">
-//                         <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
-//                           <User className="h-5 w-5 text-primary-foreground" />
-//                         </div>
-//                         <div>
-//                           <div className="font-semibold">{user.name}</div>
-//                           <div className="text-sm text-muted-foreground flex items-center">
-//                             <Mail className="h-3 w-3 mr-1" />
-//                             {user.email}
-//                           </div>
-//                         </div>
-//                       </div>
-//                     </TableCell>
-//                     <TableCell>
-//                       <Badge className={getRoleBadgeVariant(user.role || '')}>
-//                         {formatRole(user.role || '')}
-//                       </Badge>
-//                     </TableCell>
-//                     <TableCell>
-//                       {user.institution?.name || '-'}
-//                     </TableCell>
-//                     <TableCell>
-//                       <div>
-//                         <div className="font-medium">{user.county || '-'}</div>
-//                         {user.school && (
-//                           <div className="text-sm text-muted-foreground">{user.school}</div>
-//                         )}
-//                       </div>
-//                     </TableCell>
-//                     <TableCell>
-//                       {getStatusBadge(user.status || '')}
-//                     </TableCell>
-//                     <TableCell>
-//                       <div className="text-sm">
-//                         {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : '-'}
-//                       </div>
-//                       <div className="text-xs text-muted-foreground">
-//                         {user.lastLogin ? new Date(user.lastLogin).toLocaleTimeString() : ''}
-//                       </div>
-//                     </TableCell>
-//                     <TableCell>
-//                       <DropdownMenu>
-//                         <DropdownMenuTrigger asChild>
-//                           <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-//                             <MoreHorizontal className="h-4 w-4" />
-//                           </Button>
-//                         </DropdownMenuTrigger>
-//                         <DropdownMenuContent align="end" className="w-40">
-//                           <DropdownMenuItem
-//                             onClick={() => handleEdit(user)}
-//                             className="cursor-pointer"
-//                           >
-//                             <Edit className="h-4 w-4 mr-2" />
-//                             Edit
-//                           </DropdownMenuItem>
-//                           {(user.role === 'agent' || user.role === 'school_admin') && (
-//                             <DropdownMenuItem
-//                               onClick={() => handleTransfer(user)}
-//                               className="cursor-pointer"
-//                             >
-//                               <ArrowRightLeft className="h-4 w-4 mr-2" />
-//                               Transfer User
-//                             </DropdownMenuItem>
-//                           )}
-//                           <DropdownMenuItem
-//                             onClick={() => handleToggleStatus(user)}
-//                             className="cursor-pointer"
-//                           >
-//                             <Trash2 className="h-4 w-4 mr-2" />
-//                             {user.status === 'Active' ? 'Deactivate' : 'Activate'}
-//                           </DropdownMenuItem>
-//                         </DropdownMenuContent>
-//                       </DropdownMenu>
-//                     </TableCell>
-//                   </TableRow>
-//                 ))
-//               )}
-//             </TableBody>
-//           </Table>
-
-//           {/* Pagination */}
-//           {!loading && users.length > 0 && (
-//             <div className="flex items-center justify-between px-2 py-4">
-//               <div className="flex items-center space-x-2">
-//                 <label className="text-sm font-medium">Rows per page:</label>
-//                 <select
-//                   value={rowsPerPage}
-//                   onChange={handleChangeRowsPerPage}
-//                   className="border rounded px-2 py-1 text-sm"
-//                 >
-//                   <option value={5}>5</option>
-//                   <option value={10}>10</option>
-//                   <option value={25}>25</option>
-//                   <option value={50}>50</option>
-//                 </select>
-//               </div>
-//               <div className="flex items-center space-x-2">
-//                 <span className="text-sm">
-//                   {page * rowsPerPage + 1}-{Math.min((page + 1) * rowsPerPage, users.length)} of {users.length}
-//                 </span>
-//                 <div className="flex space-x-1">
-//                   <Button
-//                     variant="outline"
-//                     size="sm"
-//                     onClick={() => handleChangePage(page - 1)}
-//                     disabled={page === 0}
-//                   >
-//                     Previous
-//                   </Button>
-//                   <Button
-//                     variant="outline"
-//                     size="sm"
-//                     onClick={() => handleChangePage(page + 1)}
-//                     disabled={(page + 1) * rowsPerPage >= users.length}
-//                   >
-//                     Next
-//                   </Button>
-//                 </div>
+//             <div>
+//               <Label className="text-sm font-medium text-gray-600">Permissions:</Label>
+//               <div className="mt-2 grid grid-cols-2 gap-2 max-h-60 overflow-y-auto">
+//                 {permissions.map((permission) => (
+//                   <div key={permission.id} className="flex items-center space-x-2">
+//                     <Checkbox
+//                       id={`permission-${permission.id}`}
+//                       checked={selectedPermissions.includes(permission.id)}
+//                       onCheckedChange={(checked) => {
+//                         if (checked) {
+//                           setSelectedPermissions([...selectedPermissions, permission.id]);
+//                         } else {
+//                           setSelectedPermissions(selectedPermissions.filter(id => id !== permission.id));
+//                         }
+//                       }}
+//                     />
+//                     <Label
+//                       htmlFor={`permission-${permission.id}`}
+//                       className="text-sm font-normal cursor-pointer"
+//                     >
+//                       {permission.name}
+//                     </Label>
+//                   </div>
+//                 ))}
 //               </div>
 //             </div>
-//           )}
-//         </CardContent>
-//       </Card>
-//       </div>
 
-//       {/* Transfer User Modal */}
-//       {showTransferModal && selectedUser && (
-//         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-//           <div className="bg-white rounded-lg shadow-lg w-full p-6 relative" style={{ maxWidth: '500px' }}>
-//             <button className="absolute top-2 right-2 text-muted-foreground" onClick={handleCloseTransferModal}>
-//               <X className="h-5 w-5" />
-//             </button>
-//             <h2 className="text-xl font-bold mb-4">Transfer User</h2>
-//             <p className="text-sm text-muted-foreground mb-4">
-//               Transfer {selectedUser.name} to a new location
-//             </p>
-//             <form onSubmit={handleTransferSubmit} className="space-y-4">
-//               {selectedUser.role === 'agent' ? (
-//                 // Agent transfer form
-//                 <>
-//                   <div>
-//                     <label className="block text-sm font-medium mb-1">New County</label>
-//                     <Select
-//                       value={selectedCounty}
-//                       onValueChange={(value) => {
-//                         setSelectedCounty(value);
-//                         setSelectedSubcounty('');
-//                         const county = getCounties().find((c: any) => c.county_id === value);
-//                         setTransferForm({
-//                           ...transferForm,
-//                           new_county_code: value,
-//                           new_county: county?.county_name || '',
-//                           new_subcounty: '',
-//                           new_ward: ''
-//                         });
-//                       }}
-//                     >
-//                       <SelectTrigger>
-//                         <SelectValue placeholder="Select county" />
-//                       </SelectTrigger>
-//                       <SelectContent>
-//                         {getCounties().map((county: any) => (
-//                           <SelectItem key={county.county_id} value={county.county_id}>
-//                             {county.county_name}
-//                           </SelectItem>
-//                         ))}
-//                       </SelectContent>
-//                     </Select>
-//                   </div>
-//                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-//                     <div>
-//                       <label className="block text-sm font-medium mb-1">New Subcounty</label>
-//                       <Select
-//                         value={selectedSubcounty}
-//                         onValueChange={(value) => {
-//                           setSelectedSubcounty(value);
-//                           const subcounty = getSubcounties(selectedCounty).find(s => s.subcounty_id === value);
-//                           setTransferForm({ ...transferForm, new_subcounty: subcounty?.constituency_name || '', new_ward: '' });
-//                         }}
-//                         disabled={!selectedCounty}
-//                       >
-//                         <SelectTrigger>
-//                           <SelectValue placeholder="Select subcounty" />
-//                         </SelectTrigger>
-//                         <SelectContent>
-//                           {selectedCounty && getSubcounties(selectedCounty).map((subcounty: Subcounty) => (
-//                             <SelectItem key={subcounty.subcounty_id} value={subcounty.subcounty_id}>
-//                               {subcounty.constituency_name}
-//                             </SelectItem>
-//                           ))}
-//                         </SelectContent>
-//                       </Select>
-//                     </div>
-//                     <div>
-//                       <label className="block text-sm font-medium mb-1">New Ward</label>
-//                       <Select
-//                         value={transferForm.new_ward}
-//                         onValueChange={(value) => setTransferForm({ ...transferForm, new_ward: value })}
-//                         disabled={!selectedSubcounty}
-//                       >
-//                         <SelectTrigger>
-//                           <SelectValue placeholder="Select ward" />
-//                         </SelectTrigger>
-//                         <SelectContent>
-//                           {selectedSubcounty && getWards(selectedSubcounty).map((ward: any) => (
-//                             <SelectItem key={ward.station_id} value={ward.ward}>
-//                               {ward.ward}
-//                             </SelectItem>
-//                           ))}
-//                         </SelectContent>
-//                       </Select>
-//                     </div>
-//                   </div>
-//                 </>
-//               ) : selectedUser.role === 'school_admin' ? (
-//                 // School Admin transfer form
-//                 <div>
-//                   <label className="block text-sm font-medium mb-1">New Institution <span className="text-destructive">*</span></label>
-//                   <Popover>
-//                     <PopoverTrigger asChild>
-//                       <Button
-//                         variant="outline"
-//                         role="combobox"
-//                         className="w-full justify-between"
-//                       >
-//                         {transferForm.new_institution_id
-//                           ? institutions.find((inst) => inst.id === parseInt(transferForm.new_institution_id))?.name
-//                           : "Select institution..."}
-//                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-//                       </Button>
-//                     </PopoverTrigger>
-//                     <PopoverContent className="w-full p-0">
-//                       <Command>
-//                         <CommandInput
-//                           placeholder="Search institutions..."
-//                           value={institutionSearch}
-//                           onValueChange={setInstitutionSearch}
-//                         />
-//                         <CommandEmpty>No institution found.</CommandEmpty>
-//                         <CommandGroup>
-//                           {institutions
-//                             .sort((a, b) => a.name.localeCompare(b.name))
-//                             .filter((inst) =>
-//                               institutionSearch === '' ||
-//                               inst.name.toLowerCase().includes(institutionSearch.toLowerCase())
-//                             )
-//                             .slice(0, 10)
-//                             .map((inst) => (
-//                               <CommandItem
-//                                 key={inst.id}
-//                                 value={inst.name}
-//                                 onSelect={() => {
-//                                   setTransferForm({ ...transferForm, new_institution_id: inst.id.toString() });
-//                                   setTransferInstitutionSearch('');
-//                                 }}
-//                               >
-//                                 <Check
-//                                   className={cn(
-//                                     "mr-2 h-4 w-4",
-//                                     transferForm.new_institution_id === inst.id.toString() ? "opacity-100" : "opacity-0"
-//                                   )}
-//                                 />
-//                                 {inst.name}
-//                               </CommandItem>
-//                             ))}
-//                         </CommandGroup>
-//                       </Command>
-//                     </PopoverContent>
-//                   </Popover>
-//                 </div>
-//               ) : null}
+//             <DialogFooter>
+//               <Button
+//                 type="button"
+//                 variant="outline"
+//                 onClick={() => {
+//                   setShowAddRoleModal(false);
+//                   setNewRoleName('');
+//                   setSelectedPermissions([]);
+//                 }}
+//               >
+//                 Cancel
+//               </Button>
+//               <Button
+//                 type="button"
+//                 onClick={async () => {
+//                   if (!newRoleName.trim()) {
+//                     toast({
+//                       title: "Error",
+//                       description: "Role name is required",
+//                       variant: "destructive",
+//                     });
+//                     return;
+//                   }
 
-//               <div className="flex justify-end space-x-2 pt-4">
-//                 <Button type="button" variant="outline" onClick={handleCloseTransferModal}>
-//                   Cancel
-//                 </Button>
-//                 <Button type="submit" className="bg-primary text-primary-foreground">
-//                   Transfer User
-//                 </Button>
-//               </div>
-//             </form>
+//                   try {
+//                     // Create the role
+//                     const roleResponse = await createRole({ name: newRoleName });
+
+//                     // Assign selected permissions to the role
+//                     if (selectedPermissions.length > 0) {
+//                       const roleId = roleResponse.id; // Assuming the response includes the role ID
+//                       for (const permissionId of selectedPermissions) {
+//                         const permission = permissions.find(p => p.id === permissionId);
+//                         if (permission) {
+//                           await assignPermissionToRole({
+//                             permission_name: permission.name,
+//                             role_name: newRoleName,
+//                             permission_id: permissionId,
+//                             role_id: roleId
+//                           });
+//                         }
+//                       }
+//                     }
+
+//                     toast({
+//                       title: "Success",
+//                       description: "Role created successfully with permissions",
+//                       variant: "default",
+//                     });
+
+//                     // Refresh roles
+//                     const permissionsData = await getPermissions();
+//                     setRoles(permissionsData.roles?.map(r => ({ ...r, status: r.status || 'Active' })) || []);
+
+//                     // Reset and close
+//                     setShowAddRoleModal(false);
+//                     setNewRoleName('');
+//                     setSelectedPermissions([]);
+//                   } catch (error: any) {
+//                     console.error('Error creating role:', error);
+//                     toast({
+//                       title: "Error",
+//                       description: error?.response?.data?.message || error?.message || "Failed to create role",
+//                       variant: "destructive",
+//                     });
+//                   }
+//                 }}
+//                 className="bg-indigo-600 hover:bg-indigo-700"
+//               >
+//                 Save Role
+//               </Button>
+//             </DialogFooter>
 //           </div>
-//         </div>
-//       )}
+//         </DialogContent>
+//       </Dialog>
 
-//       {/* Delete Confirmation Dialog */}
-//       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-//         <AlertDialogContent>
-//           <AlertDialogHeader>
-//             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-//             <AlertDialogDescription>
-//               This action cannot be undone. This will permanently delete the user
-//               {selectedUser ? ` "${selectedUser.name}"` : ''} and remove their data from the system.
-//             </AlertDialogDescription>
-//           </AlertDialogHeader>
-//           <AlertDialogFooter>
-//             <AlertDialogCancel>Cancel</AlertDialogCancel>
-//             <AlertDialogAction
-//               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-//               onClick={confirmDelete}
-//             >
-//               Delete
-//             </AlertDialogAction>
-//           </AlertDialogFooter>
-//         </AlertDialogContent>
-//       </AlertDialog>
+//       {/* Edit Role Modal */}
+//       <Dialog open={showEditRoleModal} onOpenChange={setShowEditRoleModal}>
+//         <DialogContent>
+//           <DialogHeader>
+//             <DialogTitle>Edit Role</DialogTitle>
+//             <DialogDescription>Update the role name.</DialogDescription>
+//           </DialogHeader>
+//           <div className="space-y-4">
+//             <div>
+//               <Label htmlFor="editRoleName">Role Name</Label>
+//               <Input
+//                 id="editRoleName"
+//                 value={editName}
+//                 onChange={(e) => setEditName(e.target.value)}
+//                 placeholder="Role Name"
+//               />
+//             </div>
+//           </div>
+//           <DialogFooter>
+//             <Button variant="outline" onClick={() => setShowEditRoleModal(false)}>Cancel</Button>
+//             <Button onClick={handleEditRole}>Save</Button>
+//           </DialogFooter>
+//         </DialogContent>
+//       </Dialog>
 
+//       </div>
 //       <Toaster />
 //     </>
 //   );
-// };export default Users;
+// };
+
+// export default RolesPermissions;

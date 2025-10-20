@@ -881,8 +881,8 @@ useEffect(() => {
         return;
       }
 
-      // Validation: Check if all safety details are marked
-      const allSafetyMarked = safetyData.every(item => item.attentionRequired || item.good);
+      // Validation: Check if all safety details are marked (only if there are safety items)
+      const allSafetyMarked = safetyData.length === 0 || safetyData.every(item => item.attentionRequired || item.good);
       if (!allSafetyMarked) {
         toast({
           title: 'Validation Error',
@@ -903,12 +903,13 @@ useEffect(() => {
 
       // Check if facility is not available
       const isFacilityNotAvailable = (isToiletFacility && hasToiletFacility === false) ||
-                                     (isLaboratoryFacility && hasLaboratoryFacility === false) ||
-                                     (isDiningHallFacility && hasDiningHallFacility === false) ||
-                                     (isDormitoryFacility && hasDormitoryFacility === false) ||
-                                     (isOfficeFacility && hasOfficeFacility === false);
+                                    (isLaboratoryFacility && hasLaboratoryFacility === false) ||
+                                    (isDiningHallFacility && hasDiningHallFacility === false) ||
+                                    (isDormitoryFacility && hasDormitoryFacility === false) ||
+                                    (isOfficeFacility && hasOfficeFacility === false);
 
-      if (hasMaintenanceChanges) {
+      // Always submit maintenance if there are changes or notes
+      if (hasMaintenanceChanges || (isFacilityNotAvailable && data.school_feedback.trim())) {
         // Create the assessment input object matching MaintenanceAssessmentInput type
          const assessmentInput = {
            institution_id: selectedFacility.institution_id || 1,
@@ -938,33 +939,9 @@ useEffect(() => {
           return;
         }
         maintenanceSubmitted = true;
-      } else if (isFacilityNotAvailable && data.school_feedback.trim()) {
-        // Submit notes-only assessment for unavailable facility
-        const assessmentInput = {
-          institution_id: selectedFacility.institution_id || 1,
-          institution_name: 'Institution',
-          facility_id: data.facility_id,
-          entity: [],
-          status: 'pending' as 'pending',
-          details: [],
-          school_feedback: data.school_feedback,
-          agent_feedback: data.agent_feedback,
-          files: uploadedFiles,
-        };
-
-        const response = await createMaintenanceAssessment(assessmentInput);
-
-        if (response && response.status === 'error') {
-          toast({
-            title: 'Submission Error',
-            description: response.message || 'Failed to submit assessment',
-            variant: 'destructive',
-          });
-          return;
-        }
-        maintenanceSubmitted = true;
       }
 
+      // Always submit safety if there are changes
       if (hasSafetyChanges) {
         // Create safety assessment input
         const safetyInput = {
@@ -1082,43 +1059,19 @@ interface ClassSelectProps {
 }
 
 const ClassSelect: React.FC<ClassSelectProps> = ({ onChange, value, classOptions }) => {
-  const [open, setOpen] = useState(false);
-
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button variant="outline" className="w-full justify-between">
-          {value.length > 0 ? value.join(', ') : <em>Select classes...</em>}
-          <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-full p-0">
-        <Command>
-          <CommandList>
-            <CommandEmpty>No classes found.</CommandEmpty>
-            <CommandGroup>
-              {classOptions.map((option) => {
-                const isSelected = value.includes(option);
-                return (
-                  <CommandItem
-                    key={option}
-                    onSelect={() => {
-                      const newValue = isSelected
-                        ? value.filter((v) => v !== option)
-                        : [...value, option];
-                      onChange(newValue);
-                    }}
-                  >
-                    {isSelected ? <Check className="mr-2 h-4 w-4" /> : <div className="mr-2 h-4 w-4" />}
-                    {option}
-                  </CommandItem>
-                );
-              })}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+    <Select value={value[0] || ''} onValueChange={(selectedValue) => onChange([selectedValue])}>
+      <SelectTrigger>
+        <SelectValue placeholder="Select a class..." />
+      </SelectTrigger>
+      <SelectContent>
+        {classOptions.map((option) => (
+          <SelectItem key={option} value={option}>
+            {option}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 };
 
@@ -1497,9 +1450,6 @@ const ClassSelect: React.FC<ClassSelectProps> = ({ onChange, value, classOptions
                             {/* Laboratory Quantities */}
                             {selectedLaboratoryTypes.length > 0 && (
                               <div className="space-y-4">
-                                <Label className="text-sm font-medium text-gray-700">
-                                  Number of Laboratories for Each Type
-                                </Label>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                   {selectedLaboratoryTypes.map((type) => (
                                     <div key={type} className="space-y-2">
@@ -1599,9 +1549,6 @@ const ClassSelect: React.FC<ClassSelectProps> = ({ onChange, value, classOptions
                             {/* Dining Hall Quantities */}
                             {selectedDiningHallTypes.length > 0 && (
                               <div className="space-y-4">
-                                <Label className="text-sm font-medium text-gray-700">
-                                  Number of Dining Halls for Each Type
-                                </Label>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                   {selectedDiningHallTypes.map((type) => (
                                     <div key={type} className="space-y-2">
@@ -1701,9 +1648,6 @@ const ClassSelect: React.FC<ClassSelectProps> = ({ onChange, value, classOptions
                             {/* Dormitory Quantities */}
                             {selectedDormitoryTypes.length > 0 && (
                               <div className="space-y-4">
-                                <Label className="text-sm font-medium text-gray-700">
-                                  Number of Dormitories for Each Type
-                                </Label>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                   {selectedDormitoryTypes.map((type) => (
                                     <div key={type} className="space-y-2">
@@ -1803,9 +1747,6 @@ const ClassSelect: React.FC<ClassSelectProps> = ({ onChange, value, classOptions
                             {/* Office Quantities */}
                             {selectedOfficeTypes.length > 0 && (
                               <div className="space-y-4">
-                                <Label className="text-sm font-medium text-gray-700">
-                                  Number of Offices for Each Type
-                                </Label>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                   {selectedOfficeTypes.map((type) => (
                                     <div key={type} className="space-y-2">
