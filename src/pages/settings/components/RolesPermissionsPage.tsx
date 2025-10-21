@@ -181,6 +181,16 @@ const RolesPermissions = () => {
     setSelectedRole('');
   };
 
+  const fetchRolePermissions = async (roleId: number) => {
+    try {
+      const response = await api.get(Urls.GET_ROLE_PERMISSIONS_URL(roleId));
+      return response.data.data || [];
+    } catch (error) {
+      console.error('Error fetching role permissions:', error);
+      return [];
+    }
+  };
+
   const handleEditRole = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedItemId || !editName) return;
@@ -189,26 +199,16 @@ const RolesPermissions = () => {
       // Update role name
       await updateRole(selectedItemId, { name: editName });
 
-      // Get current permissions for this role (assuming we need to fetch them)
-      // For now, we'll need to implement a way to get role permissions
-      // Since there's no direct API, we'll handle permission updates by removing all and adding selected ones
+      // Update permissions for the role using the specific endpoint
+      // Backend expects permission names, not IDs
+      const selectedPermissionNames = editPermissions.map(id => {
+        const permission = permissions.find(p => p.id === id);
+        return permission ? permission.name : null;
+      }).filter(name => name !== null);
 
-      // First, remove all existing permissions (this might need a backend endpoint)
-      // For now, we'll just assign the selected permissions
-      const selectedRole = roles.find(r => r.id === selectedItemId);
-      if (selectedRole) {
-        for (const permissionId of editPermissions) {
-          const permission = permissions.find(p => p.id === permissionId);
-          if (permission) {
-            await assignPermissionToRole({
-              permission_name: permission.name,
-              role_name: editName,
-              permission_id: permissionId,
-              role_id: selectedItemId
-            });
-          }
-        }
-      }
+      await api.put(Urls.UPDATE_PERMISSION_URL(selectedItemId), {
+        permissions: selectedPermissionNames
+      });
 
       toast({
         title: "Success",
@@ -530,13 +530,13 @@ const RolesPermissions = () => {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-40">
                               <DropdownMenuItem
-                                onClick={() => {
+                                onClick={async () => {
                                   setSelectedItemId(role.id);
                                   setEditName(role.name);
-                                  // Pre-check existing permissions for this role
-                                  // Since we don't have role-specific permissions stored, we'll start with empty
-                                  // In a real implementation, you'd fetch permissions for this role
-                                  setEditPermissions([]);
+                                  // Fetch and pre-check existing permissions for this role
+                                  const rolePermissions = await fetchRolePermissions(role.id);
+                                  const permissionIds = rolePermissions.map((p: any) => p.id);
+                                  setEditPermissions(permissionIds);
                                   setShowEditRoleModal(true);
                                 }}
                                 className="cursor-pointer"

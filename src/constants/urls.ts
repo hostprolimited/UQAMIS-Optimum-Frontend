@@ -82,7 +82,8 @@ export const Urls = {
   GET_PERMISSIONS_URL: '/permissions/list',
   CREATE_PERMISSION_URL: '/permissions/create',
   ASSIGN_PERMISSION_ROLE_URL: '/permissions/assign-to-role',
-  UPDATE_PERMISSION_URL: (id: number) => `/permissions/${id}`,
+  GET_ROLE_PERMISSIONS_URL: (id: number) => `/roles/permissions/${id}`,
+  UPDATE_PERMISSION_URL: (id: number) => `/roles/permissions/update/${id}`,
   DELETE_PERMISSION_URL: (id: number) => `/permissions/${id}`,
 
   // Incidents Endpoints
@@ -98,7 +99,7 @@ export const Urls = {
   GET_USER_ROLE: (id: number) => `/users/role/${id}`,
   ASSIGN_USER_ROLE_URL: (id: number) => `/users/assign-role/${id}`,
   CHANGE_USER_STATUS: (id: number) => `/users/toggle-status/${id}`,
-  UPDATE_ROLE_URL: (id: number) => `/update-role/${id}`,
+  UPDATE_ROLE_URL: (id: number) => `/roles/${id}`,
   DELETE_ROLE_URL: (id: number) => `/roles/${id}`,
   
 

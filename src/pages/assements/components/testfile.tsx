@@ -76,6 +76,7 @@
 //   const [isLoading, setIsLoading] = useState(true);
 //   const [newRoleName, setNewRoleName] = useState('');
 //   const [selectedPermissions, setSelectedPermissions] = useState<number[]>([]);
+//   const [editPermissions, setEditPermissions] = useState<number[]>([]);
 //   const [roleStats, setRoleStats] = useState({
 //     totalRoles: 0,
 //     totalPermissions: 0,
@@ -185,7 +186,26 @@
 //     if (!selectedItemId || !editName) return;
 
 //     try {
+//       // Update role name
 //       await updateRole(selectedItemId, { name: editName });
+
+//       // Get current permissions for this role (assuming we need to fetch them)
+//       // For now, we'll just assign the selected permissions
+//       const selectedRole = roles.find(r => r.id === selectedItemId);
+//       if (selectedRole) {
+//         for (const permissionId of editPermissions) {
+//           const permission = permissions.find(p => p.id === permissionId);
+//           if (permission) {
+//             await assignPermissionToRole({
+//               permission_name: permission.name,
+//               role_name: editName,
+//               permission_id: permissionId,
+//               role_id: selectedItemId
+//             });
+//           }
+//         }
+//       }
+
 //       toast({
 //         title: "Success",
 //         description: "Role updated successfully",
@@ -509,6 +529,10 @@
 //                                 onClick={() => {
 //                                   setSelectedItemId(role.id);
 //                                   setEditName(role.name);
+//                                   // Pre-check existing permissions for this role
+//                                   // Since we don't have role-specific permissions stored, we'll start with empty
+//                                   // In a real implementation, you'd fetch permissions for this role
+//                                   setEditPermissions([]);
 //                                   setShowEditRoleModal(true);
 //                                 }}
 //                                 className="cursor-pointer"
@@ -827,10 +851,10 @@
 
 //       {/* Edit Role Modal */}
 //       <Dialog open={showEditRoleModal} onOpenChange={setShowEditRoleModal}>
-//         <DialogContent>
+//         <DialogContent className="max-w-2xl">
 //           <DialogHeader>
 //             <DialogTitle>Edit Role</DialogTitle>
-//             <DialogDescription>Update the role name.</DialogDescription>
+//             <DialogDescription>Update the role name and permissions.</DialogDescription>
 //           </DialogHeader>
 //           <div className="space-y-4">
 //             <div>
@@ -841,6 +865,33 @@
 //                 onChange={(e) => setEditName(e.target.value)}
 //                 placeholder="Role Name"
 //               />
+//             </div>
+
+//             <div>
+//               <Label className="text-sm font-medium text-gray-600">Permissions:</Label>
+//               <div className="mt-2 grid grid-cols-2 gap-2 max-h-60 overflow-y-auto">
+//                 {permissions.map((permission) => (
+//                   <div key={permission.id} className="flex items-center space-x-2">
+//                     <Checkbox
+//                       id={`edit-permission-${permission.id}`}
+//                       checked={editPermissions.includes(permission.id)}
+//                       onCheckedChange={(checked) => {
+//                         if (checked) {
+//                           setEditPermissions([...editPermissions, permission.id]);
+//                         } else {
+//                           setEditPermissions(editPermissions.filter(id => id !== permission.id));
+//                         }
+//                       }}
+//                     />
+//                     <Label
+//                       htmlFor={`edit-permission-${permission.id}`}
+//                       className="text-sm font-normal cursor-pointer"
+//                     >
+//                       {permission.name}
+//                     </Label>
+//                   </div>
+//                 ))}
+//               </div>
 //             </div>
 //           </div>
 //           <DialogFooter>
