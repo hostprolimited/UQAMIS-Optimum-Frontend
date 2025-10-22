@@ -73,11 +73,13 @@ const SchoolAdminUsers: React.FC = () => {
     try {
       const data = await getUsers();
       if (Array.isArray(data)) {
+        const findActiveAssignment = (user: UserModel) => user.assignments?.find(a => a.end_date === null);
         // Filter users by institution_id
-        const schoolUsers = data.filter(user => user.institution_id === currentUser?.institution_id);
+        const schoolUsers = data.filter(user => findActiveAssignment(user)?.institution_id === currentUser?.institution_id);
         setUsers(schoolUsers);
       } else if (data && typeof data === 'object' && 'users' in data && Array.isArray((data as { users: UserModel[] }).users)) {
-        const schoolUsers = (data as { users: UserModel[] }).users.filter(user => user.institution_id === currentUser?.institution_id);
+        const findActiveAssignment = (user: UserModel) => user.assignments?.find(a => a.end_date === null);
+        const schoolUsers = (data as { users: UserModel[] }).users.filter(user => findActiveAssignment(user)?.institution_id === currentUser?.institution_id);
         setUsers(schoolUsers);
       } else {
         setUsers([]);
@@ -256,7 +258,7 @@ const SchoolAdminUsers: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {users.filter(user => user.role === 'teacher').length}
+                {users.filter(user => user.assignments?.find(a => a.end_date === null)?.role === 'teacher').length}
               </div>
               <p className="text-xs text-muted-foreground">
                 Teaching staff
@@ -270,7 +272,7 @@ const SchoolAdminUsers: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {users.filter(user => user.status === 'Active').length}
+                {users.filter(user => user.assignments?.find(a => a.end_date === null)?.status === 'Active').length}
               </div>
               <p className="text-xs text-muted-foreground">
                 Currently active staff
@@ -379,8 +381,12 @@ const SchoolAdminUsers: React.FC = () => {
                     <TableCell colSpan={4} className="text-center">No staff members found.</TableCell>
                   </TableRow>
                 ) : (
-                  users.map((user) => (
-                    <TableRow key={user.id} className="hover:bg-muted/50">
+                  users.map((user) => {
+                    const activeAssignment = user.assignments?.find(a => a.end_date === null);
+                    const role = activeAssignment?.role ?? user.role ?? '';
+                    const status = activeAssignment?.status ?? user.status ?? '';
+                    return (
+                      <TableRow key={user.id} className="hover:bg-muted/50">
                       <TableCell>
                         <div className="flex items-center space-x-3">
                           <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
@@ -397,11 +403,11 @@ const SchoolAdminUsers: React.FC = () => {
                       </TableCell>
                       <TableCell>
                         <Badge className="bg-muted text-muted-foreground">
-                          {formatRole(user.role || '')}
+                          {formatRole(role)}
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        {getStatusBadge(user.status || '')}
+                        {getStatusBadge(status)}
                       </TableCell>
                       <TableCell>
                         <div className="text-sm">
@@ -412,7 +418,8 @@ const SchoolAdminUsers: React.FC = () => {
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))
+                    )
+                  })
                 )}
               </TableBody>
             </Table>
@@ -605,12 +612,13 @@ const Users = () => {
   const filteredUsers = React.useMemo(
     () => {
       if (!searchTerm) return users;
+      const findActiveAssignment = (user: UserModel) => user.assignments?.find(a => a.end_date === null);
       return users.filter(user =>
         user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (user.role && user.role.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (user.institution?.name && user.institution.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (user.county && user.county.toLowerCase().includes(searchTerm.toLowerCase()))
+        (findActiveAssignment(user)?.role && findActiveAssignment(user)?.role.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (findActiveAssignment(user)?.institution?.name && findActiveAssignment(user)?.institution?.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (findActiveAssignment(user)?.county && findActiveAssignment(user)?.county.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     },
     [users, searchTerm]
@@ -1359,85 +1367,90 @@ const Users = () => {
                   <TableCell colSpan={7} className="text-center">No users found.</TableCell>
                 </TableRow>
               ) : (
-                visibleUsers.map((user) => (
-                  <TableRow key={user.id} className="hover:bg-muted/50">
-                    <TableCell>
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
-                          <User className="h-5 w-5 text-primary-foreground" />
-                        </div>
-                        <div>
-                          <div className="font-semibold">{user.name}</div>
-                          <div className="text-sm text-muted-foreground flex items-center">
-                            <Mail className="h-3 w-3 mr-1" />
-                            {user.email}
+                visibleUsers.map((user) => {
+                  const activeAssignment = user.assignments?.find(a => a.end_date === null);
+                  const role = activeAssignment?.role ?? user.role ?? '';
+                  const status = activeAssignment?.status ?? user.status ?? '';
+                  const institutionName = activeAssignment?.institution?.name ?? '-';
+                  const county = activeAssignment?.county ?? user.county ?? '-';
+
+                  return (
+                    <TableRow key={user.id} className="hover:bg-muted/50">
+                      <TableCell>
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
+                            <User className="h-5 w-5 text-primary-foreground" />
+                          </div>
+                          <div>
+                            <div className="font-semibold">{user.name}</div>
+                            <div className="text-sm text-muted-foreground flex items-center">
+                              <Mail className="h-3 w-3 mr-1" />
+                              {user.email}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={getRoleBadgeVariant(user.role || '')}>
-                        {formatRole(user.role || '')}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {user.institution?.name || '-'}
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{user.county || '-'}</div>
-                        {user.school && (
-                          <div className="text-sm text-muted-foreground">{user.school}</div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {getStatusBadge(user.status || '')}
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : '-'}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {user.lastLogin ? new Date(user.lastLogin).toLocaleTimeString() : ''}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-40">
-                          <DropdownMenuItem
-                            onClick={() => handleEdit(user)}
-                            className="cursor-pointer"
-                          >
-                            <Edit className="h-4 w-4 mr-2" />
-                            Edit
-                          </DropdownMenuItem>
-                          {(user.role === 'agent' || user.role === 'school_admin') && (
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={getRoleBadgeVariant(role)}>
+                          {formatRole(role)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {institutionName}
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{county}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {getStatusBadge(status)}
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">
+                          {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : '-'}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {user.lastLogin ? new Date(user.lastLogin).toLocaleTimeString() : ''}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-40">
                             <DropdownMenuItem
-                              onClick={() => handleTransfer(user)}
+                              onClick={() => handleEdit(user)}
                               className="cursor-pointer"
                             >
-                              <ArrowRightLeft className="h-4 w-4 mr-2" />
-                              Transfer User
+                              <Edit className="h-4 w-4 mr-2" />
+                              Edit
                             </DropdownMenuItem>
-                          )}
-                          <DropdownMenuItem
-                            onClick={() => handleToggleStatus(user)}
-                            className="cursor-pointer"
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            {user.status === 'Active' ? 'Deactivate' : 'Activate'}
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))
+                            {(role === 'agent' || role === 'school_admin') && (
+                              <DropdownMenuItem
+                                onClick={() => handleTransfer(user)}
+                                className="cursor-pointer"
+                              >
+                                <ArrowRightLeft className="h-4 w-4 mr-2" />
+                                Transfer User
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem
+                              onClick={() => handleToggleStatus(user)}
+                              className="cursor-pointer"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              {status === 'active' ? 'Deactivate' : 'Activate'}
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })
               )}
             </TableBody>
           </Table>
