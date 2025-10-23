@@ -956,8 +956,8 @@ useEffect(() => {
         maintenanceSubmitted = true;
       }
 
-      // Always submit safety if there are changes
-      if (hasSafetyChanges) {
+      // Always submit safety if there are changes or if facility is not available with feedback
+      if (hasSafetyChanges || (isFacilityNotAvailable && data.school_feedback.trim())) {
         // Create safety assessment input
         const safetyInput = {
           institution_id: selectedFacility.institution_id || 1,
