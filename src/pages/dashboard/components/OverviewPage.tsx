@@ -2,14 +2,27 @@ import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useRole } from '@/contexts/RoleContext';
 import { getDashboardData } from '../core/_request';
 import { getSchoolMetrics } from '../../assements/core/_request';
-import { DashboardData } from '../core/_models';
 import { DashboardResponse } from '../core/_models';
 import { SchoolMetric } from '../../assements/core/_model';
 import countiesData from '@/constants/data.json';
+import { School, Users, FileText, TrendingUp, CheckCircle, AlertTriangle, BarChart3 } from 'lucide-react';
+
+import Box from '@mui/material/Box';
+import Collapse from '@mui/material/Collapse';
+import IconButton from '@mui/material/IconButton';
+import { default as MuiTable } from '@mui/material/Table';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TableContainer from '@mui/material/TableContainer';
+import TableHead from '@mui/material/TableHead';
+import TableRow from '@mui/material/TableRow';
+import Typography from '@mui/material/Typography';
+import Paper from '@mui/material/Paper';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 
 // Kenya county code to name mapping from data.json
 const countiesTable = countiesData.find((item: any) => item.type === 'table' && item.name === 'counties');
@@ -18,7 +31,6 @@ const countyCodeToName: Record<string, string> = counties.reduce((acc: Record<st
   acc[county.county_id] = county.county_name;
   return acc;
 }, {});
-import { School, Users, FileText, TrendingUp, CheckCircle, AlertTriangle, XCircle, BarChart3 } from 'lucide-react';
 
 // Mock data for different levels
 const countyData = [
@@ -37,24 +49,130 @@ const schoolAssessmentData = [
   { month: 'Jun', completed: 55, pending: 9, score: 88 },
 ];
 
-const statusData = [
-  { name: 'Approved', value: 314, color: 'hsl(var(--success))' },
-  { name: 'Pending Review', value: 89, color: 'hsl(var(--warning))' },
-  { name: 'Needs Improvement', value: 48, color: 'hsl(var(--destructive))' },
-  { name: 'Not Assessed', value: 67, color: 'hsl(var(--muted-foreground))' },
-];
+// --- Table Helper Types and Functions ---
+
+interface ProblemItem {
+  item_name: string;
+  status: string;
+  count: number;
+  school_name: string;
+}
+
+interface GroupedProblem {
+  item_name: string;
+  total_count: number;
+  schools: { school_name: string; count: number; status: string }[];
+}
+
+function processDataForCollapsibleTable(problems: ProblemItem[]): GroupedProblem[] {
+  const groupedProblems = problems.reduce((acc, problem) => {
+    if (!acc[problem.item_name]) {
+      acc[problem.item_name] = {
+        item_name: problem.item_name,
+        total_count: 0,
+        schools: [],
+      };
+    }
+    acc[problem.item_name].total_count += problem.count;
+    acc[problem.item_name].schools.push({
+      school_name: problem.school_name,
+      count: problem.count,
+      status: problem.status,
+    });
+    return acc;
+  }, {} as Record<string, GroupedProblem>);
+
+  return Object.values(groupedProblems).sort((a, b) => b.total_count - a.total_count);
+}
+
+function CollapsibleRow(props: { row: GroupedProblem }) {
+  const { row } = props;
+  const [open, setOpen] = React.useState(false);
+
+  return (
+    <React.Fragment>
+      <TableRow sx={{ '& > *': { borderBottom: 'unset' } }}>
+        <TableCell>
+          <IconButton
+            aria-label="expand row"
+            size="small"
+            onClick={() => setOpen(!open)}
+          >
+            {open ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
+          </IconButton>
+        </TableCell>
+        <TableCell component="th" scope="row">
+          {row.item_name}
+        </TableCell>
+        <TableCell align="right">{row.total_count}</TableCell>
+      </TableRow>
+      <TableRow>
+        <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={3}>
+          <Collapse in={open} timeout="auto" unmountOnExit>
+            <Box sx={{ margin: 1 }}>
+              <Typography variant="h6" gutterBottom component="div">
+                Details by School
+              </Typography>
+              <MuiTable size="small" aria-label="details">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>School Name</TableCell>
+                    <TableCell>Status</TableCell>
+                    <TableCell align="right">Count</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {row.schools.map((schoolRow, index) => (
+                    <TableRow key={index}>
+                      <TableCell component="th" scope="row">
+                        {schoolRow.school_name}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant="outline"
+                          className={`text-xs ${
+                            schoolRow.status === 'Urgent Attention' ? 'border-red-500 text-red-500' :
+                            schoolRow.status === 'Attention Required' ? 'border-yellow-500 text-yellow-500' :
+                            'border-green-500 text-green-500'
+                          }`}
+                        >
+                          {schoolRow.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell align="right">{schoolRow.count}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </MuiTable>
+            </Box>
+          </Collapse>
+        </TableCell>
+      </TableRow>
+    </React.Fragment>
+  );
+}
 
 const Overview = () => {
   const { currentUser } = useRole();
-  // const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [schoolMetricsData, setSchoolMetricsData] = useState<SchoolMetric[] | null>(null);
   const [dashboardData, setDashboardData] = useState<DashboardResponse | null>(null);
+
+  const [performanceScores, setPerformanceScores] = useState({
+    lowest_safety_scores: [],
+    highest_safety_scores: [],
+    lowest_maintenance_scores: [],
+    highest_maintenance_scores: []
+  });
+
+  const [topProblemAreas, setTopProblemAreas] = useState<{maintenance: ProblemItem[], safety: ProblemItem[]}>({
+    maintenance: [],
+    safety: []
+  });
 
   const getDashboardType = () => {
     if (currentUser.permissions?.includes('view_national_dashboard')) return 'ministry_admin';
     if (currentUser.permissions?.includes('view_county_dashboard') || currentUser.permissions?.includes('view_ward_dashboard')) return 'agent';
     if (currentUser.permissions?.includes('view_school_dashboard')) return 'school_admin';
-    // fallback to role
     return currentUser.role;
   };
 
@@ -67,6 +185,18 @@ const Overview = () => {
           const response = await getDashboardData();
           if (response.status === 'success') {
             setDashboardData(response);
+            if (response.data?.lowest_safety_scores || response.data?.highest_safety_scores ||
+                response.data?.lowest_maintenance_scores || response.data?.highest_maintenance_scores) {
+              setPerformanceScores({
+                lowest_safety_scores: response.data.lowest_safety_scores || [],
+                highest_safety_scores: response.data.highest_safety_scores || [],
+                lowest_maintenance_scores: response.data.lowest_maintenance_scores || [],
+                highest_maintenance_scores: response.data.highest_maintenance_scores || []
+              });
+            }
+            if (response.data?.top_problem_areas) {
+              setTopProblemAreas(response.data.top_problem_areas);
+            }
           }
         }
         if (dashboardType === 'ministry_admin') {
@@ -85,14 +215,9 @@ const Overview = () => {
   const getOverviewTitle = () => {
     switch (dashboardType) {
       case 'ministry_admin':
-        if (dashboardData && dashboardData.title) {
-          return dashboardData.title;
-        } else {
-          return 'National Overview';
-        }
+        return dashboardData?.title || 'National Overview';
       case 'agent':
         if (dashboardData && dashboardData.title) {
-          // Extract county code from title like "County Dashboard: 12"
           const titleMatch = dashboardData.title.match(/County Dashboard:\s*(\d+)/);
           if (titleMatch) {
             const countyCode = titleMatch[1];
@@ -159,8 +284,6 @@ const Overview = () => {
               { title: 'Total Teachers', value: dashboardData.data.metrics_kpis.total_teachers.value.toString(), icon: Users, trend: dashboardData.data.metrics_kpis.total_teachers.vs_last_month, color: 'text-success' },
               { title: 'Total Students', value: dashboardData.data.metrics_kpis.total_students.value.toString(), icon: Users, trend: dashboardData.data.metrics_kpis.total_students.vs_last_month, color: 'text-info' },
               { title: 'Assessment Coverage', value: dashboardData.data.metrics_kpis.assessment_coverage_percentage.value.toString(), icon: FileText, trend: dashboardData.data.metrics_kpis.assessment_coverage_percentage.vs_last_month, color: 'text-warning' },
-              // { title: 'Assessments Overdue', value: dashboardData.data.metrics_kpis.assessments_overdue.value.toString(), icon: AlertTriangle, trend: dashboardData.data.metrics_kpis.assessments_overdue.vs_last_month, color: 'text-destructive' },
-              // { title: 'Avg Time to Complete', value: dashboardData.data.metrics_kpis.avg_time_to_complete_days.value.toString(), icon: TrendingUp, trend: dashboardData.data.metrics_kpis.avg_time_to_complete_days.vs_last_month, color: 'text-info' },
               { title: 'Total Assessments', value: dashboardData.data.metrics_kpis.total_assessments.value.toString(), icon: FileText, trend: dashboardData.data.metrics_kpis.total_assessments.vs_last_month, color: 'text-warning' },
               { title: 'Safety Assessments', value: dashboardData.data.metrics_kpis.total_safety_assessments.value.toString(), icon: CheckCircle, trend: dashboardData.data.metrics_kpis.total_safety_assessments.vs_last_month, color: 'text-primary' },
               { title: 'Safety Score', value: dashboardData.data.metrics_kpis.safety_score.value.toString(), icon: TrendingUp, trend: dashboardData.data.metrics_kpis.safety_score.vs_last_month, color: 'text-success' },
@@ -187,7 +310,6 @@ const Overview = () => {
           } else if (schoolMetricsData && currentUser.institution_id) {
             const schoolMetrics = schoolMetricsData.filter(m => m.institution_id === currentUser.institution_id);
             if (schoolMetrics.length > 0) {
-              // Take the latest by created_at
               const latest = schoolMetrics.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
               return [
                 { title: 'Students', value: latest.students_count.toString(), icon: Users, trend: '+0', color: 'text-primary' },
@@ -203,7 +325,7 @@ const Overview = () => {
             { title: 'Total Actions', value: '5', icon: FileText, trend: '+100%', color: 'text-info' },
             { title: 'Safety Assessments', value: '2', icon: CheckCircle, trend: '+100%', color: 'text-warning' },
             { title: 'Safety Score', value: '50', icon: TrendingUp, trend: 'N/A', color: 'text-primary' },
-                      { title: 'Maintenance Assessments', value: '3', icon: AlertTriangle, trend: '+100%', color: 'text-info' },
+            { title: 'Maintenance Assessments', value: '3', icon: AlertTriangle, trend: '+100%', color: 'text-info' },
             { title: 'Maintenance Score', value: '30.8', icon: TrendingUp, trend: 'N/A', color: 'text-success' },
             { title: 'Completed Maintenance', value: '0', icon: CheckCircle, trend: '0%', color: 'text-warning' },
             { title: 'High Priority Maintenance', value: '0', icon: AlertTriangle, trend: '0%', color: 'text-destructive' },
@@ -232,28 +354,6 @@ const Overview = () => {
     { name: 'Not Assessed', value: 67, color: 'hsl(var(--muted-foreground))' },
   ];
 
-  // Prepare assessment details data for the table
-  const assessmentDetailsData = React.useMemo(() => {
-    if (!dashboardData?.data?.assessment_status_distribution) return [];
-
-    const details: any[] = [];
-    dashboardData.data.assessment_status_distribution.forEach(statusGroup => {
-      if (Array.isArray(statusGroup.value)) {
-        statusGroup.value.forEach(assessment => {
-          details.push({
-            school_name: assessment.school_name,
-            item_description: assessment.item_description,
-            status: assessment.status,
-            count: assessment.count,
-            status_color: statusGroup.color,
-            status_label: statusGroup.label
-          });
-        });
-      }
-    });
-    return details;
-  }, [dashboardData]);
-
   const subCountyData = dashboardData && (dashboardData.data.county_performance || dashboardData.data.sub_county_performance || dashboardData.data.institution_performance) ?
     (dashboardData.data.county_performance || dashboardData.data.sub_county_performance || dashboardData.data.institution_performance).labels.map((label, i) => {
       const obj: any = { name: countyCodeToName[label] || label };
@@ -264,6 +364,9 @@ const Overview = () => {
     }) :
     countyData;
 
+  const processedMaintenanceData = processDataForCollapsibleTable(topProblemAreas.maintenance);
+  const processedSafetyData = processDataForCollapsibleTable(topProblemAreas.safety);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -273,64 +376,181 @@ const Overview = () => {
             Monitor and track quality assurance metrics across your jurisdiction
           </p>
         </div>
-        {/* <div className="flex items-center space-x-2">
-          <Badge variant="outline" className="text-sm">
-            Last updated: 2 minutes ago
-          </Badge>
-        </div> */}
+      </div>
+      {/* Performance Scores Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader className="text-center">
+            <CardTitle className="flex items-center justify-center space-x-2">
+              <CheckCircle className="h-5 w-5 text-success" />
+              <span>Safety Performance Scores</span>
+            </CardTitle>
+            <CardDescription>
+              Lowest and highest safety scores across schools
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={400}>
+              <BarChart
+                data={[
+                  ...performanceScores.lowest_safety_scores.map(item => ({ ...item, type: 'Lowest' })),
+                  ...performanceScores.highest_safety_scores.map(item => ({ ...item, type: 'Highest' }))
+                ]}
+                margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                <XAxis
+                  dataKey="school_name"
+                  className="text-muted-foreground"
+                  fontSize={10}
+                  angle={-45}
+                  textAnchor="end"
+                  height={100}
+                  interval={0}
+                  dy={10}
+                  tickLine={false}
+                />
+                <YAxis
+                  className="text-muted-foreground"
+                  fontSize={12}
+                  domain={[0, 100]}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'hsl(var(--card))',
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '6px'
+                  }}
+                  formatter={(value) => [`${value}%`, 'Score']}
+                />
+                <Bar
+                  dataKey="score"
+                  fill="hsl(var(--success))"
+                  name="Safety Score"
+                  maxBarSize={40}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="text-center">
+            <CardTitle className="flex items-center justify-center space-x-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              <span>Maintenance Performance Scores</span>
+            </CardTitle>
+            <CardDescription>
+              Lowest and highest maintenance scores across schools
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={400}>
+              <BarChart
+                data={[
+                  ...performanceScores.lowest_maintenance_scores.map(item => ({ ...item, type: 'Lowest' })),
+                  ...performanceScores.highest_maintenance_scores.map(item => ({ ...item, type: 'Highest' }))
+                ]}
+                margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                <XAxis
+                  dataKey="school_name"
+                  className="text-muted-foreground"
+                  fontSize={10}
+                  angle={-45}
+                  textAnchor="end"
+                  height={100}
+                  interval={0}
+                  dy={10}
+                  tickLine={false}
+                />
+                <YAxis
+                  className="text-muted-foreground"
+                  fontSize={12}
+                  domain={[0, 100]}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'hsl(var(--card))',
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '6px'
+                  }}
+                  formatter={(value) => [`${value}%`, 'Score']}
+                />
+                <Bar
+                  dataKey="score"
+                  fill="hsl(var(--destructive))"
+                  name="Maintenance Score"
+                  maxBarSize={40}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Assessment Status Distribution */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <CheckCircle className="h-5 w-5 text-success" />
-                <span>Assessment Status Distribution</span>
-              </CardTitle>
-              <CardDescription>
-                Overview of assessment outcomes across all schools
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={statusData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={100}
-                    paddingAngle={5}
-                    dataKey="value"
-                  >
-                    {statusData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="grid grid-cols-2 gap-4 mt-4">
-                {statusData.map((item, index) => (
-                  <div key={index} className="flex items-center space-x-2">
-                    <div
-                      className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: item.color }}
-                    />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">{item.name}</p>
-                      {/* <p className="text-xs text-muted-foreground">{item.value} parts</p> */}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-        {/* Performance Trends */}
+       {(dashboardType === 'ministry_admin' || dashboardType === 'agent') && (
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
+          <CardHeader className="text-center">
+            <CardTitle className="flex items-center justify-center space-x-2">
+              <BarChart3 className="h-5 w-5 text-primary" />
+              <span>
+                {dashboardType === 'ministry_admin' ? 'County Performance' :
+                 dashboardData?.data?.institution_performance ? 'Institution Performance' :
+                 'Sub-County Performance'}
+              </span>
+            </CardTitle>
+            <CardDescription>
+              Assessment metrics across different regions
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={500}>
+              <BarChart
+                data={subCountyData}
+                barCategoryGap="20%"
+                barGap={4}
+                margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                <XAxis
+                  dataKey="name"
+                  className="text-muted-foreground"
+                  fontSize={10}
+                  angle={-45}
+                  textAnchor="end"
+                  height={100}
+                  interval={0}
+                  dy={10}
+                  tickLine={false}
+                />
+                <YAxis className="text-muted-foreground" fontSize={12} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'hsl(var(--card))',
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '6px'
+                  }}
+                />
+                {dashboardData && (dashboardData.data.county_performance || dashboardData.data.sub_county_performance || dashboardData.data.institution_performance) &&
+                  (dashboardData.data.county_performance || dashboardData.data.sub_county_performance || dashboardData.data.institution_performance).data.map(item => (
+                    <Bar
+                      key={item.label}
+                      dataKey={item.label}
+                      fill={item.color}
+                      name={item.label}
+                      maxBarSize={40}
+                    />
+                  ))}
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      )}
+        <Card>
+          <CardHeader className="text-center">
+            <CardTitle className="flex items-center justify-center space-x-2">
               <TrendingUp className="h-5 w-5 text-info" />
               <span>Performance Trends</span>
             </CardTitle>
@@ -407,120 +627,67 @@ const Overview = () => {
         ))}
       </div>
 
-      {/* County/Regional Performance (for Admin and County Admin) */}
-      {(dashboardType === 'ministry_admin' || dashboardType === 'agent') && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <BarChart3 className="h-5 w-5 text-primary" />
-              <span>
-                {dashboardType === 'ministry_admin' ? 'County Performance' :
-                 dashboardData?.data?.institution_performance ? 'Institution Performance' :
-                 'Sub-County Performance'}
-              </span>
-            </CardTitle>
-            <CardDescription>
-              Assessment metrics across different regions
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={500}>
-              <BarChart
-                data={subCountyData}
-                barCategoryGap="20%"
-                barGap={4}
-                margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                <XAxis
-                  dataKey="name"
-                  className="text-muted-foreground"
-                  fontSize={10}
-                  angle={-45}
-                  textAnchor="end"
-                  height={100}
-                  interval={0}
-                  dy={10}
-                  tickLine={false}
-                />
-                <YAxis className="text-muted-foreground" fontSize={12} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: 'hsl(var(--card))',
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '6px'
-                  }}
-                />
-                {dashboardData && (dashboardData.data.county_performance || dashboardData.data.sub_county_performance || dashboardData.data.institution_performance) &&
-                  (dashboardData.data.county_performance || dashboardData.data.sub_county_performance || dashboardData.data.institution_performance).data.map(item => (
-                    <Bar
-                      key={item.label}
-                      dataKey={item.label}
-                      fill={item.color}
-                      name={item.label}
-                      maxBarSize={40}
-                    />
-                  ))
-                }
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      )}
+      {/* Top Maintenance Problems */}
+      <Card>
+        <CardHeader className="text-center">
+          <CardTitle className="flex items-center justify-center space-x-2">
+            <AlertTriangle className="h-5 w-5 text-destructive" />
+            <span>Top Maintenance Problems</span>
+          </CardTitle>
+          <CardDescription>
+            Most common maintenance issues across schools
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <TableContainer component={Paper}>
+            <MuiTable aria-label="collapsible table">
+              <TableHead>
+                <TableRow>
+                  <TableCell />
+                  <TableCell>Item Name</TableCell>
+                  <TableCell align="right">Total Count</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {processedMaintenanceData.map((row) => (
+                  <CollapsibleRow key={row.item_name} row={row} />
+                ))}
+              </TableBody>
+            </MuiTable>
+          </TableContainer>
+        </CardContent>
+      </Card>
 
-      {/* Assessment Details Table */}
-      {assessmentDetailsData.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <FileText className="h-5 w-5 text-primary" />
-              <span>Assessment Details</span>
-            </CardTitle>
-            <CardDescription>
-              Detailed breakdown of assessments by school and condition
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    {(dashboardType === 'ministry_admin' || dashboardType === 'agent') && (
-                      <TableHead>School Name</TableHead>
-                    )}
-                    <TableHead>Condition</TableHead>
-                    <TableHead>Item Description</TableHead>
-                    <TableHead>Parts</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {assessmentDetailsData.map((item, index) => (
-                    <TableRow key={index}>
-                      {(dashboardType === 'ministry_admin' || dashboardType === 'agent') && (
-                        <TableCell className="font-medium">{item.school_name}</TableCell>
-                      )}
-                      <TableCell>
-                        <Badge
-                          variant="outline"
-                          className="text-xs"
-                          style={{
-                            borderColor: item.status_color,
-                            color: item.status_color
-                          }}
-                        >
-                          {item.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{item.item_description}</TableCell>
-                      <TableCell>{item.count}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {/* Top Safety Problems */}
+      <Card>
+        <CardHeader className="text-center">
+          <CardTitle className="flex items-center justify-center space-x-2">
+            <CheckCircle className="h-5 w-5 text-success" />
+            <span>Top Safety Problems</span>
+          </CardTitle>
+          <CardDescription>
+            Most common safety issues across schools
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <TableContainer component={Paper}>
+            <MuiTable aria-label="collapsible table">
+              <TableHead>
+                <TableRow>
+                  <TableCell />
+                  <TableCell>Item Name</TableCell>
+                  <TableCell align="right">Total Count</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {processedSafetyData.map((row) => (
+                  <CollapsibleRow key={row.item_name} row={row} />
+                ))}
+              </TableBody>
+            </MuiTable>
+          </TableContainer>
+        </CardContent>
+      </Card>
     </div>
   );
 };
