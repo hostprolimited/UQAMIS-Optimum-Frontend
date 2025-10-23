@@ -491,6 +491,9 @@ const isFacilityNotAvailable = selectedFacility ? (() => {
   const [selectedIncidentFacility, setSelectedIncidentFacility] = useState<string>('');
   const [isSubmittingIncident, setIsSubmittingIncident] = useState(false);
 
+  // Assessment submission state
+  const [isSubmittingAssessment, setIsSubmittingAssessment] = useState(false);
+
   // Initialize form with empty values
   const facilityForm = useForm<FacilityAssessmentData>({
     resolver: zodResolver(facilityAssessmentSchema),
@@ -869,6 +872,7 @@ useEffect(() => {
 
   const handleFacilityAssessmentSubmit = async (data: FacilityAssessmentData) => {
     try {
+      setIsSubmittingAssessment(true);
       if (!selectedFacility) return;
 
       const facilityType = getFacilityType(selectedFacility.name);
@@ -1064,6 +1068,8 @@ useEffect(() => {
         description: message,
         variant: 'destructive',
       });
+    } finally {
+      setIsSubmittingAssessment(false);
     }
   };
 
@@ -1889,8 +1895,9 @@ const ClassSelect: React.FC<ClassSelectProps> = ({ onChange, value, classOptions
                   <Button
                     type="submit"
                     className="flex-1 bg-[#F89B0C] hover:bg-[#F89B0C]/90 text-primary-foreground"
+                    disabled={isSubmittingAssessment}
                   >
-                    Submit Assessment
+                    {isSubmittingAssessment ? 'Submitting...' : 'Submit Assessment'}
                   </Button>
                 </div>
               </form>
