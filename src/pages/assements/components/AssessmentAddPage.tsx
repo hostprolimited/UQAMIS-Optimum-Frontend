@@ -476,6 +476,15 @@ const AssessmentAddPage: React.FC = () => {
 
   // Incident reporting state
   const [isIncidentModalOpen, setIsIncidentModalOpen] = useState(false);
+const isFacilityNotAvailable = selectedFacility ? (() => {
+  const facilityType = getFacilityType(selectedFacility.name);
+  if (facilityType === 'toilet') return hasToiletFacility === false;
+  if (facilityType === 'laboratory') return hasLaboratoryFacility === false;
+  if (facilityType === 'dining_hall') return hasDiningHallFacility === false;
+  if (facilityType === 'dormitory') return hasDormitoryFacility === false;
+  if (facilityType === 'office') return hasOfficeFacility === false;
+  return false;
+})() : false;
   const [incidentDescription, setIncidentDescription] = useState('');
   const [incidentSeverity, setIncidentSeverity] = useState('');
   const [incidentFiles, setIncidentFiles] = useState<File[]>([]);
@@ -863,6 +872,14 @@ useEffect(() => {
       if (!selectedFacility) return;
 
       const facilityType = getFacilityType(selectedFacility.name);
+      const isFacilityNotAvailable = (() => {
+        if (facilityType === 'toilet') return hasToiletFacility === false;
+        if (facilityType === 'laboratory') return hasLaboratoryFacility === false;
+        if (facilityType === 'dining_hall') return hasDiningHallFacility === false;
+        if (facilityType === 'dormitory') return hasDormitoryFacility === false;
+        if (facilityType === 'office') return hasOfficeFacility === false;
+        return false;
+      })();
       const isClassFacility = facilityType === 'classroom';
       const isToiletFacility = facilityType === 'toilet';
       const isLaboratoryFacility = facilityType === 'laboratory';
@@ -870,26 +887,30 @@ useEffect(() => {
       const isDormitoryFacility = facilityType === 'dormitory';
       const isOfficeFacility = facilityType === 'office';
 
-      // Validation: Check if all maintenance details are marked
-      const allMaintenanceMarked = data.details.every(detail => detail.assessment_status !== undefined);
-      if (!allMaintenanceMarked) {
-        toast({
-          title: 'Validation Error',
-          description: 'Please mark all maintenance assessment areas before submitting.',
-          variant: 'destructive',
-        });
-        return;
+      // Validation: Check if all maintenance details are marked (only if facility is available)
+      if (!isFacilityNotAvailable) {
+        const allMaintenanceMarked = data.details.every(detail => detail.assessment_status !== undefined);
+        if (!allMaintenanceMarked) {
+          toast({
+            title: 'Validation Error',
+            description: 'Please mark all maintenance assessment areas before submitting.',
+            variant: 'destructive',
+          });
+          return;
+        }
       }
 
-      // Validation: Check if all safety details are marked (only if there are safety items)
-      const allSafetyMarked = safetyData.length === 0 || safetyData.every(item => item.attentionRequired || item.good);
-      if (!allSafetyMarked) {
-        toast({
-          title: 'Validation Error',
-          description: 'Please mark all safety assessment areas before submitting.',
-          variant: 'destructive',
-        });
-        return;
+      // Validation: Check if all safety details are marked (only if there are safety items and facility is available)
+      if (!isFacilityNotAvailable) {
+        const allSafetyMarked = safetyData.length === 0 || safetyData.every(item => item.attentionRequired || item.good);
+        if (!allSafetyMarked) {
+          toast({
+            title: 'Validation Error',
+            description: 'Please mark all safety assessment areas before submitting.',
+            variant: 'destructive',
+          });
+          return;
+        }
       }
 
       let maintenanceSubmitted = false;
@@ -901,14 +922,8 @@ useEffect(() => {
       // Check if safety has changes
       const hasSafetyChanges = safetyData.some(item => item.attentionRequired || item.good);
 
-      // Check if facility is not available
-      const isFacilityNotAvailable = (isToiletFacility && hasToiletFacility === false) ||
-                                    (isLaboratoryFacility && hasLaboratoryFacility === false) ||
-                                    (isDiningHallFacility && hasDiningHallFacility === false) ||
-                                    (isDormitoryFacility && hasDormitoryFacility === false) ||
-                                    (isOfficeFacility && hasOfficeFacility === false);
 
-      // Always submit maintenance if there are changes or notes
+      // Always submit maintenance if there are changes or notes (or if facility is not available with feedback)
       if (hasMaintenanceChanges || (isFacilityNotAvailable && data.school_feedback.trim())) {
         // Create the assessment input object matching MaintenanceAssessmentInput type
          const assessmentInput = {
@@ -974,7 +989,8 @@ useEffect(() => {
         safetySubmitted = true;
       }
 
-      if (!maintenanceSubmitted && !safetySubmitted && !data.school_feedback.trim()) {
+      // Allow submission if facility is not available and user provided feedback
+      if (!maintenanceSubmitted && !safetySubmitted && !data.school_feedback.trim() && !isFacilityNotAvailable) {
         toast({
           title: 'No Changes',
           description: 'Please provide notes or make assessment changes.',

@@ -13,6 +13,8 @@ export interface User {
   status?: string;
   institution_id?: number;
   assignments?: {
+    transferred_by: string;
+    approved_by: string;
     id: number;
     user_id: number;
     institution_id: number;

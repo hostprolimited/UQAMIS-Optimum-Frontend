@@ -319,7 +319,7 @@ const Overview = () => {
                     />
                     <div className="flex-1">
                       <p className="text-sm font-medium">{item.name}</p>
-                      <p className="text-xs text-muted-foreground">{item.value} parts</p>
+                      {/* <p className="text-xs text-muted-foreground">{item.value} parts</p> */}
                     </div>
                   </div>
                 ))}
@@ -407,8 +407,6 @@ const Overview = () => {
         ))}
       </div>
 
-      
-
       {/* County/Regional Performance (for Admin and County Admin) */}
       {(dashboardType === 'ministry_admin' || dashboardType === 'agent') && (
         <Card>
@@ -491,6 +489,7 @@ const Overview = () => {
                       <TableHead>School Name</TableHead>
                     )}
                     <TableHead>Condition</TableHead>
+                    <TableHead>Item Description</TableHead>
                     <TableHead>Parts</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -512,6 +511,7 @@ const Overview = () => {
                           {item.status}
                         </Badge>
                       </TableCell>
+                      <TableCell>{item.item_description}</TableCell>
                       <TableCell>{item.count}</TableCell>
                     </TableRow>
                   ))}
@@ -521,63 +521,6 @@ const Overview = () => {
           </CardContent>
         </Card>
       )}
-
-      {/* Recent Activity */}
-      {/* <Card>
-        <CardHeader>
-          <CardTitle>Recent Activity</CardTitle>
-          <CardDescription>Latest assessment updates and system events</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {[
-              {
-                icon: CheckCircle,
-                color: 'text-success',
-                title: 'Green Valley Primary School',
-                description: 'Assessment approved with score 92.5',
-                time: '2 minutes ago'
-              },
-              {
-                icon: AlertTriangle,
-                color: 'text-warning',
-                title: 'St. Mary Secondary School',
-                description: 'Assessment pending review - missing documentation',
-                time: '15 minutes ago'
-              },
-              {
-                icon: FileText,
-                color: 'text-info',
-                title: 'Hillside Academy',
-                description: 'New assessment submitted for review',
-                time: '1 hour ago'
-              },
-              {
-                icon: XCircle,
-                color: 'text-destructive',
-                title: 'Riverside Primary',
-                description: 'Assessment requires improvements in safety protocols',
-                time: '2 hours ago'
-              }
-            ].map((activity, index) => (
-              <div key={index} className="flex items-start space-x-3">
-                <activity.icon className={`h-5 w-5 mt-0.5 ${activity.color}`} />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground">
-                    {activity.title}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {activity.description}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {activity.time}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card> */}
     </div>
   );
 };

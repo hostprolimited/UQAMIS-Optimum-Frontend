@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { User, Mail, Shield, Edit, X, Trash2, AlertCircle, Phone, MoreHorizontal, Check, ChevronsUpDown, ArrowRightLeft } from 'lucide-react';
+import { User, Mail, Shield, Edit, X, Trash2, AlertCircle, Phone, MoreHorizontal, Check, ChevronsUpDown, ArrowRightLeft, UserCheck, UserX, Eye } from 'lucide-react';
 import dataJson from '@/constants/data.json';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -15,6 +15,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -65,6 +66,15 @@ const SchoolAdminUsers: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [roles, setRoles] = useState<any[]>([]);
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [transferForm, setTransferForm] = useState({ new_institution_id: '' });
+  const [transferInstitutionSearch, setTransferInstitutionSearch] = useState('');
+  const [institutions, setInstitutions] = useState<any[]>([]);
+  const [pendingTransfers, setPendingTransfers] = useState<any[]>([]);
+  const [selectedUser, setSelectedUser] = useState<UserModel | null>(null);
+  const [showUserDetailsModal, setShowUserDetailsModal] = useState(false);
+  const [userDetails, setUserDetails] = useState<UserModel | null>(null);
+  const [openTransferInstitution, setOpenTransferInstitution] = useState(false);
   const { currentUser } = useRole();
   const { toast } = useToast();
 
@@ -75,11 +85,11 @@ const SchoolAdminUsers: React.FC = () => {
       if (Array.isArray(data)) {
         const findActiveAssignment = (user: UserModel) => user.assignments?.find(a => a.end_date === null);
         // Filter users by institution_id
-        const schoolUsers = data.filter(user => findActiveAssignment(user)?.institution_id === currentUser?.institution_id);
+        const schoolUsers = data.filter(user => findActiveAssignment(user)?.institution_id === currentUser?.institution?.id);
         setUsers(schoolUsers);
       } else if (data && typeof data === 'object' && 'users' in data && Array.isArray((data as { users: UserModel[] }).users)) {
         const findActiveAssignment = (user: UserModel) => user.assignments?.find(a => a.end_date === null);
-        const schoolUsers = (data as { users: UserModel[] }).users.filter(user => findActiveAssignment(user)?.institution_id === currentUser?.institution_id);
+        const schoolUsers = (data as { users: UserModel[] }).users.filter(user => findActiveAssignment(user)?.institution_id === currentUser?.institution?.id);
         setUsers(schoolUsers);
       } else {
         setUsers([]);
@@ -100,6 +110,26 @@ const SchoolAdminUsers: React.FC = () => {
       setUsers([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchInstitutions = async () => {
+    try {
+      const data = await getInstitutions();
+      setInstitutions(Array.isArray(data.institutions) ? data.institutions : []);
+    } catch (e) {
+      setInstitutions([]);
+    }
+  };
+
+  const fetchPendingTransfers = async () => {
+    try {
+      // Assuming there's an endpoint to get pending transfers for the current school
+      const response = await api.get(`/users/pending-transfers/${currentUser?.institution?.id}`);
+      setPendingTransfers(response.data || []);
+    } catch (error) {
+      console.error('Error fetching pending transfers:', error);
+      setPendingTransfers([]);
     }
   };
 
@@ -127,7 +157,9 @@ const SchoolAdminUsers: React.FC = () => {
   useEffect(() => {
     fetchSchoolUsers();
     fetchRoles();
-  }, [currentUser?.institution_id]);
+    fetchInstitutions();
+    fetchPendingTransfers();
+  }, [currentUser?.institution?.id]);
 
   const handleOpenModal = () => {
     setForm({ name: '', email: '', phone: '', gender: '', role: '', password: '' });
@@ -139,6 +171,97 @@ const SchoolAdminUsers: React.FC = () => {
     setShowModal(false);
     setError(null);
     setForm({ name: '', email: '', phone: '', gender: '', role: '', password: '' });
+  };
+
+  const handleCloseTransferModal = () => {
+    setShowTransferModal(false);
+    setTransferForm({ new_institution_id: '' });
+    setTransferInstitutionSearch('');
+    setOpenTransferInstitution(false);
+  };
+
+  const handleTransfer = (user: UserModel) => {
+    setSelectedUser(user);
+    setTransferForm({ new_institution_id: '' });
+    setShowTransferModal(true);
+  };
+
+  const handleTransferSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedUser || !transferForm.new_institution_id) return;
+
+    try {
+      // Initiate transfer request to the receiving school
+      await api.post(`/users/initiate-transfer`, {
+        user_id: selectedUser.id,
+        from_institution_id: currentUser?.institution?.id,
+        to_institution_id: parseInt(transferForm.new_institution_id)
+      });
+      toast({
+        title: "Success",
+        description: "Transfer request sent to receiving school for approval",
+        variant: "default",
+      });
+      setShowTransferModal(false);
+      fetchSchoolUsers();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to initiate transfer request",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleApproveTransfer = async (transferId: number) => {
+    try {
+      await api.patch(`/users/approve-transfer/${transferId}`, {
+        approved_by: currentUser?.id
+      });
+      toast({
+        title: "Success",
+        description: "Transfer approved successfully",
+        variant: "default",
+      });
+      fetchPendingTransfers();
+      fetchSchoolUsers();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to approve transfer",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleRejectTransfer = async (transferId: number) => {
+    try {
+      await api.patch(`/users/reject-transfer/${transferId}`, {
+        rejected_by: currentUser?.id
+      });
+      toast({
+        title: "Success",
+        description: "Transfer rejected successfully",
+        variant: "default",
+      });
+      fetchPendingTransfers();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to reject transfer",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleViewUserDetails = (user: UserModel) => {
+    setUserDetails(user);
+    setShowUserDetailsModal(true);
+  };
+
+  const handleCloseUserDetailsModal = () => {
+    setShowUserDetailsModal(false);
+    setUserDetails(null);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -166,7 +289,7 @@ const SchoolAdminUsers: React.FC = () => {
     try {
       const createData = {
         ...form,
-        institution_id: currentUser?.institution_id,
+        institution_id: currentUser?.institution?.id,
       };
       await createUser(createData);
       toast({
@@ -353,6 +476,83 @@ const SchoolAdminUsers: React.FC = () => {
           </div>
         )}
 
+        {/* Pending Transfers Section */}
+        {pendingTransfers.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Pending User Transfers</CardTitle>
+              <CardDescription>
+                Users waiting for your approval to join your school
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>User</TableHead>
+                    <TableHead>From School</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Requested On</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {pendingTransfers.map((transfer) => (
+                    <TableRow key={transfer.id}>
+                      <TableCell>
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
+                            <User className="h-5 w-5 text-primary-foreground" />
+                          </div>
+                          <div>
+                            <div className="font-semibold">{transfer.user.name}</div>
+                            <div className="text-sm text-muted-foreground flex items-center">
+                              <Mail className="h-3 w-3 mr-1" />
+                              {transfer.user.email}
+                            </div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>{transfer.from_institution?.name || 'Unknown'}</TableCell>
+                      <TableCell>
+                        <Badge className="bg-muted text-muted-foreground">
+                          {formatRole(transfer.role)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">
+                          {new Date(transfer.created_at).toLocaleDateString()}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex space-x-2">
+                          <Button
+                            size="sm"
+                            onClick={() => handleApproveTransfer(transfer.id)}
+                            className="bg-success hover:bg-success/90 text-success-foreground"
+                          >
+                            <UserCheck className="h-4 w-4 mr-1" />
+                            Approve
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleRejectTransfer(transfer.id)}
+                            className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                          >
+                            <UserX className="h-4 w-4 mr-1" />
+                            Reject
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Staff Table */}
         <Card>
           <CardHeader>
@@ -369,16 +569,17 @@ const SchoolAdminUsers: React.FC = () => {
                   <TableHead>Role</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Last Login</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center">Loading...</TableCell>
+                    <TableCell colSpan={5} className="text-center">Loading...</TableCell>
                   </TableRow>
                 ) : users.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center">No staff members found.</TableCell>
+                    <TableCell colSpan={5} className="text-center">No staff members found.</TableCell>
                   </TableRow>
                 ) : (
                   users.map((user) => {
@@ -389,9 +590,12 @@ const SchoolAdminUsers: React.FC = () => {
                       <TableRow key={user.id} className="hover:bg-muted/50">
                       <TableCell>
                         <div className="flex items-center space-x-3">
-                          <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
+                          <button
+                            onClick={() => handleViewUserDetails(user)}
+                            className="w-10 h-10 bg-primary rounded-full flex items-center justify-center hover:bg-primary/80 transition-colors"
+                          >
                             <User className="h-5 w-5 text-primary-foreground" />
-                          </div>
+                          </button>
                           <div>
                             <div className="font-semibold">{user.name}</div>
                             <div className="text-sm text-muted-foreground flex items-center">
@@ -416,6 +620,24 @@ const SchoolAdminUsers: React.FC = () => {
                         <div className="text-xs text-muted-foreground">
                           {user.lastLogin ? new Date(user.lastLogin).toLocaleTimeString() : ''}
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-40">
+                            <DropdownMenuItem
+                              onClick={() => handleTransfer(user)}
+                              className="cursor-pointer"
+                            >
+                              <ArrowRightLeft className="h-4 w-4 mr-2" />
+                              Initiate Transfer
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                     )
@@ -474,7 +696,10 @@ const Users = () => {
   const [openInstitution, setOpenInstitution] = useState(false);
   const [institutionSearch, setInstitutionSearch] = useState('');
   const [transferInstitutionSearch, setTransferInstitutionSearch] = useState('');
+  const [openTransferInstitution, setOpenTransferInstitution] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showUserDetailsModal, setShowUserDetailsModal] = useState(false);
+  const [userDetails, setUserDetails] = useState<UserModel | null>(null);
   const { currentUser } = useRole();
   const { toast } = useToast();
 
@@ -764,6 +989,16 @@ const Users = () => {
   const handleDelete = (user: UserModel) => {
     setSelectedUser(user);
     setShowDeleteDialog(true);
+  };
+
+  const handleViewUserDetails = (user: UserModel) => {
+    setUserDetails(user);
+    setShowUserDetailsModal(true);
+  };
+
+  const handleCloseUserDetailsModal = () => {
+    setShowUserDetailsModal(false);
+    setUserDetails(null);
   };
 
   const handleTransferSubmit = async (e: React.FormEvent) => {
@@ -1378,9 +1613,12 @@ const Users = () => {
                     <TableRow key={user.id} className="hover:bg-muted/50">
                       <TableCell>
                         <div className="flex items-center space-x-3">
-                          <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
+                          <button
+                            onClick={() => handleViewUserDetails(user)}
+                            className="w-10 h-10 bg-primary rounded-full flex items-center justify-center hover:bg-primary/80 transition-colors"
+                          >
                             <User className="h-5 w-5 text-primary-foreground" />
-                          </div>
+                          </button>
                           <div>
                             <div className="font-semibold">{user.name}</div>
                             <div className="text-sm text-muted-foreground flex items-center">
@@ -1510,156 +1748,179 @@ const Users = () => {
             </button>
             <h2 className="text-xl font-bold mb-4">Transfer User</h2>
             <p className="text-sm text-muted-foreground mb-4">
-              Transfer {selectedUser.name} to a new location
+              Transfer {selectedUser.name} to a new school
             </p>
             <form onSubmit={handleTransferSubmit} className="space-y-4">
-              {selectedUser.role === 'agent' ? (
-                // Agent transfer form
-                <>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">New County</label>
-                    <Select
-                      value={selectedCounty}
-                      onValueChange={(value) => {
-                        setSelectedCounty(value);
-                        setSelectedSubcounty('');
-                        const county = getCounties().find((c: any) => c.county_id === value);
-                        setTransferForm({
-                          ...transferForm,
-                          new_county_code: value,
-                          new_county: county?.county_name || '',
-                          new_subcounty: '',
-                          new_ward: ''
-                        });
-                      }}
+              <div>
+                <label className="block text-sm font-medium mb-1">New Institution <span className="text-destructive">*</span></label>
+                <Popover open={openTransferInstitution} onOpenChange={setOpenTransferInstitution}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={openTransferInstitution}
+                      className="w-full justify-between"
                     >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select county" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {getCounties().map((county: any) => (
-                          <SelectItem key={county.county_id} value={county.county_id}>
-                            {county.county_name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium mb-1">New Subcounty</label>
-                      <Select
-                        value={selectedSubcounty}
-                        onValueChange={(value) => {
-                          setSelectedSubcounty(value);
-                          const subcounty = getSubcounties(selectedCounty).find(s => s.subcounty_id === value);
-                          setTransferForm({ ...transferForm, new_subcounty: subcounty?.constituency_name || '', new_ward: '' });
-                        }}
-                        disabled={!selectedCounty}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select subcounty" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {selectedCounty && getSubcounties(selectedCounty).map((subcounty: Subcounty) => (
-                            <SelectItem key={subcounty.subcounty_id} value={subcounty.subcounty_id}>
-                              {subcounty.constituency_name}
-                            </SelectItem>
+                      {transferForm.new_institution_id
+                        ? institutions.find((inst) => inst.id === parseInt(transferForm.new_institution_id))?.name
+                        : "Select institution..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0">
+                    <Command>
+                      <CommandInput
+                        placeholder="Search institutions..."
+                        value={transferInstitutionSearch}
+                        onValueChange={setTransferInstitutionSearch}
+                      />
+                      <CommandEmpty>No institution found.</CommandEmpty>
+                      <CommandGroup>
+                        {institutions
+                          .filter((inst) => inst.id !== currentUser?.institution?.id) // Exclude current institution
+                          .sort((a, b) => a.name.localeCompare(b.name))
+                          .filter((inst) =>
+                            transferInstitutionSearch === '' ||
+                            inst.name.toLowerCase().includes(transferInstitutionSearch.toLowerCase())
+                          )
+                          .slice(0, 10)
+                          .map((inst) => (
+                            <CommandItem
+                              key={inst.id}
+                              value={inst.name}
+                              onSelect={() => {
+                                setTransferForm({ ...transferForm, new_institution_id: inst.id.toString() });
+                                setOpenTransferInstitution(false);
+                                setTransferInstitutionSearch('');
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  transferForm.new_institution_id === inst.id.toString() ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {inst.name}
+                            </CommandItem>
                           ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-1">New Ward</label>
-                      <Select
-                        value={transferForm.new_ward}
-                        onValueChange={(value) => setTransferForm({ ...transferForm, new_ward: value })}
-                        disabled={!selectedSubcounty}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select ward" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {selectedSubcounty && getWards(selectedSubcounty).map((ward: any) => (
-                            <SelectItem key={ward.station_id} value={ward.ward}>
-                              {ward.ward}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </>
-              ) : selectedUser.role === 'school_admin' ? (
-                // School Admin transfer form
-                <div>
-                  <label className="block text-sm font-medium mb-1">New Institution <span className="text-destructive">*</span></label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        className="w-full justify-between"
-                      >
-                        {transferForm.new_institution_id
-                          ? institutions.find((inst) => inst.id === parseInt(transferForm.new_institution_id))?.name
-                          : "Select institution..."}
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-full p-0">
-                      <Command>
-                        <CommandInput
-                          placeholder="Search institutions..."
-                          value={institutionSearch}
-                          onValueChange={setInstitutionSearch}
-                        />
-                        <CommandEmpty>No institution found.</CommandEmpty>
-                        <CommandGroup>
-                          {institutions
-                            .sort((a, b) => a.name.localeCompare(b.name))
-                            .filter((inst) =>
-                              institutionSearch === '' ||
-                              inst.name.toLowerCase().includes(institutionSearch.toLowerCase())
-                            )
-                            .slice(0, 10)
-                            .map((inst) => (
-                              <CommandItem
-                                key={inst.id}
-                                value={inst.name}
-                                onSelect={() => {
-                                  setTransferForm({ ...transferForm, new_institution_id: inst.id.toString() });
-                                  setTransferInstitutionSearch('');
-                                }}
-                              >
-                                <Check
-                                  className={cn(
-                                    "mr-2 h-4 w-4",
-                                    transferForm.new_institution_id === inst.id.toString() ? "opacity-100" : "opacity-0"
-                                  )}
-                                />
-                                {inst.name}
-                              </CommandItem>
-                            ))}
-                        </CommandGroup>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              ) : null}
+                      </CommandGroup>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
 
               <div className="flex justify-end space-x-2 pt-4">
                 <Button type="button" variant="outline" onClick={handleCloseTransferModal}>
                   Cancel
                 </Button>
                 <Button type="submit" className="bg-primary text-primary-foreground">
-                  Transfer User
+                  Initiate Transfer
                 </Button>
               </div>
             </form>
           </div>
         </div>
       )}
+
+      {/* User Details Modal */}
+      <Dialog open={showUserDetailsModal} onOpenChange={setShowUserDetailsModal}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>User Details</DialogTitle>
+            <DialogDescription>
+              Detailed information about {userDetails?.name}
+            </DialogDescription>
+          </DialogHeader>
+          {userDetails && (
+            <div className="space-y-6">
+              {/* Basic Information */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Name</label>
+                  <p className="text-sm font-semibold">{userDetails.name}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Email</label>
+                  <p className="text-sm">{userDetails.email}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Phone</label>
+                  <p className="text-sm">{userDetails.phone || 'Not provided'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Gender</label>
+                  <p className="text-sm">{userDetails.gender || 'Not specified'}</p>
+                </div>
+              </div>
+
+              {/* Assignments Section */}
+              <div>
+                <h3 className="text-lg font-semibold mb-4">Assignments</h3>
+                {userDetails.assignments && userDetails.assignments.length > 0 ? (
+                  <div className="space-y-4">
+                    {userDetails.assignments.map((assignment, index) => (
+                      <Card key={assignment.id} className="p-4">
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                          <div>
+                            <label className="text-sm font-medium text-muted-foreground">Role</label>
+                            <p className="text-sm font-semibold">{formatRole(assignment.role)}</p>
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium text-muted-foreground">Status</label>
+                            <p className="text-sm">{getStatusBadge(assignment.status)}</p>
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium text-muted-foreground">County</label>
+                            <p className="text-sm">{assignment.county || 'N/A'}</p>
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium text-muted-foreground">Subcounty</label>
+                            <p className="text-sm">{assignment.subcounty || 'N/A'}</p>
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium text-muted-foreground">Ward</label>
+                            <p className="text-sm">{assignment.ward || 'N/A'}</p>
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium text-muted-foreground">Institution</label>
+                            <p className="text-sm">{assignment.institution?.name || 'N/A'}</p>
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium text-muted-foreground">Start Date</label>
+                            <p className="text-sm">{new Date(assignment.start_date).toLocaleDateString()}</p>
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium text-muted-foreground">End Date</label>
+                            <p className="text-sm">{assignment.end_date ? new Date(assignment.end_date).toLocaleDateString() : 'Active'}</p>
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium text-muted-foreground">Transferred By</label>
+                            <p className="text-sm">{assignment.transferred_by || 'N/A'}</p>
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium text-muted-foreground">Approved By</label>
+                            <p className="text-sm">{assignment.approved_by || 'N/A'}</p>
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium text-muted-foreground">Created At</label>
+                            <p className="text-sm">{new Date(assignment.created_at).toLocaleDateString()}</p>
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium text-muted-foreground">Updated At</label>
+                            <p className="text-sm">{new Date(assignment.updated_at).toLocaleDateString()}</p>
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No assignments found.</p>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>

@@ -98,7 +98,7 @@ const RolesPermissions = () => {
           getPermissions()
         ]);
 
-        setUsers(usersResponse.users || []); // Access the users array from the response
+        setUsers(usersResponse.users || []);
         setPermissions(permissionsData.permissions?.map(p => ({ ...p, status: p.status || 'Active' })) || []);
         setRoles(permissionsData.roles?.map(r => ({ ...r, status: r.status || 'Active' })) || []);
       } catch (error: any) {
