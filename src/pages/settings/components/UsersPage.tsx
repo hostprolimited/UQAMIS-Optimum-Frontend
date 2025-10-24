@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { User, Mail, Shield, Edit, X, Trash2, AlertCircle, Phone, MoreHorizontal, Check, ChevronsUpDown, ArrowRightLeft } from 'lucide-react';
+import { User, Mail, Shield, Edit, X, Trash2, AlertCircle, Phone, MoreHorizontal, Check, ChevronsUpDown, ArrowRightLeft, Search, Filter, Download } from 'lucide-react';
 import dataJson from '@/constants/data.json';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -65,6 +65,13 @@ const SchoolAdminUsers: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [roles, setRoles] = useState<any[]>([]);
+  const [showInitiateTransferModal, setShowInitiateTransferModal] = useState(false);
+  const [selectedUsersForTransfer, setSelectedUsersForTransfer] = useState<UserModel[]>([]);
+  const [transferForm, setTransferForm] = useState({ institution_id: '' });
+  const [institutions, setInstitutions] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [roleFilter, setRoleFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const { currentUser } = useRole();
   const { toast } = useToast();
 
@@ -73,12 +80,10 @@ const SchoolAdminUsers: React.FC = () => {
     try {
       const data = await getUsers();
       if (Array.isArray(data)) {
-        // Filter users by institution_id
-        const schoolUsers = data.filter(user => user.institution_id === currentUser?.institution_id);
-        setUsers(schoolUsers);
+        // For school admin, show all users (no filtering needed as API should return only relevant users)
+        setUsers(data);
       } else if (data && typeof data === 'object' && 'users' in data && Array.isArray((data as { users: UserModel[] }).users)) {
-        const schoolUsers = (data as { users: UserModel[] }).users.filter(user => user.institution_id === currentUser?.institution_id);
-        setUsers(schoolUsers);
+        setUsers((data as { users: UserModel[] }).users);
       } else {
         setUsers([]);
       }
@@ -122,9 +127,20 @@ const SchoolAdminUsers: React.FC = () => {
     }
   };
 
+  const fetchInstitutions = async () => {
+    try {
+      const data = await getInstitutions();
+      setInstitutions(Array.isArray(data.institutions) ? data.institutions : []);
+    } catch (error: any) {
+      console.error('Error fetching institutions:', error);
+      setInstitutions([]);
+    }
+  };
+
   useEffect(() => {
     fetchSchoolUsers();
     fetchRoles();
+    fetchInstitutions();
   }, [currentUser?.institution_id]);
 
   const handleOpenModal = () => {
@@ -137,6 +153,51 @@ const SchoolAdminUsers: React.FC = () => {
     setShowModal(false);
     setError(null);
     setForm({ name: '', email: '', phone: '', gender: '', role: '', password: '' });
+  };
+
+  const handleCloseInitiateTransferModal = () => {
+    setShowInitiateTransferModal(false);
+    setSelectedUsersForTransfer([]);
+    setTransferForm({ institution_id: '' });
+  };
+
+  const handleUserSelectionForTransfer = (user: UserModel, checked: boolean) => {
+    if (checked) {
+      setSelectedUsersForTransfer(prev => [...prev, user]);
+    } else {
+      setSelectedUsersForTransfer(prev => prev.filter(u => u.id !== user.id));
+    }
+  };
+
+  const handleInitiateTransfer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (selectedUsersForTransfer.length === 0 || !transferForm.institution_id) return;
+
+    try {
+      const transferPromises = selectedUsersForTransfer.map(async (user) => {
+        const transferData: any = {
+          new_institution_id: parseInt(transferForm.institution_id)
+        };
+        return transferUser(user.id, transferData);
+      });
+
+      await Promise.all(transferPromises);
+
+      toast({
+        title: "Success",
+        description: `${selectedUsersForTransfer.length} user(s) transfer initiated successfully`,
+        variant: "default",
+      });
+      setShowInitiateTransferModal(false);
+      setSelectedUsersForTransfer([]);
+      fetchSchoolUsers();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to initiate transfer",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -360,27 +421,109 @@ const SchoolAdminUsers: React.FC = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            <div className="flex justify-between items-center mb-4">
+              <div className="flex items-center gap-4">
+                <div className="relative">
+                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search users..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-8 w-64"
+                  />
+                </div>
+                <select
+                  value={roleFilter}
+                  onChange={(e) => setRoleFilter(e.target.value)}
+                  className="border rounded px-3 py-2 text-sm"
+                >
+                  <option value="">All Roles</option>
+                  <option value="school_admin">School Admin</option>
+                  <option value="deputy_principal">Deputy Principal</option>
+                  <option value="teacher">Teacher</option>
+                </select>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="border rounded px-3 py-2 text-sm"
+                >
+                  <option value="">All Status</option>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <Download className="h-4 w-4 mr-2" />
+                      Export
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem>
+                      Export as Excel
+                    </DropdownMenuItem>
+                    <DropdownMenuItem>
+                      Export as PDF
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setShowInitiateTransferModal(true)}>
+                  <ArrowRightLeft className="h-4 w-4 mr-2" />
+                  Initiate Transfer
+                </Button>
+                <Button variant="outline">
+                  <User className="h-4 w-4 mr-2" />
+                  Receive User
+                </Button>
+              </div>
+            </div>
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>
+                    <input
+                      type="checkbox"
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedUsersForTransfer(users);
+                        } else {
+                          setSelectedUsersForTransfer([]);
+                        }
+                      }}
+                      checked={selectedUsersForTransfer.length === users.length && users.length > 0}
+                    />
+                  </TableHead>
                   <TableHead>Staff Member</TableHead>
-                  <TableHead>Role</TableHead>
+                  <TableHead>Email</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Last Login</TableHead>
+                  <TableHead>Phone</TableHead>
+                  <TableHead>Gender</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>County</TableHead>
+                  <TableHead>Subcounty</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center">Loading...</TableCell>
+                    <TableCell colSpan={9} className="text-center">Loading...</TableCell>
                   </TableRow>
                 ) : users.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center">No staff members found.</TableCell>
+                    <TableCell colSpan={9} className="text-center">No staff members found.</TableCell>
                   </TableRow>
                 ) : (
                   users.map((user) => (
                     <TableRow key={user.id} className="hover:bg-muted/50">
+                      <TableCell>
+                        <input
+                          type="checkbox"
+                          checked={selectedUsersForTransfer.some(u => u.id === user.id)}
+                          onChange={(e) => handleUserSelectionForTransfer(user, e.target.checked)}
+                        />
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center space-x-3">
                           <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
@@ -388,28 +531,35 @@ const SchoolAdminUsers: React.FC = () => {
                           </div>
                           <div>
                             <div className="font-semibold">{user.name}</div>
-                            <div className="text-sm text-muted-foreground flex items-center">
-                              <Mail className="h-3 w-3 mr-1" />
-                              {user.email}
-                            </div>
                           </div>
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge className="bg-muted text-muted-foreground">
-                          {formatRole(user.role || '')}
-                        </Badge>
+                        <div className="text-sm">{user.email}</div>
                       </TableCell>
                       <TableCell>
-                        {getStatusBadge(user.status || '')}
+                        <span className="text-sm">
+                          {(user as any).assignments?.[0]?.status || 'Active'}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">{user.phone || '-'}</div>
                       </TableCell>
                       <TableCell>
                         <div className="text-sm">
-                          {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : '-'}
+                          {user.gender ? user.gender.charAt(0).toUpperCase() + user.gender.slice(1) : '-'}
                         </div>
-                        <div className="text-xs text-muted-foreground">
-                          {user.lastLogin ? new Date(user.lastLogin).toLocaleTimeString() : ''}
-                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm">
+                          {formatRole((user as any).assignments?.[0]?.role || '')}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">{(user as any).assignments?.[0]?.county || '-'}</div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">{(user as any).assignments?.[0]?.subcounty || '-'}</div>
                       </TableCell>
                     </TableRow>
                   ))
@@ -419,6 +569,69 @@ const SchoolAdminUsers: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Initiate Transfer Modal */}
+      {showInitiateTransferModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-lg shadow-lg w-full p-6 relative" style={{ maxWidth: '600px' }}>
+            <button className="absolute top-2 right-2 text-muted-foreground" onClick={handleCloseInitiateTransferModal}>
+              <X className="h-5 w-5" />
+            </button>
+            <h2 className="text-xl font-bold mb-4">Initiate User Transfer</h2>
+            <p className="text-sm text-muted-foreground mb-4">
+              Select users and destination school to initiate transfer
+            </p>
+
+            {selectedUsersForTransfer.length > 0 && (
+              <div className="mb-4 p-3 bg-muted rounded">
+                <h3 className="font-medium mb-2">Selected Users ({selectedUsersForTransfer.length}):</h3>
+                <div className="max-h-32 overflow-y-auto">
+                  {selectedUsersForTransfer.map(user => (
+                    <div key={user.id} className="text-sm">
+                      {user.name} ({(user as any).assignments?.[0]?.role || 'No Role'})
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <form onSubmit={handleInitiateTransfer} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Destination School <span className="text-destructive">*</span></label>
+                <select
+                  value={transferForm.institution_id}
+                  onChange={(e) => setTransferForm({ ...transferForm, institution_id: e.target.value })}
+                  className="w-full border rounded px-2 py-1"
+                  required
+                >
+                  <option value="">Select destination school</option>
+                  {institutions
+                    .filter(inst => inst.id !== currentUser?.institution_id)
+                    .map(inst => (
+                      <option key={inst.id} value={inst.id}>
+                        {inst.name}
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              <div className="flex justify-end space-x-2 pt-4">
+                <Button type="button" variant="outline" onClick={handleCloseInitiateTransferModal}>
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  className="bg-primary text-primary-foreground"
+                  disabled={selectedUsersForTransfer.length === 0 || !transferForm.institution_id}
+                >
+                  Initiate Transfer
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       <Toaster />
     </>
   );
@@ -469,6 +682,8 @@ const Users = () => {
   const [institutionSearch, setInstitutionSearch] = useState('');
   const [transferInstitutionSearch, setTransferInstitutionSearch] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [roleFilter, setRoleFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const { currentUser } = useRole();
   const { toast } = useToast();
 
@@ -605,16 +820,20 @@ const Users = () => {
 
   const filteredUsers = React.useMemo(
     () => {
-      if (!searchTerm) return users;
-      return users.filter(user =>
-        user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (user.role && user.role.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (user.institution?.name && user.institution.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (user.county && user.county.toLowerCase().includes(searchTerm.toLowerCase()))
-      );
+      return users.filter(user => {
+        const matchesSearch = !searchTerm ||
+          user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          ((user as any).assignments?.[0]?.role || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+          ((user as any).assignments?.[0]?.county || '').toLowerCase().includes(searchTerm.toLowerCase());
+
+        const matchesRole = !roleFilter || (user as any).assignments?.[0]?.role === roleFilter;
+        const matchesStatus = !statusFilter || (user as any).assignments?.[0]?.status === statusFilter;
+
+        return matchesSearch && matchesRole && matchesStatus;
+      });
     },
-    [users, searchTerm]
+    [users, searchTerm, roleFilter, statusFilter]
   );
 
   const visibleUsers = React.useMemo(
@@ -1384,17 +1603,18 @@ const Users = () => {
                 <TableHead>Role Status</TableHead>
                 <TableHead>School</TableHead>
                 <TableHead>Jurisdiction</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center">Loading...</TableCell>
+                  <TableCell colSpan={10} className="text-center">Loading...</TableCell>
                 </TableRow>
               ) : users.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center">No users found.</TableCell>
+                  <TableCell colSpan={10} className="text-center">No users found.</TableCell>
                 </TableRow>
               ) : (
                 visibleUsers.map((user) => (
@@ -1454,6 +1674,9 @@ const Users = () => {
                       </div>
                     </TableCell>
                     <TableCell>
+                      {getStatusBadge(user.status || '')}
+                    </TableCell>
+                    <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
@@ -1472,7 +1695,7 @@ const Users = () => {
                             onClick={() => handleToggleStatus(user)}
                             className="cursor-pointer"
                           >
-                            <Trash2 className="h-4 w-4 mr-2" />
+                            <Check className="h-4 w-4 mr-2" />
                             {user.status === 'Active' ? 'Deactivate' : 'Activate'}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
