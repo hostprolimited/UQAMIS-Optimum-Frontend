@@ -12,23 +12,7 @@ export interface User {
   role?: string;
   status?: string;
   institution_id?: number;
-  assignments?: {
-    transferred_by: string;
-    approved_by: string;
-    id: number;
-    user_id: number;
-    institution_id: number;
-    role: string;
-    county_code: string;
-    county: string;
-    subcounty: string;
-    ward: string;
-    status: string;
-    start_date: string;
-    end_date: string;
-    created_at: string;
-    updated_at: string;
-    institution?: {
+  institution?: {
     id: number;
     name: string;
     type: string;
@@ -50,8 +34,6 @@ export interface User {
     created_at: string;
     updated_at: string;
   };
-  }[];
-  
   created_at?: string;
   updated_at?: string;
 }

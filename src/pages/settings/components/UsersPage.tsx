@@ -73,13 +73,11 @@ const SchoolAdminUsers: React.FC = () => {
     try {
       const data = await getUsers();
       if (Array.isArray(data)) {
-        const findActiveAssignment = (user: UserModel) => user.assignments?.find(a => a.end_date === null);
         // Filter users by institution_id
-        const schoolUsers = data.filter(user => findActiveAssignment(user)?.institution_id === currentUser?.institution_id);
+        const schoolUsers = data.filter(user => user.institution_id === currentUser?.institution_id);
         setUsers(schoolUsers);
       } else if (data && typeof data === 'object' && 'users' in data && Array.isArray((data as { users: UserModel[] }).users)) {
-        const findActiveAssignment = (user: UserModel) => user.assignments?.find(a => a.end_date === null);
-        const schoolUsers = (data as { users: UserModel[] }).users.filter(user => findActiveAssignment(user)?.institution_id === currentUser?.institution_id);
+        const schoolUsers = (data as { users: UserModel[] }).users.filter(user => user.institution_id === currentUser?.institution_id);
         setUsers(schoolUsers);
       } else {
         setUsers([]);
@@ -258,7 +256,7 @@ const SchoolAdminUsers: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {users.filter(user => user.assignments?.find(a => a.end_date === null)?.role === 'teacher').length}
+                {users.filter(user => user.role === 'teacher').length}
               </div>
               <p className="text-xs text-muted-foreground">
                 Teaching staff
@@ -272,7 +270,7 @@ const SchoolAdminUsers: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {users.filter(user => user.assignments?.find(a => a.end_date === null)?.status === 'Active').length}
+                {users.filter(user => user.status === 'Active').length}
               </div>
               <p className="text-xs text-muted-foreground">
                 Currently active staff
@@ -381,12 +379,8 @@ const SchoolAdminUsers: React.FC = () => {
                     <TableCell colSpan={4} className="text-center">No staff members found.</TableCell>
                   </TableRow>
                 ) : (
-                  users.map((user) => {
-                    const activeAssignment = user.assignments?.find(a => a.end_date === null);
-                    const role = activeAssignment?.role ?? user.role ?? '';
-                    const status = activeAssignment?.status ?? user.status ?? '';
-                    return (
-                      <TableRow key={user.id} className="hover:bg-muted/50">
+                  users.map((user) => (
+                    <TableRow key={user.id} className="hover:bg-muted/50">
                       <TableCell>
                         <div className="flex items-center space-x-3">
                           <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
@@ -403,11 +397,11 @@ const SchoolAdminUsers: React.FC = () => {
                       </TableCell>
                       <TableCell>
                         <Badge className="bg-muted text-muted-foreground">
-                          {formatRole(role)}
+                          {formatRole(user.role || '')}
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        {getStatusBadge(status)}
+                        {getStatusBadge(user.status || '')}
                       </TableCell>
                       <TableCell>
                         <div className="text-sm">
@@ -418,8 +412,7 @@ const SchoolAdminUsers: React.FC = () => {
                         </div>
                       </TableCell>
                     </TableRow>
-                    )
-                  })
+                  ))
                 )}
               </TableBody>
             </Table>
@@ -460,13 +453,14 @@ const Users = () => {
   const [selectedUser, setSelectedUser] = useState<UserModel | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
-  const [transferForm, setTransferForm] = useState({
-    new_county_code: '',
-    new_county: '',
-    new_subcounty: '',
-    new_ward: '',
-    new_institution_id: '',
-  });
+   const [selectedUsers, setSelectedUsers] = useState<UserModel[]>([]);
+   const [transferForm, setTransferForm] = useState({
+     new_county_code: '',
+     new_county: '',
+     new_subcounty: '',
+     new_ward: '',
+     new_institution_id: '',
+   });
   const [selectedCounty, setSelectedCounty] = useState('');
   const [selectedSubcounty, setSelectedSubcounty] = useState('');
   const [page, setPage] = useState(0);
@@ -612,13 +606,12 @@ const Users = () => {
   const filteredUsers = React.useMemo(
     () => {
       if (!searchTerm) return users;
-      const findActiveAssignment = (user: UserModel) => user.assignments?.find(a => a.end_date === null);
       return users.filter(user =>
         user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (findActiveAssignment(user)?.role && findActiveAssignment(user)?.role.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (findActiveAssignment(user)?.institution?.name && findActiveAssignment(user)?.institution?.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (findActiveAssignment(user)?.county && findActiveAssignment(user)?.county.toLowerCase().includes(searchTerm.toLowerCase()))
+        (user.role && user.role.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (user.institution?.name && user.institution.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (user.county && user.county.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     },
     [users, searchTerm]
@@ -652,7 +645,7 @@ const Users = () => {
 
   const handleCloseTransferModal = () => {
     setShowTransferModal(false);
-    setSelectedUser(null);
+    setSelectedUsers([]);
     setTransferForm({
       new_county_code: '',
       new_county: '',
@@ -749,16 +742,12 @@ const Users = () => {
     }
   };
 
-  const handleTransfer = (user: UserModel) => {
-    setSelectedUser(user);
-    setTransferForm({
-      new_county_code: '',
-      new_county: '',
-      new_subcounty: '',
-      new_ward: '',
-      new_institution_id: '',
-    });
-    setShowTransferModal(true);
+  const handleUserSelection = (user: UserModel, checked: boolean) => {
+    if (checked) {
+      setSelectedUsers(prev => [...prev, user]);
+    } else {
+      setSelectedUsers(prev => prev.filter(u => u.id !== user.id));
+    }
   };
 
   const handleDelete = (user: UserModel) => {
@@ -768,34 +757,41 @@ const Users = () => {
 
   const handleTransferSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedUser) return;
+    if (selectedUsers.length === 0) return;
 
     try {
-      const transferData: any = {};
+      const transferPromises = selectedUsers.map(async (user) => {
+        const transferData: any = {};
 
-      if (selectedUser.role === 'agent') {
-        // For agents, collect county information (county is required, subcounty and ward are optional)
-        if (transferForm.new_county_code) transferData.new_county_code = transferForm.new_county_code;
-        if (transferForm.new_county) transferData.new_county = transferForm.new_county;
-        if (transferForm.new_subcounty) transferData.new_subcounty = transferForm.new_subcounty;
-        if (transferForm.new_ward) transferData.new_ward = transferForm.new_ward;
-      } else if (selectedUser.role === 'school_admin') {
-        // For school admins, collect institution information
-        if (transferForm.new_institution_id) transferData.new_institution_id = parseInt(transferForm.new_institution_id);
-      }
+        const userRole = (user as any).assignments?.[0]?.role;
+        if (userRole === 'agent') {
+          // For agents, collect county information (county is required, subcounty and ward are optional)
+          if (transferForm.new_county_code) transferData.new_county_code = transferForm.new_county_code;
+          if (transferForm.new_county) transferData.new_county = transferForm.new_county;
+          if (transferForm.new_subcounty) transferData.new_subcounty = transferForm.new_subcounty;
+          if (transferForm.new_ward) transferData.new_ward = transferForm.new_ward;
+        } else if (userRole === 'school_admin') {
+          // For school admins, collect institution information
+          if (transferForm.new_institution_id) transferData.new_institution_id = parseInt(transferForm.new_institution_id);
+        }
 
-      await transferUser(selectedUser.id, transferData);
+        return transferUser(user.id, transferData);
+      });
+
+      await Promise.all(transferPromises);
+
       toast({
         title: "Success",
-        description: "User transferred successfully",
+        description: `${selectedUsers.length} user(s) transferred successfully`,
         variant: "default",
       });
       setShowTransferModal(false);
+      setSelectedUsers([]);
       fetchUsers(); // Refresh the users list
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.response?.data?.message || "Failed to transfer user",
+        description: error.response?.data?.message || "Failed to transfer users",
         variant: "destructive",
       });
     }
@@ -1321,136 +1317,169 @@ const Users = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {/* Search Input */}
-          <div className="flex items-center space-x-2 mb-4">
-            <Input
-              placeholder="Search users by name, email, role, institution, or county..."
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setPage(0); // Reset to first page when searching
-              }}
-              className="max-w-sm"
-            />
-            {searchTerm && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setSearchTerm('');
-                  setPage(0);
+          {/* Search Input and Transfer Button */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-2">
+              <Input
+                placeholder="Search users by name, email, role, institution, or county..."
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setPage(0); // Reset to first page when searching
                 }}
-              >
-                Clear
-              </Button>
-            )}
+                className="max-w-sm"
+              />
+              {searchTerm && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setSearchTerm('');
+                    setPage(0);
+                  }}
+                >
+                  Clear
+                </Button>
+              )}
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (selectedUsers.length === 0) {
+                  toast({
+                    title: "No Users Selected",
+                    description: "Please select at least one user to transfer",
+                    variant: "destructive",
+                  });
+                  return;
+                }
+                setShowTransferModal(true);
+              }}
+              className="bg-primary hover:bg-primary-hover text-primary-foreground"
+            >
+              <ArrowRightLeft className="h-4 w-4 mr-2" />
+              Transfer Users
+            </Button>
           </div>
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>
+                  <input
+                    type="checkbox"
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedUsers(visibleUsers);
+                      } else {
+                        setSelectedUsers([]);
+                      }
+                    }}
+                    checked={selectedUsers.length === visibleUsers.length && visibleUsers.length > 0}
+                  />
+                </TableHead>
                 <TableHead>User</TableHead>
+                <TableHead>Phone</TableHead>
+                <TableHead>Gender</TableHead>
                 <TableHead>Role</TableHead>
+                <TableHead>Role Status</TableHead>
                 <TableHead>School</TableHead>
                 <TableHead>Jurisdiction</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Last Login</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center">Loading...</TableCell>
+                  <TableCell colSpan={9} className="text-center">Loading...</TableCell>
                 </TableRow>
               ) : users.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center">No users found.</TableCell>
+                  <TableCell colSpan={9} className="text-center">No users found.</TableCell>
                 </TableRow>
               ) : (
-                visibleUsers.map((user) => {
-                  const activeAssignment = user.assignments?.find(a => a.end_date === null);
-                  const role = activeAssignment?.role ?? user.role ?? '';
-                  const status = activeAssignment?.status ?? user.status ?? '';
-                  const institutionName = activeAssignment?.institution?.name ?? '-';
-                  const county = activeAssignment?.county ?? user.county ?? '-';
-
-                  return (
-                    <TableRow key={user.id} className="hover:bg-muted/50">
-                      <TableCell>
-                        <div className="flex items-center space-x-3">
-                          <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
-                            <User className="h-5 w-5 text-primary-foreground" />
-                          </div>
-                          <div>
-                            <div className="font-semibold">{user.name}</div>
-                            <div className="text-sm text-muted-foreground flex items-center">
-                              <Mail className="h-3 w-3 mr-1" />
-                              {user.email}
-                            </div>
-                          </div>
+                visibleUsers.map((user) => (
+                  <TableRow key={user.id} className="hover:bg-muted/50">
+                    <TableCell>
+                      <input
+                        type="checkbox"
+                        checked={selectedUsers.some(u => u.id === user.id)}
+                        onChange={(e) => handleUserSelection(user, e.target.checked)}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
+                          <User className="h-5 w-5 text-primary-foreground" />
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={getRoleBadgeVariant(role)}>
-                          {formatRole(role)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {institutionName}
-                      </TableCell>
-                      <TableCell>
                         <div>
-                          <div className="font-medium">{county}</div>
+                          <div className="font-semibold">{user.name}</div>
+                          <div className="text-sm text-muted-foreground flex items-center">
+                            <Mail className="h-3 w-3 mr-1" />
+                            {user.email}
+                          </div>
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        {getStatusBadge(status)}
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : '-'}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {user.lastLogin ? new Date(user.lastLogin).toLocaleTimeString() : ''}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-40">
-                            <DropdownMenuItem
-                              onClick={() => handleEdit(user)}
-                              className="cursor-pointer"
-                            >
-                              <Edit className="h-4 w-4 mr-2" />
-                              Edit
-                            </DropdownMenuItem>
-                            {(role === 'agent' || role === 'school_admin') && (
-                              <DropdownMenuItem
-                                onClick={() => handleTransfer(user)}
-                                className="cursor-pointer"
-                              >
-                                <ArrowRightLeft className="h-4 w-4 mr-2" />
-                                Transfer User
-                              </DropdownMenuItem>
-                            )}
-                            <DropdownMenuItem
-                              onClick={() => handleToggleStatus(user)}
-                              className="cursor-pointer"
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              {status === 'active' ? 'Deactivate' : 'Activate'}
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">
+                        {user.phone || '-'}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">
+                        {user.gender ? user.gender.charAt(0).toUpperCase() + user.gender.slice(1) : '-'}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-sm">
+                        {formatRole((user as any).assignments?.[0]?.role || '')}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-sm">
+                        {(user as any).assignments?.[0]?.status || 'Active'}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      {(user as any).assignments?.[0]?.institution?.name || '-'}
+                    </TableCell>
+                    <TableCell>
+                      <div>
+                        <div className="font-medium">{(user as any).assignments?.[0]?.county || '-'}</div>
+                        {(user as any).assignments?.[0]?.subcounty && (
+                          <div className="text-sm text-muted-foreground">
+                            {(user as any).assignments[0].subcounty}
+                          </div>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-40">
+                          <DropdownMenuItem
+                            onClick={() => handleEdit(user)}
+                            className="cursor-pointer"
+                          >
+                            <Edit className="h-4 w-4 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleToggleStatus(user)}
+                            className="cursor-pointer"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            {user.status === 'Active' ? 'Deactivate' : 'Activate'}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))
               )}
             </TableBody>
           </Table>
@@ -1502,151 +1531,176 @@ const Users = () => {
       </div>
 
       {/* Transfer User Modal */}
-      {showTransferModal && selectedUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-lg shadow-lg w-full p-6 relative" style={{ maxWidth: '500px' }}>
-            <button className="absolute top-2 right-2 text-muted-foreground" onClick={handleCloseTransferModal}>
-              <X className="h-5 w-5" />
-            </button>
-            <h2 className="text-xl font-bold mb-4">Transfer User</h2>
-            <p className="text-sm text-muted-foreground mb-4">
-              Transfer {selectedUser.name} to a new location
-            </p>
+       {showTransferModal && (
+         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+           <div className="bg-white rounded-lg shadow-lg w-full p-6 relative" style={{ maxWidth: '500px' }}>
+             <button className="absolute top-2 right-2 text-muted-foreground" onClick={handleCloseTransferModal}>
+               <X className="h-5 w-5" />
+             </button>
+             <h2 className="text-xl font-bold mb-4">Transfer Users</h2>
+            
+             {selectedUsers.length > 0 && (
+               <div className="mb-4 p-3 bg-muted rounded">
+                 <div className="max-h-32 overflow-y-auto">
+                   {selectedUsers.map(user => {
+                     const userRole = (user as any).assignments?.[0]?.role;
+                     return (
+                       <div key={user.id} className="text-sm">
+                         {user.name} ({userRole || 'No Role'})
+                       </div>
+                     );
+                   })}
+                 </div>
+               </div>
+             )}
             <form onSubmit={handleTransferSubmit} className="space-y-4">
-              {selectedUser.role === 'agent' ? (
-                // Agent transfer form
-                <>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">New County</label>
-                    <Select
-                      value={selectedCounty}
-                      onValueChange={(value) => {
-                        setSelectedCounty(value);
-                        setSelectedSubcounty('');
-                        const county = getCounties().find((c: any) => c.county_id === value);
-                        setTransferForm({
-                          ...transferForm,
-                          new_county_code: value,
-                          new_county: county?.county_name || '',
-                          new_subcounty: '',
-                          new_ward: ''
-                        });
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select county" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {getCounties().map((county: any) => (
-                          <SelectItem key={county.county_id} value={county.county_id}>
-                            {county.county_name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {selectedUsers.length > 0 && (() => {
+                const firstUserRole = (selectedUsers[0] as any).assignments?.[0]?.role;
+                const allSameRole = selectedUsers.every(user => (user as any).assignments?.[0]?.role === firstUserRole);
+
+                if (!allSameRole) {
+                  return (
+                    <div className="text-destructive text-sm p-3 bg-destructive/10 rounded">
+                      All selected users must be of the same role type (agent or school_admin) to transfer together.
+                    </div>
+                  );
+                }
+
+                return firstUserRole === 'agent' ? (
+                  // Agent transfer form
+                  <>
                     <div>
-                      <label className="block text-sm font-medium mb-1">New Subcounty</label>
+                      <label className="block text-sm font-medium mb-1">New County</label>
                       <Select
-                        value={selectedSubcounty}
+                        value={selectedCounty}
                         onValueChange={(value) => {
-                          setSelectedSubcounty(value);
-                          const subcounty = getSubcounties(selectedCounty).find(s => s.subcounty_id === value);
-                          setTransferForm({ ...transferForm, new_subcounty: subcounty?.constituency_name || '', new_ward: '' });
+                          setSelectedCounty(value);
+                          setSelectedSubcounty('');
+                          const county = getCounties().find((c: any) => c.county_id === value);
+                          setTransferForm({
+                            ...transferForm,
+                            new_county_code: value,
+                            new_county: county?.county_name || '',
+                            new_subcounty: '',
+                            new_ward: ''
+                          });
                         }}
-                        disabled={!selectedCounty}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Select subcounty" />
+                          <SelectValue placeholder="Select county" />
                         </SelectTrigger>
                         <SelectContent>
-                          {selectedCounty && getSubcounties(selectedCounty).map((subcounty: Subcounty) => (
-                            <SelectItem key={subcounty.subcounty_id} value={subcounty.subcounty_id}>
-                              {subcounty.constituency_name}
+                          {getCounties().map((county: any) => (
+                            <SelectItem key={county.county_id} value={county.county_id}>
+                              {county.county_name}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-1">New Ward</label>
-                      <Select
-                        value={transferForm.new_ward}
-                        onValueChange={(value) => setTransferForm({ ...transferForm, new_ward: value })}
-                        disabled={!selectedSubcounty}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select ward" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {selectedSubcounty && getWards(selectedSubcounty).map((ward: any) => (
-                            <SelectItem key={ward.station_id} value={ward.ward}>
-                              {ward.ward}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </>
-              ) : selectedUser.role === 'school_admin' ? (
-                // School Admin transfer form
-                <div>
-                  <label className="block text-sm font-medium mb-1">New Institution <span className="text-destructive">*</span></label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        className="w-full justify-between"
-                      >
-                        {transferForm.new_institution_id
-                          ? institutions.find((inst) => inst.id === parseInt(transferForm.new_institution_id))?.name
-                          : "Select institution..."}
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-full p-0">
-                      <Command>
-                        <CommandInput
-                          placeholder="Search institutions..."
-                          value={institutionSearch}
-                          onValueChange={setInstitutionSearch}
-                        />
-                        <CommandEmpty>No institution found.</CommandEmpty>
-                        <CommandGroup>
-                          {institutions
-                            .sort((a, b) => a.name.localeCompare(b.name))
-                            .filter((inst) =>
-                              institutionSearch === '' ||
-                              inst.name.toLowerCase().includes(institutionSearch.toLowerCase())
-                            )
-                            .slice(0, 10)
-                            .map((inst) => (
-                              <CommandItem
-                                key={inst.id}
-                                value={inst.name}
-                                onSelect={() => {
-                                  setTransferForm({ ...transferForm, new_institution_id: inst.id.toString() });
-                                  setTransferInstitutionSearch('');
-                                }}
-                              >
-                                <Check
-                                  className={cn(
-                                    "mr-2 h-4 w-4",
-                                    transferForm.new_institution_id === inst.id.toString() ? "opacity-100" : "opacity-0"
-                                  )}
-                                />
-                                {inst.name}
-                              </CommandItem>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-1">New Subcounty</label>
+                        <Select
+                          value={selectedSubcounty}
+                          onValueChange={(value) => {
+                            setSelectedSubcounty(value);
+                            const subcounty = getSubcounties(selectedCounty).find(s => s.subcounty_id === value);
+                            setTransferForm({ ...transferForm, new_subcounty: subcounty?.constituency_name || '', new_ward: '' });
+                          }}
+                          disabled={!selectedCounty}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select subcounty" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {selectedCounty && getSubcounties(selectedCounty).map((subcounty: Subcounty) => (
+                              <SelectItem key={subcounty.subcounty_id} value={subcounty.subcounty_id}>
+                                {subcounty.constituency_name}
+                              </SelectItem>
                             ))}
-                        </CommandGroup>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              ) : null}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">New Ward</label>
+                        <Select
+                          value={transferForm.new_ward}
+                          onValueChange={(value) => setTransferForm({ ...transferForm, new_ward: value })}
+                          disabled={!selectedSubcounty}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select ward" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {selectedSubcounty && getWards(selectedSubcounty).map((ward: any) => (
+                              <SelectItem key={ward.station_id} value={ward.ward}>
+                                {ward.ward}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </>
+                ) : firstUserRole === 'school_admin' ? (
+                  // School Admin transfer form
+                  <div>
+                    <label className="block text-sm font-medium mb-1">New Institution <span className="text-destructive">*</span></label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          className="w-full justify-between"
+                        >
+                          {transferForm.new_institution_id
+                            ? institutions.find((inst) => inst.id === parseInt(transferForm.new_institution_id))?.name
+                            : "Select institution..."}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-full p-0">
+                        <Command>
+                          <CommandInput
+                            placeholder="Search institutions..."
+                            value={institutionSearch}
+                            onValueChange={setInstitutionSearch}
+                          />
+                          <CommandEmpty>No institution found.</CommandEmpty>
+                          <CommandGroup>
+                            {institutions
+                              .sort((a, b) => a.name.localeCompare(b.name))
+                              .filter((inst) =>
+                                institutionSearch === '' ||
+                                inst.name.toLowerCase().includes(institutionSearch.toLowerCase())
+                              )
+                              .slice(0, 10)
+                              .map((inst) => (
+                                <CommandItem
+                                  key={inst.id}
+                                  value={inst.name}
+                                  onSelect={() => {
+                                    setTransferForm({ ...transferForm, new_institution_id: inst.id.toString() });
+                                    setTransferInstitutionSearch('');
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      transferForm.new_institution_id === inst.id.toString() ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  {inst.name}
+                                </CommandItem>
+                              ))}
+                          </CommandGroup>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                ) : null;
+              })()}
 
               <div className="flex justify-end space-x-2 pt-4">
                 <Button type="button" variant="outline" onClick={handleCloseTransferModal}>
