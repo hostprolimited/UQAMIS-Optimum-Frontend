@@ -1,6 +1,6 @@
 import api from '@/utils/api';
 import { Urls } from '@/constants/urls';
-import { User, CreateUserInput, UpdateUserInput, Role, Permission, CreatePermissionInput, AssignPermissionRoleInput, AssignUserRoleInput } from './_models';
+import { User, CreateUserInput, UpdateUserInput, Role, Permission, CreatePermissionInput, AssignPermissionRoleInput, AssignUserRoleInput, PendingTransfer } from './_models';
 
 // Get all users
 export const getUsers = async (): Promise<{ users: User[] }> => {
@@ -111,4 +111,15 @@ export const transferUser = async (id: number, data: {
 }): Promise<User> => {
   const res = await api.patch(Urls.TRANSFER_USER_URL(id), data);
   return res.data;
+};
+
+// Get pending transfers
+export const getPendingTransfers = async (): Promise<{ transfers: PendingTransfer[] }> => {
+  const res = await api.get(Urls.CHECK_PENDING_TRANSFER_URL);
+  return res.data;
+};
+
+// Approve transfer
+export const approveTransfer = async (id: number): Promise<void> => {
+  await api.patch(Urls.APPROVE_TRANSFER_URL(id));
 };

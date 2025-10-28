@@ -102,3 +102,27 @@ export interface AssignUserRoleInput {
   role_id: number;
   role_name: string;
 }
+
+export interface PendingTransfer {
+  id: number;
+  user_id: number;
+  from_institution_id: number;
+  to_institution_id: number;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  user?: {
+    id: number;
+    name: string;
+    email: string;
+    role?: string;
+  };
+  from_institution?: {
+    id: number;
+    name: string;
+  };
+  to_institution?: {
+    id: number;
+    name: string;
+  };
+}

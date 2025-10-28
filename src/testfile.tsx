@@ -21,11 +21,11 @@
 // import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 // import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 // import { cn } from "@/lib/utils";
-// import { getUsers, createUser, deleteUser, updateUser, transferUser } from '../core/_requests';
+// import { getUsers, createUser, deleteUser, updateUser, transferUser, getPendingTransfers, approveTransfer } from '../core/_requests';
 // import { Urls } from '@/constants/urls';
 // import { getInstitutions } from '@/pages/onboarding/core/_requests';
 // import { getPermissions } from '../core/_requests';
-// import { User as UserModel, CreateUserInput } from '../core/_models';
+// import { User as UserModel, CreateUserInput, PendingTransfer } from '../core/_models';
 // import { useRole } from '@/contexts/RoleContext';
 // import { useToast } from "@/components/ui/use-toast";
 // import { Toaster } from "@/components/ui/toaster";
@@ -72,6 +72,10 @@
 //   const [searchTerm, setSearchTerm] = useState('');
 //   const [roleFilter, setRoleFilter] = useState('');
 //   const [statusFilter, setStatusFilter] = useState('');
+//   const [openTransferInstitution, setOpenTransferInstitution] = useState(false);
+//   const [transferInstitutionSearch, setTransferInstitutionSearch] = useState('');
+//   const [pendingTransfers, setPendingTransfers] = useState<PendingTransfer[]>([]);
+//   const [showPendingApprovalsModal, setShowPendingApprovalsModal] = useState(false);
 //   const { currentUser } = useRole();
 //   const { toast } = useToast();
 
@@ -141,7 +145,35 @@
 //     fetchSchoolUsers();
 //     fetchRoles();
 //     fetchInstitutions();
+//     fetchPendingTransfers();
 //   }, [currentUser?.institution_id]);
+
+//   const fetchPendingTransfers = async () => {
+//     try {
+//       const response = await getPendingTransfers();
+//       const transfers = response.pending_transfers || [];
+//       // Map the API response to match PendingTransfer interface
+//       const mappedTransfers: PendingTransfer[] = transfers.map((transfer: any) => ({
+//         id: transfer.assignment_id,
+//         user_id: transfer.user_id,
+//         from_institution_id: 0, // Not provided in response
+//         to_institution_id: 0, // Not provided in response
+//         status: transfer.status,
+//         created_at: '', // Not provided
+//         updated_at: '', // Not provided
+//         user: {
+//           id: transfer.user_id,
+//           name: transfer.name,
+//           email: transfer.email,
+//           role: transfer.role,
+//         },
+//       }));
+//       setPendingTransfers(mappedTransfers);
+//     } catch (error: any) {
+//       console.error('Error fetching pending transfers:', error);
+//       setPendingTransfers([]);
+//     }
+//   };
 
 //   const handleOpenModal = () => {
 //     setForm({ name: '', email: '', phone: '', gender: '', role: '', password: '' });
@@ -159,6 +191,44 @@
 //     setShowInitiateTransferModal(false);
 //     setSelectedUsersForTransfer([]);
 //     setTransferForm({ institution_id: '' });
+//   };
+
+//   const handleToggleStatus = async (user: UserModel) => {
+//     const newStatus = user.status === 'Active' ? 'Inactive' : 'Active';
+//     try {
+//       await api.patch(Urls.CHANGE_USER_STATUS(user.id));
+//       toast({
+//         title: "Success",
+//         description: `User ${newStatus.toLowerCase()}d successfully`,
+//         variant: "default",
+//       });
+//       fetchSchoolUsers();
+//     } catch (error: any) {
+//       toast({
+//         title: "Error",
+//         description: error.response?.data?.message || "Failed to update user status",
+//         variant: "destructive",
+//       });
+//     }
+//   };
+
+//   const handleApproveTransfer = async (transferId: number) => {
+//     try {
+//       await approveTransfer(transferId);
+//       toast({
+//         title: "Success",
+//         description: "Transfer approved successfully",
+//         variant: "default",
+//       });
+//       fetchPendingTransfers();
+//       fetchSchoolUsers();
+//     } catch (error: any) {
+//       toast({
+//         title: "Error",
+//         description: error.response?.data?.message || "Failed to approve transfer",
+//         variant: "destructive",
+//       });
+//     }
 //   };
 
 //   const handleUserSelectionForTransfer = (user: UserModel, checked: boolean) => {
@@ -279,6 +349,7 @@
 //         return <Badge variant="outline">{status}</Badge>;
 //     }
 //   };
+
 
 //   return (
 //     <>
@@ -473,9 +544,12 @@
 //                   <ArrowRightLeft className="h-4 w-4 mr-2" />
 //                   Initiate Transfer
 //                 </Button>
-//                 <Button variant="outline">
+//                 <Button variant="outline" onClick={() => {
+//                   fetchPendingTransfers();
+//                   setShowPendingApprovalsModal(true);
+//                 }}>
 //                   <User className="h-4 w-4 mr-2" />
-//                   Receive User
+//                   Pending Approvals ({pendingTransfers.length})
 //                 </Button>
 //               </div>
 //             </div>
@@ -503,6 +577,7 @@
 //                   <TableHead>Role</TableHead>
 //                   <TableHead>County</TableHead>
 //                   <TableHead>Subcounty</TableHead>
+//                   <TableHead>Actions</TableHead>
 //                 </TableRow>
 //               </TableHeader>
 //               <TableBody>
@@ -512,7 +587,7 @@
 //                   </TableRow>
 //                 ) : users.length === 0 ? (
 //                   <TableRow>
-//                     <TableCell colSpan={9} className="text-center">No staff members found.</TableCell>
+//                     <TableCell colSpan={10} className="text-center">No staff members found.</TableCell>
 //                   </TableRow>
 //                 ) : (
 //                   users.map((user) => (
@@ -561,6 +636,24 @@
 //                       <TableCell>
 //                         <div className="text-sm">{(user as any).assignments?.[0]?.subcounty || '-'}</div>
 //                       </TableCell>
+//                       <TableCell>
+//                         <DropdownMenu>
+//                           <DropdownMenuTrigger asChild>
+//                             <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+//                               <MoreHorizontal className="h-4 w-4" />
+//                             </Button>
+//                           </DropdownMenuTrigger>
+//                           <DropdownMenuContent align="end" className="w-40">
+//                             <DropdownMenuItem
+//                               onClick={() => handleToggleStatus(user)}
+//                               className="cursor-pointer"
+//                             >
+//                               <Check className="h-4 w-4 mr-2" />
+//                               {((user as any).assignments?.[0]?.status || 'Active') === 'Active' ? 'Deactivate' : 'Activate'}
+//                             </DropdownMenuItem>
+//                           </DropdownMenuContent>
+//                         </DropdownMenu>
+//                       </TableCell>
 //                     </TableRow>
 //                   ))
 //                 )}
@@ -598,21 +691,67 @@
 //             <form onSubmit={handleInitiateTransfer} className="space-y-4">
 //               <div>
 //                 <label className="block text-sm font-medium mb-1">Destination School <span className="text-destructive">*</span></label>
-//                 <select
-//                   value={transferForm.institution_id}
-//                   onChange={(e) => setTransferForm({ ...transferForm, institution_id: e.target.value })}
-//                   className="w-full border rounded px-2 py-1"
-//                   required
-//                 >
-//                   <option value="">Select destination school</option>
-//                   {institutions
-//                     .filter(inst => inst.id !== currentUser?.institution_id)
-//                     .map(inst => (
-//                       <option key={inst.id} value={inst.id}>
-//                         {inst.name}
-//                       </option>
-//                     ))}
-//                 </select>
+//                 <Popover open={openTransferInstitution} onOpenChange={setOpenTransferInstitution}>
+//                   <PopoverTrigger asChild>
+//                     <Button
+//                       variant="outline"
+//                       role="combobox"
+//                       aria-expanded={openTransferInstitution}
+//                       className="w-full justify-between"
+//                     >
+//                       {transferForm.institution_id
+//                         ? institutions.find((inst) => inst.id === parseInt(transferForm.institution_id))?.name
+//                         : "Select destination school..."}
+//                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+//                     </Button>
+//                   </PopoverTrigger>
+//                   <PopoverContent className="w-full p-0">
+//                     <Command>
+//                       <CommandInput
+//                         placeholder="Search institutions..."
+//                         value={transferInstitutionSearch}
+//                         onValueChange={setTransferInstitutionSearch}
+//                       />
+//                       <CommandEmpty>No institution found.</CommandEmpty>
+//                       <CommandGroup>
+//                         {institutions
+//                           .filter(inst => inst.id !== currentUser?.institution_id)
+//                           .sort((a, b) => a.name.localeCompare(b.name))
+//                           .filter((inst) =>
+//                             transferInstitutionSearch === '' ||
+//                             inst.name.toLowerCase().includes(transferInstitutionSearch.toLowerCase())
+//                           )
+//                           .slice(0, 10)
+//                           .map((inst) => (
+//                             <CommandItem
+//                               key={inst.id}
+//                               value={inst.name}
+//                               onSelect={() => {
+//                                 setTransferForm({ ...transferForm, institution_id: inst.id.toString() });
+//                                 setOpenTransferInstitution(false);
+//                                 setTransferInstitutionSearch('');
+//                               }}
+//                             >
+//                               <Check
+//                                 className={cn(
+//                                   "mr-2 h-4 w-4",
+//                                   transferForm.institution_id === inst.id.toString() ? "opacity-100" : "opacity-0"
+//                                 )}
+//                               />
+//                               {inst.name}
+//                             </CommandItem>
+//                           ))}
+//                       </CommandGroup>
+//                       {institutions.length > 10 && (
+//                         <div className="p-2 text-xs text-muted-foreground border-t">
+//                           {transferInstitutionSearch === ''
+//                             ? "Showing first 10 institutions. Type to search more."
+//                             : `Showing first 10 matches for "${transferInstitutionSearch}". Refine search for better results.`}
+//                         </div>
+//                       )}
+//                     </Command>
+//                   </PopoverContent>
+//                 </Popover>
 //               </div>
 
 //               <div className="flex justify-end space-x-2 pt-4">
@@ -628,6 +767,62 @@
 //                 </Button>
 //               </div>
 //             </form>
+//           </div>
+//         </div>
+//       )}
+
+//       {/* Pending Approvals Modal */}
+//       {showPendingApprovalsModal && (
+//         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+//           <div className="bg-white rounded-lg shadow-lg w-full p-6 relative" style={{ maxWidth: '700px' }}>
+//             <button className="absolute top-2 right-2 text-muted-foreground" onClick={() => setShowPendingApprovalsModal(false)}>
+//               <X className="h-5 w-5" />
+//             </button>
+//             <h2 className="text-xl font-bold mb-4">Pending Transfer Approvals</h2>
+//             <p className="text-sm text-muted-foreground mb-4">
+//               Review and approve pending user transfer requests
+//             </p>
+
+//             {pendingTransfers.length === 0 ? (
+//               <div className="text-center py-8">
+//                 <User className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+//                 <p className="text-muted-foreground">No pending transfer approvals</p>
+//               </div>
+//             ) : (
+//               <div className="space-y-4 max-h-96 overflow-y-auto">
+//                 {pendingTransfers.map((transfer) => (
+//                   <div key={transfer.id} className="flex items-center justify-between p-4 border rounded-lg">
+//                     <div className="flex items-center space-x-4">
+//                       <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
+//                         <User className="h-5 w-5 text-primary-foreground" />
+//                       </div>
+//                       <div>
+//                         <div className="font-semibold">{transfer.user?.name}</div>
+//                         <div className="text-sm text-muted-foreground">
+//                           {transfer.user?.email} • Role: {transfer.user?.role}
+//                         </div>
+//                         <div className="text-xs text-muted-foreground">
+//                           Status: {transfer.status}
+//                         </div>
+//                       </div>
+//                     </div>
+//                     <Button
+//                       onClick={() => handleApproveTransfer(transfer.id)}
+//                       className="bg-primary hover:bg-primary-hover text-primary-foreground"
+//                     >
+//                       <Check className="h-4 w-4 mr-2" />
+//                       Approve Transfer
+//                     </Button>
+//                   </div>
+//                 ))}
+//               </div>
+//             )}
+
+//             <div className="flex justify-end mt-6">
+//               <Button variant="outline" onClick={() => setShowPendingApprovalsModal(false)}>
+//                 Close
+//               </Button>
+//             </div>
 //           </div>
 //         </div>
 //       )}
@@ -681,12 +876,60 @@
 //   const [openInstitution, setOpenInstitution] = useState(false);
 //   const [institutionSearch, setInstitutionSearch] = useState('');
 //   const [transferInstitutionSearch, setTransferInstitutionSearch] = useState('');
+//   const [openTransferInstitution, setOpenTransferInstitution] = useState(false);
 //   const [searchTerm, setSearchTerm] = useState('');
 //   const [roleFilter, setRoleFilter] = useState('');
 //   const [statusFilter, setStatusFilter] = useState('');
+//   const [showPendingApprovalsModal, setShowPendingApprovalsModal] = useState(false);
+//   const [pendingTransfers, setPendingTransfers] = useState<PendingTransfer[]>([]);
 //   const { currentUser } = useRole();
 //   const { toast } = useToast();
 
+//   const fetchPendingTransfers = async () => {
+//     try {
+//       const response = await getPendingTransfers();
+//       const transfers = response.pending_transfers || [];
+//       // Map the API response to match PendingTransfer interface
+//       const mappedTransfers: PendingTransfer[] = transfers.map((transfer: any) => ({
+//         id: transfer.assignment_id,
+//         user_id: transfer.user_id,
+//         from_institution_id: 0, // Not provided in response
+//         to_institution_id: 0, // Not provided in response
+//         status: transfer.status,
+//         created_at: '', // Not provided
+//         updated_at: '', // Not provided
+//         user: {
+//           id: transfer.user_id,
+//           name: transfer.name,
+//           email: transfer.email,
+//           role: transfer.role,
+//         },
+//       }));
+//       setPendingTransfers(mappedTransfers);
+//     } catch (error: any) {
+//       console.error('Error fetching pending transfers:', error);
+//       setPendingTransfers([]);
+//     }
+//   };
+
+//   const handleApproveTransfer = async (transferId: number) => {
+//     try {
+//       await approveTransfer(transferId);
+//       toast({
+//         title: "Success",
+//         description: "Transfer approved successfully",
+//         variant: "default",
+//       });
+//       fetchPendingTransfers();
+//       fetchUsers();
+//     } catch (error: any) {
+//       toast({
+//         title: "Error",
+//         description: error.response?.data?.message || "Failed to approve transfer",
+//         variant: "destructive",
+//       });
+//     }
+//   };
 
 //   // If current user is school admin, show school admin interface
 //   if (currentUser?.role === 'school_admin') {
@@ -773,6 +1016,7 @@
 //     fetchUsers();
 //     fetchInstitutions();
 //     fetchRoles();
+//     fetchPendingTransfers();
 //   }, []);
 
 //   // Fetch wards when subcounties change
@@ -1106,6 +1350,11 @@
 //       } else {
 //         // Handle create
 //         const createData = { ...form };
+//         // Map county_code to county name for ministry_admin
+//         if (createData.county_code) {
+//           const county = getCounties().find(c => c.county_id === createData.county_code);
+//           createData.county = county?.county_name || '';
+//         }
 //         // Map subcounty_ids to subcounty name and ward_ids to ward name (take first if multiple)
 //         if (createData.subcounty_ids && createData.subcounty_ids.length > 0) {
 //           const selectedSubcounty = subcounties.find(s => s.id === createData.subcounty_ids[0]);
@@ -1212,6 +1461,7 @@
 //             </p>
 //           </CardContent>
 //         </Card>
+
 //       </div>
 
 //       {/* Modal for creating user */}
@@ -1603,17 +1853,18 @@
 //                 <TableHead>Role Status</TableHead>
 //                 <TableHead>School</TableHead>
 //                 <TableHead>Jurisdiction</TableHead>
+//                 <TableHead>Status</TableHead>
 //                 <TableHead>Actions</TableHead>
 //               </TableRow>
 //             </TableHeader>
 //             <TableBody>
 //               {loading ? (
 //                 <TableRow>
-//                   <TableCell colSpan={9} className="text-center">Loading...</TableCell>
+//                   <TableCell colSpan={10} className="text-center">Loading...</TableCell>
 //                 </TableRow>
 //               ) : users.length === 0 ? (
 //                 <TableRow>
-//                   <TableCell colSpan={9} className="text-center">No users found.</TableCell>
+//                   <TableCell colSpan={10} className="text-center">No users found.</TableCell>
 //                 </TableRow>
 //               ) : (
 //                 visibleUsers.map((user) => (
@@ -1673,6 +1924,9 @@
 //                       </div>
 //                     </TableCell>
 //                     <TableCell>
+//                       {getStatusBadge(user.status || '')}
+//                     </TableCell>
+//                     <TableCell>
 //                       <DropdownMenu>
 //                         <DropdownMenuTrigger asChild>
 //                           <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
@@ -1691,7 +1945,7 @@
 //                             onClick={() => handleToggleStatus(user)}
 //                             className="cursor-pointer"
 //                           >
-//                             <Trash2 className="h-4 w-4 mr-2" />
+//                             <Check className="h-4 w-4 mr-2" />
 //                             {user.status === 'Active' ? 'Deactivate' : 'Activate'}
 //                           </DropdownMenuItem>
 //                         </DropdownMenuContent>
@@ -1930,6 +2184,62 @@
 //                 </Button>
 //               </div>
 //             </form>
+//           </div>
+//         </div>
+//       )}
+
+//       {/* Pending Approvals Modal */}
+//       {showPendingApprovalsModal && (
+//         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+//           <div className="bg-white rounded-lg shadow-lg w-full p-6 relative" style={{ maxWidth: '700px' }}>
+//             <button className="absolute top-2 right-2 text-muted-foreground" onClick={() => setShowPendingApprovalsModal(false)}>
+//               <X className="h-5 w-5" />
+//             </button>
+//             <h2 className="text-xl font-bold mb-4">Pending Transfer Approvals</h2>
+//             <p className="text-sm text-muted-foreground mb-4">
+//               Review and approve pending user transfer requests
+//             </p>
+
+//             {pendingTransfers.length === 0 ? (
+//               <div className="text-center py-8">
+//                 <User className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+//                 <p className="text-muted-foreground">No pending transfer approvals</p>
+//               </div>
+//             ) : (
+//               <div className="space-y-4 max-h-96 overflow-y-auto">
+//                 {pendingTransfers.map((transfer) => (
+//                   <div key={transfer.id} className="flex items-center justify-between p-4 border rounded-lg">
+//                     <div className="flex items-center space-x-4">
+//                       <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
+//                         <User className="h-5 w-5 text-primary-foreground" />
+//                       </div>
+//                       <div>
+//                         <div className="font-semibold">{transfer.user?.name}</div>
+//                         <div className="text-sm text-muted-foreground">
+//                           {transfer.user?.email} • Role: {transfer.user?.role}
+//                         </div>
+//                         <div className="text-xs text-muted-foreground">
+//                           Status: {transfer.status}
+//                         </div>
+//                       </div>
+//                     </div>
+//                     <Button
+//                       onClick={() => handleApproveTransfer(transfer.id)}
+//                       className="bg-primary hover:bg-primary-hover text-primary-foreground"
+//                     >
+//                       <Check className="h-4 w-4 mr-2" />
+//                       Approve Transfer
+//                     </Button>
+//                   </div>
+//                 ))}
+//               </div>
+//             )}
+
+//             <div className="flex justify-end mt-6">
+//               <Button variant="outline" onClick={() => setShowPendingApprovalsModal(false)}>
+//                 Close
+//               </Button>
+//             </div>
 //           </div>
 //         </div>
 //       )}

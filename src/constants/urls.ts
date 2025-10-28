@@ -85,6 +85,8 @@ export const Urls = {
   GET_ROLE_PERMISSIONS_URL: (id: number) => `/roles/permissions/${id}`,
   UPDATE_PERMISSION_URL: (id: number) => `/roles/permissions/update/${id}`,
   DELETE_PERMISSION_URL: (id: number) => `/permissions/${id}`,
+  APPROVE_TRANSFER_URL: (id: number) => `/users/approve-user-transfer/${id}`,
+  CHECK_PENDING_TRANSFER_URL: '/users/transfers/pending',
 
   // Incidents Endpoints
   CREATE_INCIDENT_URL: '/incidents/create',
