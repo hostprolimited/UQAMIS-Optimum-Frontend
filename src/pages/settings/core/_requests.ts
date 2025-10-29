@@ -43,6 +43,11 @@ export const createRole = async (data: { name: string }): Promise<Role> => {
   return res.data;
 };
 
+// Change role status
+export const changeRoleStatus = async (id: number): Promise<void> => {
+  await api.patch(Urls.CHANGE_ROLE_STATUS(id));
+};
+
 // Permissions
 export const getPermissions = async (): Promise<{
   roles: any[]; permissions: Permission[] 

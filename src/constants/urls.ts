@@ -101,6 +101,7 @@ export const Urls = {
   GET_USER_ROLE: (id: number) => `/users/role/${id}`,
   ASSIGN_USER_ROLE_URL: (id: number) => `/users/assign-role/${id}`,
   CHANGE_USER_STATUS: (id: number) => `/users/toggle-status/${id}`,
+  CHANGE_ROLE_STATUS: (id: number) => `/roles/toggle-status/${id}`,
   UPDATE_ROLE_URL: (id: number) => `/roles/${id}`,
   DELETE_ROLE_URL: (id: number) => `/roles/${id}`,
   

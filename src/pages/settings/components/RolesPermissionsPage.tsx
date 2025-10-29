@@ -230,7 +230,7 @@ const RolesPermissions = () => {
 
   const handleToggleRoleStatus = async (id: number, newStatus: string) => {
     try {
-      await api.patch(Urls.CHANGE_USER_STATUS(id));
+      await api.patch(Urls.CHANGE_ROLE_STATUS(id));
       toast({
         title: "Success",
         description: `Role ${newStatus.toLowerCase()}d successfully`,
