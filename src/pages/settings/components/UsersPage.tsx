@@ -154,13 +154,13 @@ const SchoolAdminUsers: React.FC = () => {
       const transfers = response.pending_transfers || [];
       // Map the API response to match PendingTransfer interface
       const mappedTransfers: PendingTransfer[] = transfers.map((transfer: any) => ({
-        id: transfer.assignment_id,
+        id: transfer.user_id,
         user_id: transfer.user_id,
-        from_institution_id: 0, // Not provided in response
-        to_institution_id: 0, // Not provided in response
+        from_institution_id: 0, 
+        to_institution_id: 0, 
         status: transfer.status,
-        created_at: '', // Not provided
-        updated_at: '', // Not provided
+        created_at: '', 
+        updated_at: '', 
         user: {
           id: transfer.user_id,
           name: transfer.name,
