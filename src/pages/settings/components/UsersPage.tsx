@@ -649,7 +649,7 @@ const SchoolAdminUsers: React.FC = () => {
                               className="cursor-pointer"
                             >
                               <Check className="h-4 w-4 mr-2" />
-                              {((user as any).assignments?.[0]?.status || 'Active') === 'Active' ? 'Deactivate' : 'Activate'}
+                              {((user as any).assignments?.[0]?.status || 'active') === 'active' ? 'Deactivate' : 'Activate'}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
