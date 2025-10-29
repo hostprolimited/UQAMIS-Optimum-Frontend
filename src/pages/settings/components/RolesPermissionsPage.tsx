@@ -548,8 +548,8 @@ const RolesPermissions = () => {
                                 onClick={() => handleToggleRoleStatus(role.id, role.status === 'Active' ? 'Inactive' : 'Active')}
                                 className="cursor-pointer"
                               >
-                                {role.status === 'Active' ? <XCircle className="h-4 w-4 mr-2" /> : <CheckCircle className="h-4 w-4 mr-2" />}
-                                {role.status === 'Active' ? 'Deactivate' : 'Activate'}
+                                {role.status === 'active' ? <XCircle className="h-4 w-4 mr-2" /> : <CheckCircle className="h-4 w-4 mr-2" />}
+                                {role.status === 'active' ? 'Deactivate' : 'Activate'}
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
