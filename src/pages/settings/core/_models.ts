@@ -108,7 +108,7 @@ export interface PendingTransfer {
   user_id: number;
   from_institution_id: number;
   to_institution_id: number;
-  pendin
+  pending_transfer_id?: number;
   status: string;
   created_at: string;
   updated_at: string;
