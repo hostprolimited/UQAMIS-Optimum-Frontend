@@ -108,6 +108,7 @@ export interface PendingTransfer {
   user_id: number;
   from_institution_id: number;
   to_institution_id: number;
+  pendin
   status: string;
   created_at: string;
   updated_at: string;
