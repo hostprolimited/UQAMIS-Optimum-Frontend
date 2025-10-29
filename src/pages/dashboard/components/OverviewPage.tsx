@@ -364,6 +364,43 @@ const Overview = () => {
     }) :
     countyData;
 
+  const maintenanceStatuses = ["Urgent Attention", "Attention Required", "Good"];
+  const safetyStatuses = ["Attention Required", "Good"];
+
+  const maintenanceBarData = topProblemAreas.maintenance.reduce((acc, item) => {
+    const existing = acc.find(x => x.item_name === item.item_name);
+    if (existing) {
+      existing[item.status] = (existing[item.status] || 0) + item.count;
+    } else {
+      const newItem: any = { item_name: item.item_name };
+      maintenanceStatuses.forEach(s => newItem[s] = 0);
+      newItem[item.status] = item.count;
+      acc.push(newItem);
+    }
+    return acc;
+  }, [] as any[]).sort((a, b) => {
+    const totalA = maintenanceStatuses.reduce((sum, s) => sum + a[s], 0);
+    const totalB = maintenanceStatuses.reduce((sum, s) => sum + b[s], 0);
+    return totalB - totalA;
+  });
+
+  const safetyBarData = topProblemAreas.safety.reduce((acc, item) => {
+    const existing = acc.find(x => x.item_name === item.item_name);
+    if (existing) {
+      existing[item.status] = (existing[item.status] || 0) + item.count;
+    } else {
+      const newItem: any = { item_name: item.item_name };
+      safetyStatuses.forEach(s => newItem[s] = 0);
+      newItem[item.status] = item.count;
+      acc.push(newItem);
+    }
+    return acc;
+  }, [] as any[]).sort((a, b) => {
+    const totalA = safetyStatuses.reduce((sum, s) => sum + a[s], 0);
+    const totalB = safetyStatuses.reduce((sum, s) => sum + b[s], 0);
+    return totalB - totalA;
+  });
+
   const processedMaintenanceData = processDataForCollapsibleTable(topProblemAreas.maintenance);
   const processedSafetyData = processDataForCollapsibleTable(topProblemAreas.safety);
 
@@ -628,14 +665,112 @@ const Overview = () => {
       </div>
 
       {/* Top Maintenance Problems */}
+      {dashboardType === 'school_admin' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader className="text-center">
+              <CardTitle className="flex items-center justify-center space-x-2">
+                <AlertTriangle className="h-5 w-5 text-destructive" />
+                <span>Maintenance Problems</span>
+              </CardTitle>
+              <CardDescription>
+                Cumulative maintenance issues by status across schools
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={400}>
+                <BarChart
+                  data={maintenanceBarData}
+                  margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                  <XAxis
+                    dataKey="item_name"
+                    className="text-muted-foreground"
+                    fontSize={10}
+                    angle={-45}
+                    textAnchor="end"
+                    height={100}
+                    interval={0}
+                    dy={10}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    className="text-muted-foreground"
+                    fontSize={12}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '6px'
+                    }}
+                  />
+                  <Bar dataKey="Urgent Attention" stackId="a" fill="#ef4444" name="Urgent Attention" />
+                  <Bar dataKey="Attention Required" stackId="a" fill="#f59e0b" name="Attention Required" />
+                  <Bar dataKey="Good" stackId="a" fill="#10b981" name="Good" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="text-center">
+              <CardTitle className="flex items-center justify-center space-x-2">
+                <CheckCircle className="h-5 w-5 text-success" />
+                <span>Safety Problems</span>
+              </CardTitle>
+              <CardDescription>
+                Cumulative safety issues by status across schools
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={400}>
+                <BarChart
+                  data={safetyBarData}
+                  margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                  <XAxis
+                    dataKey="item_name"
+                    className="text-muted-foreground"
+                    fontSize={10}
+                    angle={-45}
+                    textAnchor="end"
+                    height={100}
+                    interval={0}
+                    dy={10}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    className="text-muted-foreground"
+                    fontSize={12}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '6px'
+                    }}
+                  />
+                  <Bar dataKey="Attention Required" stackId="a" fill="#f59e0b" name="Attention Required" />
+                  <Bar dataKey="Good" stackId="a" fill="#10b981" name="Good" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Detailed Maintenance Problems */}
       <Card>
         <CardHeader className="text-center">
           <CardTitle className="flex items-center justify-center space-x-2">
             <AlertTriangle className="h-5 w-5 text-destructive" />
-            <span>Top Maintenance Problems</span>
+            <span>Top Maintenance Problems Details</span>
           </CardTitle>
           <CardDescription>
-            Most common maintenance issues across schools
+            Most common maintenance issues across schools with details
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -658,15 +793,15 @@ const Overview = () => {
         </CardContent>
       </Card>
 
-      {/* Top Safety Problems */}
+      {/* Detailed Safety Problems */}
       <Card>
         <CardHeader className="text-center">
           <CardTitle className="flex items-center justify-center space-x-2">
             <CheckCircle className="h-5 w-5 text-success" />
-            <span>Top Safety Problems</span>
+            <span>Top Safety Problems Details</span>
           </CardTitle>
           <CardDescription>
-            Most common safety issues across schools
+            Most common safety issues across schools with details
           </CardDescription>
         </CardHeader>
         <CardContent>
