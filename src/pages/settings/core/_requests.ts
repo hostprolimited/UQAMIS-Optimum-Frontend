@@ -1,4 +1,3 @@
-
 import api from '@/utils/api';
 import { Urls } from '@/constants/urls';
 import { User, CreateUserInput, UpdateUserInput, Role, Permission, CreatePermissionInput, AssignPermissionRoleInput, AssignUserRoleInput, PendingTransfer } from './_models';
